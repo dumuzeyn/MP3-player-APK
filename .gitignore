@@ -1,0 +1,9 @@
+﻿.android-sdk/
+build/
+cmdline-temp/
+commandlinetools.zip
+mp3player-debug.keystore
+*.log
+.DS_Store
+Thumbs.db
+*.idsig
