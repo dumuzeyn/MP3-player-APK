@@ -297,6 +297,7 @@ Apk/
 
 Проект разрешен для личного, учебного и некоммерческого использования. Коммерческая продажа, коммерческое распространение, перепродажа или включение в коммерческий продукт без отдельного разрешения запрещены. Подробности находятся в `LICENSE`.
 
+>**Автор проекта: Зейналов У.Р.о.**
 ---
 <h1 id = engVer>
  MP3 Player APK
@@ -596,3 +597,5 @@ Apk/
 ## License
 
 The project is free for personal, educational, and non-commercial use. Commercial sale, commercial redistribution, resale, or inclusion in a commercial product requires separate permission. See `LICENSE` for details.
+
+>**Author of project: Zeynalov U.R.o.**
