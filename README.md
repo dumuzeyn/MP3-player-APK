@@ -1,268 +1,268 @@
-# MP3 Player APK
+﻿# MP3 Player APK
 
 <p align="center">
   <a href="https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-MP3--Player.apk-black?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/�������_APK-MP3--Player.apk-black?style=for-the-badge" alt="������� APK">
   </a>
 </p>
 
 [English version](#engVer)
 
-MP3 Player APK - нативное Android-приложение для локальной музыки. Оно работает без браузера, без WebView и без локального сервера: пользователь устанавливает APK, выбирает аудиофайлы через системный выбор файлов Android и слушает музыку прямо в приложении.
+MP3 Player APK - �������� Android-���������� ��� ��������� ������. ��� �������� ��� ��������, ��� WebView � ��� ���������� �������: ������������ ������������� APK, �������� ���������� ����� ��������� ����� ������ Android � ������� ������ ����� � ����������.
 
-Приложение хранит только ссылки на выбранные пользователем аудиофайлы. Исходные песни не копируются, не изменяются и не удаляются с устройства. Если пользователь удалит или переместит файл вручную, сохраненная ссылка на него может перестать работать.
+���������� ������ ������ ������ �� ��������� ������������� ����������. �������� ����� �� ����������, �� ���������� � �� ��������� � ����������. ���� ������������ ������ ��� ���������� ���� �������, ����������� ������ �� ���� ����� ��������� ��������.
 
-## Скачать
+## �������
 
-Готовый APK лежит в репозитории здесь:
+������� APK ����� � ����������� �����:
 
 ```text
 output/MP3-Player.apk
 ```
 
-Прямая ссылка:
+������ ������:
 
-[Скачать MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk)
+[������� MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk)
 
-Если Android предупреждает об установке из неизвестного источника, нужно разрешить установку APK для приложения, через которое открыт файл. Это обычное поведение Android для приложений, установленных не из магазина.
+���� Android ������������� �� ��������� �� ������������ ���������, ����� ��������� ��������� APK ��� ����������, ����� ������� ������ ����. ��� ������� ��������� Android ��� ����������, ������������� �� �� ��������.
 
-## Что умеет приложение
+## ��� ����� ����������
 
-- Добавлять одну или несколько песен через системный файловый менеджер Android.
-- Показывать список песен с обложками и визуальной волновой формой.
-- Читать название, исполнителя, альбом, жанр и обложку через `MediaMetadataRetriever`.
-- Сортировать библиотеку: сначала английские названия, затем русские.
-- Искать песни, избранное и плейлисты по совпадению в названии.
-- Проигрывать одну песню, весь список подряд или список в случайном порядке.
-- Создавать постоянные плейлисты.
-- Добавлять песни в избранное и убирать их повторным нажатием на сердце.
-- Добавлять песни в существующий плейлист или создавать новый плейлист из меню песни.
-- Удалять песню из приложения без удаления файла с устройства.
-- Удалять плейлист с подтверждением.
-- Открывать большой плеер с обложкой, перемоткой, таймером, лайком, повтором и очередью.
-- Показывать мини-плеер снизу экрана во время воспроизведения.
-- Работать в фоне через Android foreground service и системное уведомление.
-- Переключать светлую и темную черно-белую тему.
+- ��������� ���� ��� ��������� ����� ����� ��������� �������� �������� Android.
+- ���������� ������ ����� � ��������� � ���������� �������� ������.
+- ������ ��������, �����������, ������, ���� � ������� ����� `MediaMetadataRetriever`.
+- ����������� ����������: ������� ���������� ��������, ����� �������.
+- ������ �����, ��������� � ��������� �� ���������� � ��������.
+- ����������� ���� �����, ���� ������ ������ ��� ������ � ��������� �������.
+- ��������� ���������� ���������.
+- ��������� ����� � ��������� � ������� �� ��������� �������� �� ������.
+- ��������� ����� � ������������ �������� ��� ��������� ����� �������� �� ���� �����.
+- ������� ����� �� ���������� ��� �������� ����� � ����������.
+- ������� �������� � ��������������.
+- ��������� ������� ����� � ��������, ����������, ��������, ������, �������� � ��������.
+- ���������� ����-����� ����� ������ �� ����� ���������������.
+- �������� � ���� ����� Android foreground service � ��������� �����������.
+- ����������� ������� � ������ �����-����� ����.
 
-## Как устроен интерфейс
+## ��� ������� ���������
 
-Главный экран собирается в `MainActivity.java` полностью кодом, без XML-разметки. Такой подход выбран, потому что приложение небольшое, а интерфейс часто менялся: все состояния, кнопки, вкладки, модальные окна и строки списков находятся рядом в одном файле.
+������� ����� ���������� � `MainActivity.java` ��������� �����, ��� XML-��������. ����� ������ ������, ������ ��� ���������� ���������, � ��������� ����� �������: ��� ���������, ������, �������, ��������� ���� � ������ ������� ��������� ����� � ����� �����.
 
-Верхняя часть экрана содержит название приложения, иконку и кнопку смены темы. Ниже находится горизонтальная прокручиваемая панель разделов. Разделы повторяются циклом, поэтому визуально вкладки можно прокручивать бесконечно.
+������� ����� ������ �������� �������� ����������, ������ � ������ ����� ����. ���� ��������� �������������� �������������� ������ ��������. ������� ����������� ������, ������� ��������� ������� ����� ������������ ����������.
 
-Основные разделы:
+�������� �������:
 
-- `Песни` - вся библиотека.
-- `Избранное` - песни, отмеченные сердцем.
-- `Плейлисты` - пользовательские списки песен.
-- `Жанры` - группировка по жанру из метаданных.
-- `Исполнители` - группировка по исполнителю.
-- `Альбомы` - группировка по альбому.
+- `�����` - ��� ����������.
+- `���������` - �����, ���������� �������.
+- `���������` - ���������������� ������ �����.
+- `�����` - ����������� �� ����� �� ����������.
+- `�����������` - ����������� �� �����������.
+- `�������` - ����������� �� �������.
 
-Строка песни строится методом `songRow(...)`. В ней задаются обложка, название, волновая форма, кнопка свойств или лайка и кнопка play/pause. Если нужно изменить размер строки, отступы, радиус обложек или расположение кнопок, начинать лучше с этого метода.
+������ ����� �������� ������� `songRow(...)`. � ��� �������� �������, ��������, �������� �����, ������ ������� ��� ����� � ������ play/pause. ���� ����� �������� ������ ������, �������, ������ ������� ��� ������������ ������, �������� ����� � ����� ������.
 
-Большой плеер открывается методом `openFullPlayer()`. В нем находятся обложка, название песни, позиция в очереди, кнопки таймера/лайка/повтора, ползунок перемотки и кнопки предыдущей, текущей и следующей песни.
+������� ����� ����������� ������� `openFullPlayer()`. � ��� ��������� �������, �������� �����, ������� � �������, ������ �������/�����/�������, �������� ��������� � ������ ����������, ������� � ��������� �����.
 
-Мини-плеер создается методом `buildMiniPlayer()` и обновляется методом `updateMini()`. Он закреплен снизу экрана и скрывается при открытии большого плеера.
+����-����� ��������� ������� `buildMiniPlayer()` � ����������� ������� `updateMini()`. �� ��������� ����� ������ � ���������� ��� �������� �������� ������.
 
-## Как работает воспроизведение
+## ��� �������� ���������������
 
-Воспроизведение вынесено в `PlayerService.java`. Это Android foreground service: когда музыка играет, Android видит постоянное уведомление с управлением. Благодаря этому трек продолжает играть после сворачивания приложения, блокировки экрана или обычного свайпа приложения из списка недавних.
+��������������� �������� � `PlayerService.java`. ��� Android foreground service: ����� ������ ������, Android ����� ���������� ����������� � �����������. ��������� ����� ���� ���������� ������ ����� ������������ ����������, ���������� ������ ��� �������� ������ ���������� �� ������ ��������.
 
-Важно: если пользователь откроет системные настройки Android и нажмет принудительную остановку приложения, Android завершит сервис. Обычное приложение не может обходить это системное ограничение.
+�����: ���� ������������ ������� ��������� ��������� Android � ������ �������������� ��������� ����������, Android �������� ������. ������� ���������� �� ����� �������� ��� ��������� �����������.
 
-`MainActivity` отправляет команды сервису через `Intent`:
+`MainActivity` ���������� ������� ������� ����� `Intent`:
 
-- `PLAY_INDEX` - запустить песню по индексу.
-- `TOGGLE` - пауза или продолжение.
-- `NEXT` - следующая песня.
-- `PREV` - предыдущая песня.
-- `STOP` - остановка.
-- `SEEK` - перемотка.
-- `LOOP` - изменение режима повтора.
+- `PLAY_INDEX` - ��������� ����� �� �������.
+- `TOGGLE` - ����� ��� �����������.
+- `NEXT` - ��������� �����.
+- `PREV` - ���������� �����.
+- `STOP` - ���������.
+- `SEEK` - ���������.
+- `LOOP` - ��������� ������ �������.
 
-Сервис хранит последние значения позиции, длительности, индекса и состояния воспроизведения в статических полях. Активность читает эти значения, чтобы обновлять интерфейс без сложной привязки к сервису.
+������ ������ ��������� �������� �������, ������������, ������� � ��������� ��������������� � ����������� �����. ���������� ������ ��� ��������, ����� ��������� ��������� ��� ������� �������� � �������.
 
-## Очередь и режимы запуска
+## ������� � ������ �������
 
-Когда пользователь нажимает play у отдельной песни, приложение запускает одиночное воспроизведение. После завершения этой песни очередь не продолжается автоматически, если пользователь не включил повтор.
+����� ������������ �������� play � ��������� �����, ���������� ��������� ��������� ���������������. ����� ���������� ���� ����� ������� �� ������������ �������������, ���� ������������ �� ������� ������.
 
-Когда пользователь нажимает `Все подряд`, очередь формируется из текущего раздела в текущем порядке. В большом плеере позиция отображается относительно этой очереди, а не всей библиотеки.
+����� ������������ �������� `��� ������`, ������� ����������� �� �������� ������� � ������� �������. � ������� ������ ������� ������������ ������������ ���� �������, � �� ���� ����������.
 
-Когда пользователь нажимает `Случайно`, приложение сначала берет все песни текущего раздела, перемешивает их и запускает получившуюся очередь. Это не одна случайная песня, а весь список в случайном порядке.
+����� ������������ �������� `��������`, ���������� ������� ����� ��� ����� �������� �������, ������������ �� � ��������� ������������ �������. ��� �� ���� ��������� �����, � ���� ������ � ��������� �������.
 
-Повтор имеет три состояния:
+������ ����� ��� ���������:
 
-1. Повтор выключен.
-2. Повтор одной песни.
-3. Повтор текущего списка.
+1. ������ ��������.
+2. ������ ����� �����.
+3. ������ �������� ������.
 
-## Где хранятся данные
+## ��� �������� ������
 
-Список выбранных треков хранится в `SharedPreferences`. За это отвечает `TrackStore.java`. Там же происходит чтение метаданных через `MediaMetadataRetriever`.
+������ ��������� ������ �������� � `SharedPreferences`. �� ��� �������� `TrackStore.java`. ��� �� ���������� ������ ���������� ����� `MediaMetadataRetriever`.
 
-В `MainActivity.java` дополнительно сохраняются:
+� `MainActivity.java` ������������� �����������:
 
-- избранные песни;
-- плейлисты;
-- выбранная тема;
-- пользовательское значение таймера.
+- ��������� �����;
+- ���������;
+- ��������� ����;
+- ���������������� �������� �������.
 
-Данные плейлистов и избранного хранятся как JSON-строки в `SharedPreferences`. Это простое решение без базы данных, потому что объем данных небольшой: названия списков и URI выбранных файлов.
+������ ���������� � ���������� �������� ��� JSON-������ � `SharedPreferences`. ��� ������� ������� ��� ���� ������, ������ ��� ����� ������ ���������: �������� ������� � URI ��������� ������.
 
-## Важные файлы
+## ������ �����
 
-| Файл | За что отвечает |
+| ���� | �� ��� �������� |
 |---|---|
-| `app/src/main/AndroidManifest.xml` | Package name, разрешения, регистрация Activity и сервиса |
-| `app/src/main/java/com/dumuzeyn/mp3player/MainActivity.java` | Весь интерфейс, списки, вкладки, модальные окна, темы, плейлисты |
-| `app/src/main/java/com/dumuzeyn/mp3player/PlayerService.java` | Фоновое воспроизведение, MediaPlayer, уведомление, media session |
-| `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | Модель одной песни |
-| `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | Сохранение библиотеки и чтение метаданных |
-| `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | Рисунок волновой формы под названием песни |
-| `app/src/main/res/drawable/ic_launcher.xml` | Иконка приложения на телефоне |
-| `app/src/main/res/drawable/ic_music_vector.xml` | Иконка в шапке приложения |
-| `app/src/main/res/values/strings.xml` | Название приложения |
-| `app/src/main/res/values/styles.xml` | Базовая Android-тема |
-| `build-apk.ps1` | Автоматическая сборка APK без Android Studio |
-| `output/MP3-Player.apk` | Готовый установочный файл |
+| `app/src/main/AndroidManifest.xml` | Package name, ����������, ����������� Activity � ������� |
+| `app/src/main/java/com/dumuzeyn/mp3player/MainActivity.java` | ���� ���������, ������, �������, ��������� ����, ����, ��������� |
+| `app/src/main/java/com/dumuzeyn/mp3player/PlayerService.java` | ������� ���������������, MediaPlayer, �����������, media session |
+| `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | ������ ����� ����� |
+| `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | ���������� ���������� � ������ ���������� |
+| `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | ������� �������� ����� ��� ��������� ����� |
+| `app/src/main/res/drawable/ic_launcher.xml` | ������ ���������� �� �������� |
+| `app/src/main/res/drawable/ic_music_vector.xml` | ������ � ����� ���������� |
+| `app/src/main/res/values/strings.xml` | �������� ���������� |
+| `app/src/main/res/values/styles.xml` | ������� Android-���� |
+| `build-apk.ps1` | �������������� ������ APK ��� Android Studio |
+| `output/MP3-Player.apk` | ������� ������������ ���� |
 
-## Как поменять название приложения
+## ��� �������� �������� ����������
 
-Название на рабочем столе Android находится в:
+�������� �� ������� ����� Android ��������� �:
 
 ```text
 app/src/main/res/values/strings.xml
 ```
 
-Нужно изменить значение `app_name`:
+����� �������� �������� `app_name`:
 
 ```xml
 <string name="app_name">MP3 Player</string>
 ```
 
-После изменения запустите сборку заново:
+����� ��������� ��������� ������ ������:
 
 ```powershell
 .\build-apk.ps1
 ```
 
-## Как поменять package name
+## ��� �������� package name
 
-Package name указан в двух местах:
+Package name ������ � ���� ������:
 
 ```text
 app/src/main/AndroidManifest.xml
 app/src/main/java/com/dumuzeyn/mp3player/*.java
 ```
 
-Если менять package name, нужно:
+���� ������ package name, �����:
 
-1. Изменить `package="..."` в `AndroidManifest.xml`.
-2. Изменить строку `package ...;` в каждом Java-файле.
-3. Переименовать папки внутри `app/src/main/java` под новый package.
-4. Изменить action-строки в `PlayerService.java`, чтобы они соответствовали новому package.
-5. Пересобрать APK.
+1. �������� `package="..."` � `AndroidManifest.xml`.
+2. �������� ������ `package ...;` � ������ Java-�����.
+3. ������������� ����� ������ `app/src/main/java` ��� ����� package.
+4. �������� action-������ � `PlayerService.java`, ����� ��� ��������������� ������ package.
+5. ����������� APK.
 
-## Как поменять дизайн
+## ��� �������� ������
 
-Основные цвета рассчитываются в `MainActivity.java` в методе `applyTheme()`. Сейчас интерфейс построен на двух режимах: светлом и темном. Цвета записываются в поля `bg`, `fg`, `panel`, `muted`, `line`.
+�������� ����� �������������� � `MainActivity.java` � ������ `applyTheme()`. ������ ��������� �������� �� ���� �������: ������� � ������. ����� ������������ � ���� `bg`, `fg`, `panel`, `muted`, `line`.
 
-Если нужно изменить внешний вид:
+���� ����� �������� ������� ���:
 
-- `applyTheme()` - цвета темы.
-- `buildHeader()` - верхняя строка с иконкой, названием и переключателем темы.
-- `buildTabs()` и `styleTab(...)` - горизонтальное меню разделов.
-- `songRow(...)` - карточка песни.
-- `renderPlaylists()` - карточки плейлистов.
-- `renderGroups(...)` - карточки жанров, исполнителей и альбомов.
-- `openFullPlayer()` - большой плеер.
-- `buildMiniPlayer()` и `updateMini()` - нижний мини-плеер.
-- `coverView()` - скругление обложек.
-- `button(...)`, `icon(...)`, `shuffleButton()`, `searchButton()` - общий стиль кнопок.
+- `applyTheme()` - ����� ����.
+- `buildHeader()` - ������� ������ � �������, ��������� � �������������� ����.
+- `buildTabs()` � `styleTab(...)` - �������������� ���� ��������.
+- `songRow(...)` - �������� �����.
+- `renderPlaylists()` - �������� ����������.
+- `renderGroups(...)` - �������� ������, ������������ � ��������.
+- `openFullPlayer()` - ������� �����.
+- `buildMiniPlayer()` � `updateMini()` - ������ ����-�����.
+- `coverView()` - ���������� �������.
+- `button(...)`, `icon(...)`, `shuffleButton()`, `searchButton()` - ����� ����� ������.
 
-## Как поменять иконку
+## ��� �������� ������
 
-Иконка на рабочем столе Android:
+������ �� ������� ����� Android:
 
 ```text
 app/src/main/res/drawable/ic_launcher.xml
 ```
 
-Иконка в шапке приложения:
+������ � ����� ����������:
 
 ```text
 app/src/main/res/drawable/ic_music_vector.xml
 ```
 
-Обе иконки сделаны как vector drawable. Если заменить их на другие vector drawable, приложение продолжит собираться без дополнительных изображений. Иконка в шапке красится цветом темы через `setColorFilter`, поэтому она меняется вместе со светлой и темной темой.
+��� ������ ������� ��� vector drawable. ���� �������� �� �� ������ vector drawable, ���������� ��������� ���������� ��� �������������� �����������. ������ � ����� �������� ������ ���� ����� `setColorFilter`, ������� ��� �������� ������ �� ������� � ������ �����.
 
-## Как поменять волновую форму
+## ��� �������� �������� �����
 
-Волновая форма рисуется в `WaveformView.java`. Она не анализирует реальный звук, а строит стабильный рисунок на основе строки-ключа песни. Такой подход выбран специально: он не тратит ресурсы телефона на анализ аудио и при этом дает каждой песне отличающийся визуальный рисунок.
+�������� ����� �������� � `WaveformView.java`. ��� �� ����������� �������� ����, � ������ ���������� ������� �� ������ ������-����� �����. ����� ������ ������ ����������: �� �� ������ ������� �������� �� ������ ����� � ��� ���� ���� ������ ����� ������������ ���������� �������.
 
-Если нужна другая форма:
+���� ����� ������ �����:
 
-- меняйте `onDraw(...)` в `WaveformView.java`;
-- меняйте количество полос через цикл;
-- меняйте высоту через формулу `heightFactor`;
-- меняйте цвет в месте создания `WaveformView` в `MainActivity.wave(...)`.
+- ������� `onDraw(...)` � `WaveformView.java`;
+- ������� ���������� ����� ����� ����;
+- ������� ������ ����� ������� `heightFactor`;
+- ������� ���� � ����� �������� `WaveformView` � `MainActivity.wave(...)`.
 
-## Как изменить работу плейлистов
+## ��� �������� ������ ����������
 
-Плейлисты хранятся в классе `Playlist` внутри `MainActivity.java`. Список плейлистов находится в поле `playlists`. Сохранение и загрузка выполняются методами `savePlaylists()` и `loadPlaylists()`.
+��������� �������� � ������ `Playlist` ������ `MainActivity.java`. ������ ���������� ��������� � ���� `playlists`. ���������� � �������� ����������� �������� `savePlaylists()` � `loadPlaylists()`.
 
-Главные методы:
+������� ������:
 
-- `renderPlaylists()` - отображает все плейлисты.
-- `openPlaylist(...)` - открывает конкретный плейлист.
-- `openPlaylistPicker(...)` - выбор плейлиста при добавлении песни.
-- `openPickSongsPanel(...)` - окно выбора нескольких песен.
-- `confirmDeletePlaylist(...)` - подтверждение удаления плейлиста.
+- `renderPlaylists()` - ���������� ��� ���������.
+- `openPlaylist(...)` - ��������� ���������� ��������.
+- `openPlaylistPicker(...)` - ����� ��������� ��� ���������� �����.
+- `openPickSongsPanel(...)` - ���� ������ ���������� �����.
+- `confirmDeletePlaylist(...)` - ������������� �������� ���������.
 
-## Как собрать APK
+## ��� ������� APK
 
-На Windows откройте PowerShell в корне проекта и выполните:
+�� Windows �������� PowerShell � ����� ������� � ���������:
 
 ```powershell
 .\build-apk.ps1
 ```
 
-Скрипт делает все сам:
+������ ������ ��� ���:
 
-1. Проверяет локальный Android SDK в `.android-sdk`.
-2. При первом запуске скачивает Android command line tools.
-3. Устанавливает `platforms;android-35`, `build-tools;35.0.0` и `platform-tools`.
-4. Компилирует ресурсы через `aapt2`.
-5. Линкует APK.
-6. Компилирует Java через `javac`.
-7. Упаковывает `.class` в `classes.jar`.
-8. Создает `classes.dex` через `d8`.
-9. Вставляет dex в APK.
-10. Создает локальный ключ подписи, если его еще нет.
-11. Выравнивает APK через `zipalign`.
-12. Подписывает APK через `apksigner`.
-13. Проверяет подпись.
+1. ��������� ��������� Android SDK � `.android-sdk`.
+2. ��� ������ ������� ��������� Android command line tools.
+3. ������������� `platforms;android-35`, `build-tools;35.0.0` � `platform-tools`.
+4. ����������� ������� ����� `aapt2`.
+5. ������� APK.
+6. ����������� Java ����� `javac`.
+7. ����������� `.class` � `classes.jar`.
+8. ������� `classes.dex` ����� `d8`.
+9. ��������� dex � APK.
+10. ������� ��������� ���� �������, ���� ��� ��� ���.
+11. ����������� APK ����� `zipalign`.
+12. ����������� APK ����� `apksigner`.
+13. ��������� �������.
 
-После успешной сборки файл появится здесь:
+����� �������� ������ ���� �������� �����:
 
 ```text
 output/MP3-Player.apk
 ```
 
-Папки `.android-sdk` и `build` являются рабочими каталогами сборки. Их не нужно загружать в репозиторий.
+����� `.android-sdk` � `build` �������� �������� ���������� ������. �� �� ����� ��������� � �����������.
 
-## Как установить через USB
+## ��� ���������� ����� USB
 
-Если на компьютере установлен ADB или уже скачан SDK этим проектом, можно установить APK так:
+���� �� ���������� ���������� ADB ��� ��� ������ SDK ���� ��������, ����� ���������� APK ���:
 
 ```powershell
 .\.android-sdk\platform-tools\adb.exe install -r output\MP3-Player.apk
 ```
 
-На телефоне должна быть включена отладка по USB, а компьютер должен быть разрешен в диалоге Android.
+�� �������� ������ ���� �������� ������� �� USB, � ��������� ������ ���� �������� � ������� Android.
 
-## Структура проекта
+## ��������� �������
 
 ```text
 Apk/
@@ -293,12 +293,71 @@ Apk/
 `-- README.md
 ```
 
-## Лицензия
+## ��������
 
-Проект разрешен для личного, учебного и некоммерческого использования. Коммерческая продажа, коммерческое распространение, перепродажа или включение в коммерческий продукт без отдельного разрешения запрещены. Подробности находятся в `LICENSE`.
+������ �������� ��� �������, �������� � ��������������� �������������. ������������ �������, ������������ ���������������, ����������� ��� ��������� � ������������ ������� ��� ���������� ���������� ���������. ����������� ��������� � `LICENSE`.
 
->**Автор проекта: Зейналов У.Р.о.**
 ---
+
+## Последние изменения интерфейса и логики APK
+
+Эти изменения относятся к APK-версии приложения и находятся в `app/src/main/java/com/dumuzeyn/mp3player/MainActivity.java`.
+
+### Кольцо меню и свайпы
+
+Верхнее меню теперь работает как независимое горизонтальное кольцо. Его можно прокручивать пальцем свободно, и сама прокрутка не переключает раздел. Это важно для удобства: пользователь может сначала докрутить колесо до нужной области, посмотреть соседние пункты, а потом нажать на конкретный пункт.
+
+Раздел переключается только двумя способами:
+
+1. Нажатием на название раздела в верхнем колесе.
+2. Свайпом по основной области экрана, но не по самому колесу меню.
+
+Для этого в `dispatchTouchEvent(...)` все касания проходят через `handlePageSwipe(...)`. Метод `isInsideTabs(...)` проверяет, начался ли жест внутри `HorizontalScrollView` с меню. Если жест начался на колесе, он не считается свайпом страницы: колесо просто крутится. Если жест начался ниже, в основной области, приложение переключает вкладку влево или вправо.
+
+При переключении вкладки вызывается `switchTabAnimated(...)`. Он делает две вещи одновременно:
+
+- плавно сдвигает список текущего раздела в сторону и показывает новый список;
+- докручивает верхнее колесо до активного пункта.
+
+Докрутка колеса не использует обычный долгий `smoothScrollTo(...)`. Вместо него используется `ValueAnimator` в `animateTabsScrollTo(...)`, поэтому прокрутка короткая и управляемая. Метод `scrollTabsToActive(...)` ищет ближайшую копию нужной вкладки среди повторяющихся пунктов кольца. Благодаря этому переход между `Settings` и `Songs` не должен проворачивать весь список через все пункты, а должен выбирать ближайший визуальный путь.
+
+### Меню Settings
+
+В приложение добавлен раздел `Settings`. Он находится в том же верхнем колесе, что и `Songs`, `Favorites`, `Playlists`, `Genres`, `Artists` и `Albums`.
+
+В `Settings` перенесено управление темой. Верхняя кнопка смены темы рядом с `MP3 Player` убрана, чтобы шапка была чище и не смешивала основные действия приложения с настройками.
+
+В настройках доступны:
+
+- переключение светлой и темной темы;
+- выбор языка интерфейса: `English` или `Русский`;
+- переход на GitHub проекта;
+- удаление всех песен из приложения с подтверждением;
+- удаление всех плейлистов с подтверждением.
+
+Удаление песен из приложения не удаляет файлы с телефона. Оно очищает только список песен, избранное и ссылки на песни внутри плейлистов, после чего сохраняет новое состояние через `TrackStore.save(...)` и `saveState()`.
+
+Удаление всех плейлистов очищает только коллекцию `playlists`; сами песни остаются в приложении.
+
+Все тексты в настройках выровнены по левому краю. Это сделано в `addSettingsButton(...)`, а для кнопок выбора языка отдельно задается `Gravity.START | Gravity.CENTER_VERTICAL`.
+
+### Переключение языка
+
+Язык хранится в `SharedPreferences` под ключом `LANGUAGE`. Основные подписи интерфейса выбираются через метод `tr(String en, String ru)`. Если выбран английский язык, возвращается первая строка; если русский, вторая.
+
+Список вкладок строится заново в `refreshTabLabels()`. Поэтому после смены языка приложение перестраивает интерфейс через `buildUi()`, и названия вкладок меняются сразу.
+
+### Где менять эту логику
+
+- `handlePageSwipe(...)` - распознает свайп страницы.
+- `isInsideTabs(...)` - запрещает свайпу страницы срабатывать, если жест начался на колесе меню.
+- `switchTabAnimated(...)` - отвечает за плавную смену раздела.
+- `scrollTabsToActive(...)` - выбирает ближайшую копию нужной вкладки в бесконечном кольце.
+- `animateTabsScrollTo(...)` - быстро и плавно докручивает колесо меню.
+- `renderSettings(...)` - рисует раздел настроек.
+- `addSettingsButton(...)` - задает стиль кнопок настроек и выравнивание текста влево.
+- `refreshTabLabels()` - собирает названия вкладок на выбранном языке.
+- `saveState()` - сохраняет тему, язык, избранное, плейлисты и пользовательское время таймера.
 <h1 id = engVer>
  MP3 Player APK
 </h1>
@@ -349,7 +408,7 @@ If Android warns about installing from an unknown source, allow APK installation
 
 The main screen is built in `MainActivity.java` entirely from Java code, without XML layouts. This was chosen because the app is compact and the interface changed often: screens, buttons, tabs, panels, and list rows are kept close together in one place.
 
-The top area contains the app icon, app name, and theme switch. Below it is a horizontally scrollable tab bar. Tabs are repeated in cycles, so the section list feels endless while scrolling.
+The top area contains the app icon and app name. Below it is a horizontally scrollable tab wheel. Tabs are repeated in cycles, so the section list feels endless while scrolling. Theme switching now lives in `Settings`.
 
 Main sections:
 
@@ -407,6 +466,7 @@ The selected track list is stored in `SharedPreferences`. `TrackStore.java` hand
 - favorite songs;
 - playlists;
 - selected theme;
+- selected language;
 - custom timer value.
 
 Favorites and playlists are stored as JSON strings in `SharedPreferences`. This avoids a database because the stored data is small: playlist names and selected file URIs.
@@ -472,8 +532,8 @@ Theme colors are calculated in `MainActivity.java` inside `applyTheme()`. The cu
 Useful places for design changes:
 
 - `applyTheme()` - theme colors.
-- `buildHeader()` - top row with icon, app name, and theme switch.
-- `buildTabs()` and `styleTab(...)` - horizontal section menu.
+- `buildHeader()` - top row with icon and app name.
+- `buildTabs()`, `styleTab(...)`, `switchTabAnimated(...)`, and `scrollTabsToActive(...)` - horizontal section wheel, active tab styling, and animated navigation.
 - `songRow(...)` - song card.
 - `renderPlaylists()` - playlist cards.
 - `renderGroups(...)` - genre, artist, and album cards.
@@ -520,6 +580,67 @@ Main methods:
 - `openPlaylistPicker(...)` - selects a playlist while adding a song.
 - `openPickSongsPanel(...)` - selects several songs.
 - `confirmDeletePlaylist(...)` - confirms playlist deletion.
+
+
+## Latest APK Interface And Logic Changes
+
+These changes belong to the APK version and are implemented mainly in `app/src/main/java/com/dumuzeyn/mp3player/MainActivity.java`.
+
+### Menu Wheel And Swipe Behavior
+
+The top menu now works as an independent horizontal wheel. The user can scroll it freely with a finger, and scrolling the wheel does not switch the current section. This is intentional: the user can rotate the wheel, inspect nearby sections, and then tap the exact section they want.
+
+A section changes only in two cases:
+
+1. The user taps a section name in the top wheel.
+2. The user swipes across the main screen area, outside the menu wheel.
+
+All touch events pass through `dispatchTouchEvent(...)` and then `handlePageSwipe(...)`. The method `isInsideTabs(...)` checks whether the gesture started inside the `HorizontalScrollView` that contains the menu wheel. If the gesture started on the wheel, it is treated as wheel scrolling only. If it started below the wheel, in the main content area, the app switches to the previous or next tab.
+
+When a tab changes, `switchTabAnimated(...)` runs. It does two things at the same time:
+
+- slides the current section list out and slides the new section list in;
+- moves the top wheel to the active section.
+
+The wheel movement does not use the default long `smoothScrollTo(...)`. Instead, `animateTabsScrollTo(...)` uses `ValueAnimator`, which makes the movement short and controlled. `scrollTabsToActive(...)` searches for the closest repeated copy of the target tab in the endless wheel. This is why switching between `Settings` and `Songs` should not spin through the whole list; it should choose the nearest visible path.
+
+### Settings Section
+
+The app now has a `Settings` section. It lives in the same top wheel as `Songs`, `Favorites`, `Playlists`, `Genres`, `Artists`, and `Albums`.
+
+Theme switching was moved into `Settings`. The old theme button near `MP3 Player` in the header was removed so the header stays cleaner and does not mix global settings with everyday playback actions.
+
+Settings contains:
+
+- light/dark theme switching;
+- interface language selection: `English` or `Russian`;
+- a GitHub project link;
+- delete all songs from the app, with confirmation;
+- delete all playlists, with confirmation.
+
+Deleting all songs from the app does not delete files from the phone. It clears only the app library, favorites, and song references inside playlists, then saves the new state through `TrackStore.save(...)` and `saveState()`.
+
+Deleting all playlists clears only the `playlists` collection. The songs remain in the app.
+
+All Settings text is aligned to the left. This is handled in `addSettingsButton(...)`; the language buttons also use `Gravity.START | Gravity.CENTER_VERTICAL`.
+
+### Language Switching
+
+The selected language is stored in `SharedPreferences` under the `LANGUAGE` key. Main interface labels use `tr(String en, String ru)`. If English is selected, the first string is returned; if Russian is selected, the second string is returned.
+
+Tab labels are rebuilt in `refreshTabLabels()`. After the language changes, the interface is rebuilt through `buildUi()`, so the tab names update immediately.
+
+### Where To Change This Logic
+
+- `handlePageSwipe(...)` - detects screen swipes.
+- `isInsideTabs(...)` - prevents page swipes from triggering when the gesture starts on the menu wheel.
+- `switchTabAnimated(...)` - controls the animated section transition.
+- `scrollTabsToActive(...)` - selects the closest copy of the target tab in the endless wheel.
+- `animateTabsScrollTo(...)` - quickly and smoothly moves the menu wheel.
+- `renderSettings(...)` - renders the Settings section.
+- `addSettingsButton(...)` - defines Settings button style and left text alignment.
+- `refreshTabLabels()` - builds tab names for the selected language.
+- `saveState()` - saves theme, language, favorites, playlists, and custom timer value.
 
 ## Building the APK
 
@@ -598,4 +719,3 @@ Apk/
 
 The project is free for personal, educational, and non-commercial use. Commercial sale, commercial redistribution, resale, or inclusion in a commercial product requires separate permission. See `LICENSE` for details.
 
->**Author of project: Zeynalov U.R.o.**
