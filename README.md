@@ -20,6 +20,12 @@ MP3 Player APK — полноценное Android-приложение для л
 output/MP3-Player.apk
 ```
 
+Если Android сообщает о конфликте пакета при тестировании, рядом лежит отдельная тестовая сборка:
+
+```text
+output/MP3-Player-test.apk
+```
+
 Прямая ссылка:
 
 [Скачать MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk)
@@ -42,9 +48,12 @@ output/MP3-Player.apk
 - Удаление плейлистов с подтверждением.
 - Большой плеер с обложкой, перемоткой, таймером, лайком, повтором и списком очереди.
 - Мини-плеер снизу экрана во время активного воспроизведения.
+- Восстановление мини-плеера после остановки песни и повторного открытия приложения. По умолчанию состояние хранится 2 часа, срок можно изменить в настройках.
 - Фоновое воспроизведение через Android foreground service.
 - Светлая и темная черно-белая тема.
-- Переключение языка интерфейса между English и Русский.
+- Переключение языка интерфейса между English и Русский через стилизованное окно приложения.
+- Безопасный импорт аудио через системный выбор файлов Android с проверкой MIME-типа, расширения и размера файла.
+- Устойчивое чтение метаданных и обложек: поврежденные или слишком тяжелые MP3 не должны закрывать приложение.
 
 ## Структура интерфейса
 
@@ -95,6 +104,7 @@ output/MP3-Player.apk
 
 - переключение темы;
 - выбор языка интерфейса: `English` или `Русский`;
+- настройка времени, в течение которого мини-плеер помнит остановленную песню;
 - ссылка на GitHub проекта;
 - удаление всех песен из приложения с подтверждением;
 - удаление всех плейлистов с подтверждением.
@@ -103,7 +113,7 @@ output/MP3-Player.apk
 
 Удаление всех плейлистов очищает только коллекцию плейлистов. Песни остаются в приложении.
 
-Тексты в настройках выровнены по левому краю. Это задается в `addSettingsButton(...)`, а кнопки выбора языка дополнительно получают `Gravity.START | Gravity.CENTER_VERTICAL`.
+Тексты в настройках выровнены по левому краю. Выбор языка и выбор времени памяти мини-плеера открываются в нижнем окне, которое использует те же цвета, панели и кнопки, что и остальное приложение.
 
 ## Переключение языка
 
@@ -135,6 +145,8 @@ tr(String en, String ru)
 
 Таймер сна останавливает воспроизведение после выбранного времени. Пользовательское время сохраняется и остается доступным при следующем открытии таймера.
 
+Если пользователь остановил песню и закрыл приложение, мини-плеер может восстановиться при следующем запуске на той же позиции. По умолчанию это состояние действительно 2 часа. В настройках можно выбрать другой срок или отключить восстановление.
+
 ## Хранение данных
 
 Список выбранных песен хранится в `SharedPreferences`. За это отвечает `TrackStore.java`. Метаданные читаются через `MediaMetadataRetriever`.
@@ -145,7 +157,10 @@ tr(String en, String ru)
 - плейлисты;
 - выбранную тему;
 - выбранный язык;
-- пользовательское время таймера.
+- пользовательское время таймера;
+- время хранения остановленного мини-плеера.
+
+`PlayerService.java` сохраняет небольшой снимок последнего воспроизведения: URI песни, позицию, длительность, режим повтора и очередь. Снимок используется только локально, чтобы восстановить мини-плеер после повторного открытия приложения.
 
 Избранное и плейлисты хранятся как JSON-строки в `SharedPreferences`. База данных не используется, потому что объем данных небольшой: названия плейлистов и URI выбранных файлов.
 
@@ -165,6 +180,12 @@ tr(String en, String ru)
 | `app/src/main/res/values/styles.xml` | Базовая Android-тема |
 | `build-apk.ps1` | Автоматическая сборка APK без Android Studio |
 | `output/MP3-Player.apk` | Готовый APK для установки |
+
+## Безопасность
+
+Приложение использует системный выбор файлов Android и не запрашивает полный доступ ко всему хранилищу. При добавлении песни проверяются `content://` URI, MIME-тип, расширение и примерный размер файла. Приложение не выполняет данные из ID3-тегов, не открывает ссылки из метаданных, не использует WebView, не запускает локальный сервер и не включает HTTP-трафик.
+
+Сервис воспроизведения не экспортируется наружу, исходные MP3-файлы не изменяются, резервное копирование данных приложения отключено через manifest, а чтение метаданных и обложек обернуто в защитную обработку ошибок. Слишком большие встроенные обложки пропускаются, чтобы не перегружать память.
 
 ## Что менять в коде
 
@@ -376,6 +397,12 @@ The ready-to-install APK is stored here:
 output/MP3-Player.apk
 ```
 
+If Android reports a package conflict during testing, a separate test build is also available:
+
+```text
+output/MP3-Player-test.apk
+```
+
 Direct link:
 
 [Download MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk)
@@ -398,9 +425,12 @@ If Android warns about installing from an unknown source, allow APK installation
 - Delete playlists with confirmation.
 - Open a full player with cover art, seek bar, timer, like, repeat, and queue controls.
 - Show a fixed mini-player at the bottom while music is active.
+- Restore the mini-player after stopping a song and reopening the app. By default the state is kept for 2 hours, and the timeout can be changed in Settings.
 - Continue playback in the background through an Android foreground service.
 - Switch between light and dark black-and-white themes.
-- Switch the interface language between English and Russian.
+- Switch the interface language between English and Russian through a styled in-app panel.
+- Import audio safely through Android's system file picker with MIME type, extension, and file size checks.
+- Handle damaged or unusually heavy MP3 metadata and covers without closing the app.
 
 ## Interface Structure
 
@@ -451,6 +481,7 @@ It includes:
 
 - light/dark theme switching;
 - interface language selection: `English` or `Русский`;
+- mini-player memory timeout;
 - GitHub project link;
 - delete all songs from the app, with confirmation;
 - delete all playlists, with confirmation.
@@ -459,7 +490,7 @@ Deleting all songs does not delete files from the phone. It clears only the app 
 
 Deleting all playlists clears only the `playlists` collection. Songs remain in the app.
 
-All Settings text is aligned to the left. This is handled in `addSettingsButton(...)`; the language buttons also use `Gravity.START | Gravity.CENTER_VERTICAL`.
+All Settings text is aligned to the left. Language selection and mini-player memory selection open styled bottom panels that reuse the app's own colors, panels, and buttons.
 
 ## Language Switching
 
@@ -491,6 +522,8 @@ Repeat has three states:
 
 The sleep timer stops playback after the selected time. The custom time value is saved and remains available the next time the timer is opened.
 
+If the user stops a song and closes the app, the mini-player can be restored on the next launch at the same position. By default this state is valid for 2 hours. Settings allow choosing another timeout or turning this behavior off.
+
 ## Stored Data
 
 The selected track list is stored in `SharedPreferences`. `TrackStore.java` handles this and also reads metadata through `MediaMetadataRetriever`.
@@ -501,7 +534,10 @@ The selected track list is stored in `SharedPreferences`. `TrackStore.java` hand
 - playlists;
 - selected theme;
 - selected language;
-- custom timer value.
+- custom timer value;
+- mini-player memory timeout.
+
+`PlayerService.java` stores a small local playback snapshot: song URI, position, duration, repeat mode, and queue. This snapshot is only used locally to restore the mini-player after reopening the app.
 
 Favorites and playlists are stored as JSON strings in `SharedPreferences`. This avoids a database because the stored data is small: playlist names and selected file URIs.
 
@@ -521,6 +557,12 @@ Favorites and playlists are stored as JSON strings in `SharedPreferences`. This 
 | `app/src/main/res/values/styles.xml` | Base Android theme |
 | `build-apk.ps1` | Automated APK build without Android Studio |
 | `output/MP3-Player.apk` | Ready-to-install APK |
+
+## Security
+
+The app uses Android's system file picker and does not request full access to device storage. When adding a song, it checks `content://` URIs, MIME type, extension, and approximate file size. It does not execute ID3 metadata, does not open links from metadata, does not use WebView, does not run a local server, and disables cleartext HTTP traffic.
+
+The playback service is not exported, original MP3 files are not modified, app data backup is disabled in the manifest, and metadata/cover reading is wrapped in defensive error handling. Oversized embedded covers are skipped to avoid memory pressure.
 
 ## Where To Change The Code
 

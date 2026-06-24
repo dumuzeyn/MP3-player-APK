@@ -17,6 +17,7 @@ import java.util.Locale;
 public final class TrackStore {
     private static final String PREFS = "mp3_player_store";
     private static final String TRACKS = "tracks";
+    private static final int MAX_TEXT_LENGTH = 160;
 
     private TrackStore() {}
 
@@ -71,7 +72,7 @@ public final class TrackStore {
             artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
             album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
             genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         } finally {
             try {
                 retriever.release();
@@ -91,7 +92,7 @@ public final class TrackStore {
         if (genre == null || genre.trim().isEmpty()) {
             genre = "Неизвестный жанр";
         }
-        return new Track(uri.toString(), title.trim(), artist.trim(), album.trim(), genre.trim());
+        return new Track(uri.toString(), cleanText(title), cleanText(artist), cleanText(album), cleanText(genre));
     }
 
     public static Track refreshMetadata(Context context, Track oldTrack) {
@@ -110,5 +111,16 @@ public final class TrackStore {
                 return left.title.toLowerCase(Locale.ROOT).compareTo(right.title.toLowerCase(Locale.ROOT));
             }
         });
+    }
+
+    private static String cleanText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String cleaned = value.replace('\u0000', ' ').replace('\n', ' ').replace('\r', ' ').trim();
+        if (cleaned.length() > MAX_TEXT_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_TEXT_LENGTH).trim();
+        }
+        return cleaned;
     }
 }
