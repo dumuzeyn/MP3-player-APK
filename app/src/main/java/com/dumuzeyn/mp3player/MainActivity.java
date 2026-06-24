@@ -2,12 +2,14 @@ package com.dumuzeyn.mp3player;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.database.Cursor;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -17,6 +19,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.InputFilter;
 import android.text.TextUtils;
+import android.provider.OpenableColumns;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,12 +29,9 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,9 +51,12 @@ public class MainActivity extends Activity {
     private static final String ANIMATIONS = "animations";
     private static final String FAVORITES = "favorites";
     private static final String LANGUAGE = "language";
+    private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
+    private static final int MAX_COVER_BYTES = 2 * 1024 * 1024;
     private static final int PICK_AUDIO = 2001;
     private static final String PLAYLISTS = "playlists";
     private static final String PREFS = "mp3_player_ui";
+    private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
     private static final int TAB_CYCLES = 21;
     private static final String THEME = "theme";
     private int bg;
@@ -87,6 +90,8 @@ public class MainActivity extends Activity {
     private boolean playing = false;
     private int loopMode = 0;
     private int customTimerMinutes = 10;
+    private int resumeWindowMinutes = 120;
+    private int resumePosition = 0;
     private long sleepTimerEndsAt = 0;
     private boolean dark = false;
     private boolean animations = true;
@@ -444,10 +449,12 @@ public class MainActivity extends Activity {
         this.animations = this.prefs.getBoolean(ANIMATIONS, true);
         this.language = this.prefs.getString(LANGUAGE, "en");
         this.customTimerMinutes = this.prefs.getInt(CUSTOM_TIMER, 10);
+        this.resumeWindowMinutes = Math.max(0, this.prefs.getInt(RESUME_WINDOW_MINUTES, 120));
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
         }
         loadState();
+        restoreRecentPlayback();
         buildUi();
         refreshMissingMetadataAsync();
         preloadCoverCacheAsync();
@@ -481,6 +488,46 @@ public class MainActivity extends Activity {
                 this.playlists.add(playlist);
             }
         } catch (Exception e) {
+        }
+    }
+
+    private void restoreRecentPlayback() {
+        if (this.resumeWindowMinutes <= 0) {
+            return;
+        }
+        SharedPreferences sharedPreferences = getSharedPreferences(PlayerService.RESUME_PREFS, 0);
+        long savedAt = sharedPreferences.getLong(PlayerService.RESUME_SAVED_AT, 0L);
+        if (savedAt <= 0 || System.currentTimeMillis() - savedAt > ((long) this.resumeWindowMinutes) * 60000L) {
+            return;
+        }
+        String uri = sharedPreferences.getString(PlayerService.RESUME_URI, "");
+        Track track = findTrack(uri);
+        if (track == null) {
+            return;
+        }
+        this.currentIndex = this.tracks.indexOf(track);
+        this.playing = false;
+        this.resumePosition = Math.max(0, sharedPreferences.getInt(PlayerService.RESUME_POSITION, 0));
+        PlayerService.lastIndex = this.currentIndex;
+        PlayerService.lastPlaying = false;
+        PlayerService.lastPosition = this.resumePosition;
+        PlayerService.lastDuration = Math.max(0, sharedPreferences.getInt(PlayerService.RESUME_DURATION, 0));
+        PlayerService.lastUri = uri;
+        PlayerService.lastLoopMode = sharedPreferences.getInt(PlayerService.RESUME_LOOP_MODE, 0);
+        this.loopMode = PlayerService.lastLoopMode;
+        this.playbackQueue.clear();
+        try {
+            JSONArray queue = new JSONArray(sharedPreferences.getString(PlayerService.RESUME_QUEUE, "[]"));
+            for (int i = 0; i < queue.length(); i++) {
+                Track queueTrack = findTrack(queue.optString(i, ""));
+                if (queueTrack != null) {
+                    this.playbackQueue.add(queueTrack);
+                }
+            }
+        } catch (Exception e) {
+        }
+        if (this.playbackQueue.isEmpty()) {
+            this.playbackQueue.add(track);
         }
     }
 
@@ -617,7 +664,7 @@ public class MainActivity extends Activity {
     }
 
     private void saveState() {
-        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, playlistsJson()).putString(THEME, this.dark ? "dark" : "light").putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).apply();
+        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, playlistsJson()).putString(THEME, this.dark ? "dark" : "light").putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
     }
 
     private String playlistsJson() {
@@ -649,6 +696,12 @@ public class MainActivity extends Activity {
 
     private void buildUi() {
         colors();
+        getWindow().setBackgroundDrawable(new ColorDrawable(this.bg));
+        getWindow().setStatusBarColor(this.bg);
+        getWindow().setNavigationBarColor(this.bg);
+        if (Build.VERSION.SDK_INT >= 23) {
+            getWindow().getDecorView().setSystemUiVisibility(this.dark ? 0 : 8192);
+        }
         refreshTabLabels();
         this.root = new FrameLayout(this);
         this.root.setBackgroundColor(this.bg);
@@ -1015,7 +1068,7 @@ public class MainActivity extends Activity {
         linearLayout.addView(textViewText, new LinearLayout.LayoutParams(-1, dp(48)));
         if (this.tabIndex == 0 || this.tabIndex == 1) {
             LinearLayout linearLayoutRow = row();
-            Button buttonIcon = icon("▶");
+            Button buttonIcon = icon(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
             buttonIcon.setOnClickListener(new AnonymousClass9());
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
@@ -1053,7 +1106,12 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(MainActivity.this, MainActivity.m41$$Nest$mcurrentVisibleTracks(MainActivity.this), false);
+            ArrayList arrayList = MainActivity.m41$$Nest$mcurrentVisibleTracks(MainActivity.this);
+            if (MainActivity.this.isPlayingSource(arrayList)) {
+                MainActivity.m77$$Nest$mtoggleCurrent(MainActivity.this);
+            } else {
+                MainActivity.m59$$Nest$mplayList(MainActivity.this, arrayList, false);
+            }
         }
     }
 
@@ -1139,36 +1197,18 @@ public class MainActivity extends Activity {
                 MainActivity.this.render();
             }
         });
-        TextView textViewText = text(tr("Language", "Язык"), 18, true);
-        textViewText.setGravity(8388627);
-        textViewText.setPadding(dp(4), dp(18), dp(4), dp(6));
-        this.list.addView(textViewText);
-        Spinner languageSpinner = new Spinner(this);
-        String[] languages = new String[]{"English", "Русский"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        languageSpinner.setAdapter(adapter);
-        languageSpinner.setSelection(english() ? 0 : 1);
-        setSurface(languageSpinner, this.bg, true);
-        languageSpinner.setPadding(dp(12), 0, dp(12), 0);
-        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        addSettingsButton(tr("Language: ", "Язык: ") + (english() ? "English" : "Русский"), new View.OnClickListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String next = position == 0 ? "en" : "ru";
-                if (!next.equals(MainActivity.this.language)) {
-                    MainActivity.this.language = next;
-                    MainActivity.this.saveState();
-                    MainActivity.this.buildUi();
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
+            public void onClick(View view) {
+                MainActivity.this.openLanguageDialog();
             }
         });
-        LinearLayout.LayoutParams languageParams = new LinearLayout.LayoutParams(-1, dp(56));
-        languageParams.setMargins(0, dp(5), 0, dp(10));
-        this.list.addView(languageSpinner, languageParams);
+        addSettingsButton(tr("Mini-player memory: ", "Память мини-плеера: ") + resumeWindowText(), new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.openResumeWindowDialog();
+            }
+        });
         addSettingsButton(tr("Delete all songs from app", "Удалить все песни из приложения"), new AnonymousClass20());
         addSettingsButton(tr("Delete all playlists", "Удалить все плейлисты"), new AnonymousClass21());
         addSettingsButton(tr("GitHub project", "GitHub проект"), new AnonymousClass19());
@@ -1226,6 +1266,92 @@ public class MainActivity extends Activity {
         public void onClick(View view) {
             MainActivity.m35$$Nest$mconfirmDeleteAllPlaylists(MainActivity.this);
         }
+    }
+
+    private String resumeWindowText() {
+        if (this.resumeWindowMinutes <= 0) {
+            return tr("off", "выкл");
+        }
+        if (this.resumeWindowMinutes % 60 == 0) {
+            int hours = this.resumeWindowMinutes / 60;
+            return hours + " " + tr(hours == 1 ? "hour" : "hours", "ч");
+        }
+        return this.resumeWindowMinutes + " " + tr("min", "мин");
+    }
+
+    private void openLanguageDialog() {
+        final FrameLayout frameLayoutShade = shade();
+        LinearLayout linearLayoutPanelCard = panelCard();
+        linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        linearLayoutPanelCard.addView(text(tr("Language", "Язык"), 22, true), new LinearLayout.LayoutParams(-1, dp(50)));
+        addChoiceButton(linearLayoutPanelCard, "English", english(), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.language = "en";
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.buildUi();
+            }
+        });
+        addChoiceButton(linearLayoutPanelCard, "Русский", !english(), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.language = "ru";
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.buildUi();
+            }
+        });
+        frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), -2));
+        this.overlayHost.addView(frameLayoutShade);
+        updateMini();
+    }
+
+    private void openResumeWindowDialog() {
+        final FrameLayout frameLayoutShade = shade();
+        LinearLayout linearLayoutPanelCard = panelCard();
+        linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        linearLayoutPanelCard.addView(text(tr("Mini-player memory", "Память мини-плеера"), 22, true), new LinearLayout.LayoutParams(-1, dp(50)));
+        int[] values = new int[]{30, 60, 120, 240, 480, 0};
+        for (final int value : values) {
+            String label;
+            if (value == 0) {
+                label = tr("Off", "Отключено");
+            } else if (value % 60 == 0) {
+                label = (value / 60) + " " + tr(value == 60 ? "hour" : "hours", "ч");
+            } else {
+                label = value + " " + tr("minutes", "мин");
+            }
+            addChoiceButton(linearLayoutPanelCard, label, this.resumeWindowMinutes == value, new Runnable() {
+                @Override
+                public void run() {
+                    MainActivity.this.resumeWindowMinutes = value;
+                    MainActivity.this.saveState();
+                    MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                    MainActivity.this.render();
+                }
+            });
+        }
+        frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), -2));
+        this.overlayHost.addView(frameLayoutShade);
+        updateMini();
+    }
+
+    private void addChoiceButton(LinearLayout linearLayoutPanelCard, String label, boolean selected, final Runnable action) {
+        Button button = button(label);
+        button.setTextSize(17.0f);
+        button.setGravity(8388627);
+        button.setPadding(dp(18), 0, dp(12), 0);
+        applyButtonColors(button, selected ? this.fg : this.bg, selected ? this.bg : this.fg);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                action.run();
+            }
+        });
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(54));
+        layoutParams.setMargins(0, dp(5), 0, dp(5));
+        linearLayoutPanelCard.addView(button, layoutParams);
     }
 
     private void addSettingsButton(String str, View.OnClickListener onClickListener) {
@@ -1497,6 +1623,7 @@ public class MainActivity extends Activity {
             linearLayout.setPadding(dp(14), dp(12), dp(14), dp(12));
             setSurface(linearLayout, this.panel, false);
             LinearLayout linearLayoutRow = row();
+            ArrayList<Track> arrayListPlaylistTracks = playlistTracks(playlist2);
             LinearLayout linearLayout2 = new LinearLayout(this);
             linearLayout2.setOrientation(1);
             TextView textViewText2 = text(playlist2.name, 22, true);
@@ -1505,7 +1632,7 @@ public class MainActivity extends Activity {
             linearLayout2.addView(textViewText2);
             linearLayout2.addView(textViewText3);
             linearLayoutRow.addView(linearLayout2, new LinearLayout.LayoutParams(0, -2, 1.0f));
-            Button buttonIcon = icon("▶");
+            Button buttonIcon = icon(isPlayingSource(arrayListPlaylistTracks) ? "Ⅱ" : "▶");
             buttonIcon.setOnClickListener(new AnonymousClass28(this, playlist2));
             linearLayoutRow.addView(buttonIcon, square(48));
             Button buttonShuffleButton = shuffleButton();
@@ -1525,7 +1652,6 @@ public class MainActivity extends Activity {
             linearLayout.addView(linearLayoutRow);
             LinearLayout linearLayoutRow2 = row();
             ImageView imageViewCoverView = coverView();
-            ArrayList<Track> arrayListPlaylistTracks = playlistTracks(playlist2);
             Bitmap bitmapCachedCover = arrayListPlaylistTracks.isEmpty() ? null : cachedCover(arrayListPlaylistTracks.get(0));
             if (bitmapCachedCover != null) {
                 imageViewCoverView.setImageBitmap(bitmapCachedCover);
@@ -1554,7 +1680,12 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, MainActivity.m63$$Nest$mplaylistTracks(this.this$0, this.val$playlist), false);
+            ArrayList arrayList = MainActivity.m63$$Nest$mplaylistTracks(this.this$0, this.val$playlist);
+            if (this.this$0.isPlayingSource(arrayList)) {
+                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            } else {
+                MainActivity.m59$$Nest$mplayList(this.this$0, arrayList, false);
+            }
         }
     }
 
@@ -1654,7 +1785,7 @@ public class MainActivity extends Activity {
             linearLayout.addView(textViewText);
             linearLayout.addView(textViewText2);
             linearLayoutRow.addView(linearLayout, new LinearLayout.LayoutParams(0, dp(72), 1.0f));
-            Button buttonIcon = icon("▶");
+            Button buttonIcon = icon(isPlayingSource(entry.getValue()) ? "Ⅱ" : "▶");
             buttonIcon.setOnClickListener(new AnonymousClass32(this, entry));
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
@@ -1676,7 +1807,12 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, (ArrayList) this.val$entry.getValue(), false);
+            ArrayList arrayList = (ArrayList) this.val$entry.getValue();
+            if (this.this$0.isPlayingSource(arrayList)) {
+                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            } else {
+                MainActivity.m59$$Nest$mplayList(this.this$0, arrayList, false);
+            }
         }
     }
 
@@ -1771,7 +1907,7 @@ public class MainActivity extends Activity {
         TextView panelTitle = text(str, 20, true);
         makeMarquee(panelTitle);
         linearLayoutRow.addView(panelTitle, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
-        Button buttonIcon = icon("▶");
+        Button buttonIcon = icon(isPlayingSource(arrayList) ? "Ⅱ" : "▶");
         buttonIcon.setOnClickListener(new AnonymousClass36(this, arrayList, frameLayoutShade, str, panelAction));
         linearLayoutRow.addView(buttonIcon, square(52));
         Button buttonShuffleButton = shuffleButton();
@@ -1821,7 +1957,7 @@ public class MainActivity extends Activity {
                 applyButtonColors(buttonIcon4, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
                 buttonIcon4.setOnClickListener(new AnonymousClass42(this, panelAction2, track));
                 linearLayout2.addView(buttonIcon4, square(48));
-                Button buttonIcon5 = icon((isCurrent(track) && this.playing) ? "⏸" : "▶");
+                Button buttonIcon5 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
                 applyButtonColors(buttonIcon5, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
                 buttonIcon5.setOnClickListener(new AnonymousClass43(this, track, frameLayoutShade, str, arrayList, panelAction));
                 linearLayout2.addView(buttonIcon5, square(48));
@@ -1853,7 +1989,11 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, this.val$source, false);
+            if (this.this$0.isPlayingSource(this.val$source)) {
+                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            } else {
+                MainActivity.m59$$Nest$mplayList(this.this$0, this.val$source, false);
+            }
             if (this.val$shade.getParent() != null) {
                 MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
             }
@@ -2170,6 +2310,7 @@ public class MainActivity extends Activity {
         }
         this.currentIndex = this.tracks.indexOf(track);
         this.playing = true;
+        this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, iQueueIndexOf, false);
         startPlaybackWatcher();
         render();
@@ -2323,13 +2464,13 @@ public class MainActivity extends Activity {
         linearLayout2.addView(wave(track, hashSet.contains(track.uri)));
         linearLayout.addView(linearLayout2, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
         Button buttonIcon = icon(hashSet.contains(track.uri) ? "✔" : "+");
-        buttonIcon.setOnClickListener(new AnonymousClass53(this, hashSet, track, linearLayout, textViewText, buttonIcon));
-        applyButtonColors(buttonIcon, this.bg, this.fg);
-        linearLayout.addView(buttonIcon, square(48));
         Button buttonIcon2 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
         buttonIcon2.setTag(track.uri);
         buttonIcon2.setOnClickListener(new AnonymousClass54(this, track));
-        applyButtonColors(buttonIcon2, this.bg, this.fg);
+        buttonIcon.setOnClickListener(new AnonymousClass53(this, hashSet, track, linearLayout, textViewText, buttonIcon, buttonIcon2));
+        applyButtonColors(buttonIcon, hashSet.contains(track.uri) ? this.fg : this.bg, hashSet.contains(track.uri) ? this.bg : this.fg);
+        linearLayout.addView(buttonIcon, square(48));
+        applyButtonColors(buttonIcon2, hashSet.contains(track.uri) ? this.fg : this.bg, hashSet.contains(track.uri) ? this.bg : this.fg);
         linearLayout.addView(buttonIcon2, square(48));
         return spaced(linearLayout);
     }
@@ -2337,17 +2478,19 @@ public class MainActivity extends Activity {
     class AnonymousClass53 implements View.OnClickListener {
         final MainActivity this$0;
         final Button val$mark;
+        final Button val$play;
         final LinearLayout val$row;
         final HashSet val$selected;
         final TextView val$title;
         final Track val$track;
 
-        AnonymousClass53(MainActivity mainActivity, HashSet hashSet, Track track, LinearLayout linearLayout, TextView textView, Button button) {
+        AnonymousClass53(MainActivity mainActivity, HashSet hashSet, Track track, LinearLayout linearLayout, TextView textView, Button button, Button button2) {
             this.val$selected = hashSet;
             this.val$track = track;
             this.val$row = linearLayout;
             this.val$title = textView;
             this.val$mark = button;
+            this.val$play = button2;
             this.this$0 = mainActivity;
         }
 
@@ -2367,7 +2510,8 @@ public class MainActivity extends Activity {
             MainActivity mainActivity3 = this.this$0;
             textView.setTextColor(zContains ? MainActivity.m0$$Nest$fgetbg(mainActivity3) : MainActivity.m6$$Nest$fgetfg(mainActivity3));
             this.val$mark.setText(zContains ? "✔" : "+");
-            MainActivity.m31$$Nest$mapplyButtonColors(this.this$0, this.val$mark, MainActivity.m0$$Nest$fgetbg(this.this$0), MainActivity.m6$$Nest$fgetfg(this.this$0));
+            MainActivity.m31$$Nest$mapplyButtonColors(this.this$0, this.val$mark, zContains ? MainActivity.m6$$Nest$fgetfg(this.this$0) : MainActivity.m0$$Nest$fgetbg(this.this$0), zContains ? MainActivity.m0$$Nest$fgetbg(this.this$0) : MainActivity.m6$$Nest$fgetfg(this.this$0));
+            MainActivity.m31$$Nest$mapplyButtonColors(this.this$0, this.val$play, zContains ? MainActivity.m6$$Nest$fgetfg(this.this$0) : MainActivity.m0$$Nest$fgetbg(this.this$0), zContains ? MainActivity.m0$$Nest$fgetbg(this.this$0) : MainActivity.m6$$Nest$fgetfg(this.this$0));
         }
     }
 
@@ -3338,6 +3482,7 @@ public class MainActivity extends Activity {
         this.playbackQueue.add(track);
         this.currentIndex = iIndexOf;
         this.playing = true;
+        this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, 0, true);
         startPlaybackWatcher();
         updateMini();
@@ -3362,6 +3507,7 @@ public class MainActivity extends Activity {
         this.playbackQueue.addAll(arrayList2);
         this.currentIndex = iIndexOf;
         this.playing = true;
+        this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, 0, false);
         startPlaybackWatcher();
         render();
@@ -3375,8 +3521,16 @@ public class MainActivity extends Activity {
         if (this.currentIndex < 0) {
             return;
         }
-        this.playing = !this.playing;
-        startServiceAction(PlayerService.ACTION_TOGGLE, this.currentIndex, false);
+        boolean shouldPlay = !this.playing;
+        this.playing = shouldPlay;
+        if (shouldPlay && this.resumePosition > 0) {
+            startServiceAction(PlayerService.ACTION_PLAY_INDEX, queueIndexOf(this.tracks.get(this.currentIndex)), false, this.resumePosition);
+        } else {
+            startServiceAction(PlayerService.ACTION_TOGGLE, this.currentIndex, false);
+            if (!shouldPlay) {
+                this.resumePosition = Math.max(this.resumePosition, PlayerService.lastPosition);
+            }
+        }
         startPlaybackWatcher();
         updateMini();
         render();
@@ -3390,6 +3544,7 @@ public class MainActivity extends Activity {
         int iQueueIndexOf = this.currentIndex < 0 ? 0 : (queueIndexOf(this.tracks.get(this.currentIndex)) + 1) % arrayListActiveQueue.size();
         this.currentIndex = this.tracks.indexOf(arrayListActiveQueue.get(iQueueIndexOf));
         this.playing = true;
+        this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, iQueueIndexOf, false);
         startPlaybackWatcher();
         render();
@@ -3407,6 +3562,7 @@ public class MainActivity extends Activity {
         int i = iQueueIndexOf - 1;
         this.currentIndex = this.tracks.indexOf(arrayListActiveQueue.get(i));
         this.playing = true;
+        this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, i, false);
         startPlaybackWatcher();
         render();
@@ -3421,16 +3577,24 @@ public class MainActivity extends Activity {
             Track trackM43$$Nest$mfindTrack;
             PlayerService.refreshSnapshot();
             if (PlayerService.lastIndex < 0) {
-                MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, -1);
+                if (MainActivity.this.resumeWindowMinutes <= 0) {
+                    MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, -1);
+                }
                 MainActivity.m25$$Nest$fputplaying(MainActivity.this, false);
+                MainActivity.this.resumePosition = Math.max(0, PlayerService.lastPosition);
                 MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
                 MainActivity.m67$$Nest$mrender(MainActivity.this);
                 return;
             }
+            MainActivity.m25$$Nest$fputplaying(MainActivity.this, PlayerService.lastPlaying);
+            MainActivity.this.resumePosition = Math.max(0, PlayerService.lastPosition);
             if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && (trackM43$$Nest$mfindTrack = MainActivity.m43$$Nest$mfindTrack(MainActivity.this, PlayerService.lastUri)) != null && !MainActivity.m45$$Nest$misCurrent(MainActivity.this, trackM43$$Nest$mfindTrack)) {
                 MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, MainActivity.m19$$Nest$fgettracks(MainActivity.this).indexOf(trackM43$$Nest$mfindTrack));
                 MainActivity.m67$$Nest$mrender(MainActivity.this);
-            } else if (MainActivity.m13$$Nest$fgetplaying(MainActivity.this) || MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this) >= 0) {
+            } else {
+                MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
+            }
+            if (MainActivity.m13$$Nest$fgetplaying(MainActivity.this) || MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this) >= 0) {
                 MainActivity.m11$$Nest$fgetplaybackHandler(MainActivity.this).postDelayed(this, 900L);
             }
         }
@@ -3446,10 +3610,15 @@ public class MainActivity extends Activity {
     }
 
     private void startServiceAction(String str, int i, boolean z) {
+        startServiceAction(str, i, z, 0);
+    }
+
+    private void startServiceAction(String str, int i, boolean z, int position) {
         Intent intent = new Intent(this, (Class<?>) PlayerService.class);
         intent.setAction(str);
         intent.putExtra(PlayerService.EXTRA_INDEX, i);
         intent.putExtra(PlayerService.EXTRA_ONE_SHOT, z);
+        intent.putExtra(PlayerService.EXTRA_POSITION, Math.max(0, position));
         intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
         if (Build.VERSION.SDK_INT < 26) {
             startService(intent);
@@ -3469,6 +3638,18 @@ public class MainActivity extends Activity {
 
     private ArrayList<Track> activeQueue() {
         return this.playbackQueue.isEmpty() ? this.tracks : this.playbackQueue;
+    }
+
+    private boolean isPlayingSource(ArrayList<Track> arrayList) {
+        if (!this.playing || arrayList == null || arrayList.isEmpty() || this.playbackQueue.size() != arrayList.size()) {
+            return false;
+        }
+        for (int i = 0; i < arrayList.size(); i++) {
+            if (!this.playbackQueue.get(i).uri.equals(arrayList.get(i).uri)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private int queueIndexOf(Track track) {
@@ -3595,7 +3776,7 @@ public class MainActivity extends Activity {
         try {
             mediaMetadataRetriever.setDataSource(this, track.asUri());
             byte[] embeddedPicture = mediaMetadataRetriever.getEmbeddedPicture();
-            if (embeddedPicture == null) {
+            if (embeddedPicture == null || embeddedPicture.length > MAX_COVER_BYTES) {
                 try {
                     mediaMetadataRetriever.release();
                 } catch (Exception e) {
@@ -3608,18 +3789,12 @@ public class MainActivity extends Activity {
             } catch (Exception e2) {
             }
             return bitmapDecodeByteArray;
-        } catch (Exception e3) {
+        } catch (Throwable e3) {
             try {
                 mediaMetadataRetriever.release();
             } catch (Exception e4) {
             }
             return null;
-        } catch (Throwable th) {
-            try {
-                mediaMetadataRetriever.release();
-            } catch (Exception e5) {
-            }
-            throw th;
         }
     }
 
@@ -3673,7 +3848,13 @@ public class MainActivity extends Activity {
                 return;
             }
         }
-        this.tracks.add(TrackStore.fromUri(this, uri));
+        try {
+            Track track = TrackStore.fromUri(this, uri);
+            if (track != null) {
+                this.tracks.add(track);
+            }
+        } catch (Throwable th) {
+        }
     }
 
     private boolean isSafeAudioUri(Uri uri) {
@@ -3682,10 +3863,53 @@ public class MainActivity extends Activity {
         }
         try {
             String type = getContentResolver().getType(uri);
-            return type == null || type.toLowerCase(Locale.ROOT).startsWith("audio/");
+            if (type != null && !type.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+                return false;
+            }
+            String name = queryDisplayName(uri);
+            if (type == null && name != null) {
+                String lower = name.toLowerCase(Locale.ROOT);
+                if (!lower.endsWith(".mp3") && !lower.endsWith(".m4a") && !lower.endsWith(".aac") && !lower.endsWith(".wav") && !lower.endsWith(".ogg") && !lower.endsWith(".flac")) {
+                    return false;
+                }
+            }
+            long size = querySize(uri);
+            return size <= 0 || size <= MAX_AUDIO_BYTES;
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private String queryDisplayName(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getString(0);
+            }
+        } catch (Exception e) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return uri.getLastPathSegment();
+    }
+
+    private long querySize(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri, new String[]{OpenableColumns.SIZE}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getLong(0);
+            }
+        } catch (Exception e) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return -1L;
     }
 
     private LinearLayout row() {

@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
@@ -15,6 +16,7 @@ import android.os.Build;
 import android.os.IBinder;
 import java.util.ArrayList;
 import java.util.Iterator;
+import org.json.JSONArray;
 
 public class PlayerService extends Service {
     public static final String ACTION_LOOP = "com.dumuzeyn.mp3player.LOOP";
@@ -30,6 +32,14 @@ public class PlayerService extends Service {
     public static final String EXTRA_ONE_SHOT = "oneShot";
     public static final String EXTRA_POSITION = "position";
     public static final String EXTRA_QUEUE_URIS = "queueUris";
+    public static final String RESUME_DURATION = "duration";
+    public static final String RESUME_LOOP_MODE = "loopMode";
+    public static final String RESUME_PLAYING = "playing";
+    public static final String RESUME_POSITION = "position";
+    public static final String RESUME_PREFS = "player_resume";
+    public static final String RESUME_QUEUE = "queue";
+    public static final String RESUME_SAVED_AT = "savedAt";
+    public static final String RESUME_URI = "uri";
     private static final int NOTIFICATION_ID = 7;
     private static PlayerService instance;
     private MediaSession mediaSession;
@@ -122,7 +132,7 @@ public class PlayerService extends Service {
         startForeground(NOTIFICATION_ID, buildNotification());
         if (ACTION_PLAY_INDEX.equals(action)) {
             this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
-            playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
+            playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS), intent.getIntExtra(EXTRA_POSITION, 0));
             return 1;
         }
         if (ACTION_TOGGLE.equals(action)) {
@@ -163,10 +173,14 @@ public class PlayerService extends Service {
     }
 
     private void playIndex(int i) {
-        playIndex(i, null);
+        playIndex(i, null, 0);
     }
 
     private void playIndex(int i, ArrayList<String> arrayList) {
+        playIndex(i, arrayList, 0);
+    }
+
+    private void playIndex(int i, ArrayList<String> arrayList, int startPosition) {
         if (arrayList != null) {
             this.queue.clear();
             ArrayList<Track> arrayListLoad = TrackStore.load(this);
@@ -203,6 +217,9 @@ public class PlayerService extends Service {
                 }
             });
             this.player.prepare();
+            if (startPosition > 0) {
+                this.player.seekTo(Math.max(0, Math.min(startPosition, this.player.getDuration())));
+            }
             this.player.start();
             updateState();
             startForeground(NOTIFICATION_ID, buildNotification());
@@ -239,6 +256,7 @@ public class PlayerService extends Service {
             this.player.start();
         }
         updateState();
+        saveResumeState();
         startForeground(NOTIFICATION_ID, buildNotification());
     }
 
@@ -269,19 +287,18 @@ public class PlayerService extends Service {
         try {
             this.player.seekTo(Math.max(0, Math.min(i, this.player.getDuration())));
             updateState();
+            saveResumeState();
             startForeground(NOTIFICATION_ID, buildNotification());
         } catch (Exception e) {
         }
     }
 
     private void stopPlayback() {
+        updateState();
+        saveResumeState();
         releasePlayer();
         this.currentIndex = -1;
-        lastIndex = -1;
         lastPlaying = false;
-        lastDuration = 0;
-        lastPosition = 0;
-        lastUri = "";
         stopForeground(true);
     }
 
@@ -304,6 +321,27 @@ public class PlayerService extends Service {
         lastPosition = this.player != null ? this.player.getCurrentPosition() : 0;
         lastLoopMode = this.loopMode;
         lastUri = (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) ? "" : this.queue.get(this.currentIndex).uri;
+        saveResumeState();
+    }
+
+    private void saveResumeState() {
+        if (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) {
+            return;
+        }
+        JSONArray jSONArray = new JSONArray();
+        Iterator<Track> it = this.queue.iterator();
+        while (it.hasNext()) {
+            jSONArray.put(it.next().uri);
+        }
+        SharedPreferences.Editor edit = getSharedPreferences(RESUME_PREFS, 0).edit();
+        edit.putString(RESUME_URI, this.queue.get(this.currentIndex).uri);
+        edit.putInt(RESUME_POSITION, Math.max(0, lastPosition));
+        edit.putInt(RESUME_DURATION, Math.max(0, lastDuration));
+        edit.putInt(RESUME_LOOP_MODE, this.loopMode);
+        edit.putBoolean(RESUME_PLAYING, lastPlaying);
+        edit.putLong(RESUME_SAVED_AT, System.currentTimeMillis());
+        edit.putString(RESUME_QUEUE, jSONArray.toString());
+        edit.apply();
     }
 
     public static void refreshSnapshot() {
