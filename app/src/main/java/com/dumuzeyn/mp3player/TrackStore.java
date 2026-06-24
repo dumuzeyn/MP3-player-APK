@@ -29,10 +29,10 @@ public final class TrackStore {
                 JSONObject item = array.getJSONObject(index);
                 tracks.add(new Track(
                         item.getString("uri"),
-                        item.optString("title", "РџРµСЃРЅСЏ"),
-                        item.optString("artist", "РќРµРёР·РІРµСЃС‚РЅС‹Р№ РёСЃРїРѕР»РЅРёС‚РµР»СЊ"),
-                        item.optString("album", "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р°Р»СЊР±РѕРј"),
-                        item.optString("genre", "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р¶Р°РЅСЂ")
+                        item.optString("title", "Песня"),
+                        item.optString("artist", "Неизвестный исполнитель"),
+                        item.optString("album", "Неизвестный альбом"),
+                        item.optString("genre", "Неизвестный жанр")
                 ));
             }
         } catch (Exception ignored) {
@@ -80,16 +80,16 @@ public final class TrackStore {
 
         if (title == null || title.trim().isEmpty()) {
             String path = uri.getLastPathSegment();
-            title = path == null ? "РџРµСЃРЅСЏ" : path.substring(path.lastIndexOf('/') + 1);
+            title = path == null ? "Песня" : path.substring(path.lastIndexOf('/') + 1);
         }
         if (artist == null || artist.trim().isEmpty()) {
-            artist = "РќРµРёР·РІРµСЃС‚РЅС‹Р№ РёСЃРїРѕР»РЅРёС‚РµР»СЊ";
+            artist = "Неизвестный исполнитель";
         }
         if (album == null || album.trim().isEmpty()) {
-            album = "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р°Р»СЊР±РѕРј";
+            album = "Неизвестный альбом";
         }
         if (genre == null || genre.trim().isEmpty()) {
-            genre = "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р¶Р°РЅСЂ";
+            genre = "Неизвестный жанр";
         }
         return new Track(uri.toString(), title.trim(), artist.trim(), album.trim(), genre.trim());
     }
@@ -104,8 +104,6 @@ public final class TrackStore {
     }
 
     public static void sort(List<Track> tracks) {
-        // RU: РѕР±С‹С‡РЅС‹Р№ РєРѕРјРїР°СЂР°С‚РѕСЂ Р±РµР· Java 8 default-РјРµС‚РѕРґРѕРІ, С‡С‚РѕР±С‹ APK Р·Р°РїСѓСЃРєР°Р»СЃСЏ Р±РµР· desugar.
-        // EN: plain comparator avoids Java 8 default methods, so the APK runs without desugar.
         Collections.sort(tracks, new Comparator<Track>() {
             @Override
             public int compare(Track left, Track right) {
@@ -114,4 +112,3 @@ public final class TrackStore {
         });
     }
 }
-

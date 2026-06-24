@@ -87,17 +87,23 @@ Invoke-Checked { & $Aapt2 compile --dir (Join-Path $Root "app\src\main\res") -o 
 
 $UnsignedApk = Join-Path $BuildDir "mp3-player-unsigned.apk"
 $FlatFiles = Get-ChildItem -LiteralPath $FlatDir -Filter *.flat -Recurse | ForEach-Object { $_.FullName }
-Invoke-Checked { & $Aapt2 link `
-    -o $UnsignedApk `
-    -I $AndroidJar `
-    --manifest (Join-Path $Root "app\src\main\AndroidManifest.xml") `
-    --min-sdk-version 23 `
-    --target-sdk-version 35 `
-    --version-code 1 `
-    --version-name 1.0 `
-    --java $GenDir `
-    -A (Join-Path $Root "app\src\main\assets") `
-    $FlatFiles }
+$AaptLinkArgs = @(
+    "link",
+    "-o", $UnsignedApk,
+    "-I", $AndroidJar,
+    "--manifest", (Join-Path $Root "app\src\main\AndroidManifest.xml"),
+    "--min-sdk-version", "23",
+    "--target-sdk-version", "35",
+    "--version-code", "1",
+    "--version-name", "1.0",
+    "--java", $GenDir
+)
+$AssetsDir = Join-Path $Root "app\src\main\assets"
+if (Test-Path -LiteralPath $AssetsDir) {
+    $AaptLinkArgs += @("-A", $AssetsDir)
+}
+$AaptLinkArgs += $FlatFiles
+Invoke-Checked { & $Aapt2 @AaptLinkArgs }
 
 $JavaFiles = Get-ChildItem -Path (Join-Path $Root "app\src\main\java") -Filter *.java -Recurse | ForEach-Object { $_.FullName }
 Invoke-Checked { & javac --release 17 -encoding UTF-8 -classpath $AndroidJar -d $ClassDir $JavaFiles }

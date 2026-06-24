@@ -3,14 +3,14 @@ package com.dumuzeyn.mp3player;
 import android.net.Uri;
 
 public class Track {
-    public final String uri;
-    public final String title;
-    public final String artist;
     public final String album;
+    public final String artist;
     public final String genre;
+    public final String title;
+    public final String uri;
 
     public Track(String uri, String title, String artist) {
-        this(uri, title, artist, "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р°Р»СЊР±РѕРј", "РќРµРёР·РІРµСЃС‚РЅС‹Р№ Р¶Р°РЅСЂ");
+        this(uri, title, artist, "Неизвестный альбом", "Неизвестный жанр");
     }
 
     public Track(String uri, String title, String artist, String album, String genre) {
@@ -22,7 +22,6 @@ public class Track {
     }
 
     public Uri asUri() {
-        return Uri.parse(uri);
+        return Uri.parse(this.uri);
     }
 }
-

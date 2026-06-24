@@ -13,89 +13,148 @@ import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.IBinder;
-
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class PlayerService extends Service {
-    public static final String ACTION_PLAY_INDEX = "com.dumuzeyn.mp3player.PLAY_INDEX";
-    public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
-    public static final String ACTION_NEXT = "com.dumuzeyn.mp3player.NEXT";
-    public static final String ACTION_PREV = "com.dumuzeyn.mp3player.PREV";
-    public static final String ACTION_STOP = "com.dumuzeyn.mp3player.STOP";
-    public static final String ACTION_SEEK = "com.dumuzeyn.mp3player.SEEK";
     public static final String ACTION_LOOP = "com.dumuzeyn.mp3player.LOOP";
+    public static final String ACTION_NEXT = "com.dumuzeyn.mp3player.NEXT";
+    public static final String ACTION_PLAY_INDEX = "com.dumuzeyn.mp3player.PLAY_INDEX";
+    public static final String ACTION_PREV = "com.dumuzeyn.mp3player.PREV";
+    public static final String ACTION_SEEK = "com.dumuzeyn.mp3player.SEEK";
+    public static final String ACTION_STOP = "com.dumuzeyn.mp3player.STOP";
+    public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
+    private static final String CHANNEL_ID = "playback";
     public static final String EXTRA_INDEX = "index";
+    public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_ONE_SHOT = "oneShot";
     public static final String EXTRA_POSITION = "position";
-    public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_QUEUE_URIS = "queueUris";
-
-    private static final String CHANNEL_ID = "playback";
     private static final int NOTIFICATION_ID = 7;
-
+    private static PlayerService instance;
+    private MediaSession mediaSession;
+    private MediaPlayer player;
     public static int lastIndex = -1;
     public static boolean lastPlaying = false;
     public static int lastDuration = 0;
     public static int lastPosition = 0;
     public static int lastLoopMode = 0;
     public static String lastUri = "";
-    private static PlayerService instance;
-
     private final ArrayList<Track> queue = new ArrayList<>();
-    private MediaPlayer player;
-    private MediaSession mediaSession;
     private int currentIndex = -1;
     private boolean oneShot = false;
-    private int loopMode = 0; // 0 off, 1 one song, 2 list
+    private int loopMode = 0;
+
+    public static void $r8$lambda$HQFQnxmrRGNGOnJVwAgcbEBDHew(PlayerService playerService, MediaPlayer mediaPlayer) {
+        playerService.lambda$playIndex$0(mediaPlayer);
+    }
+
+    static void m81$$Nest$mplayNext(PlayerService playerService) {
+        playerService.playNext();
+    }
+
+    static void m82$$Nest$mplayPrevious(PlayerService playerService) {
+        playerService.playPrevious();
+    }
+
+    static void m83$$Nest$mseekTo(PlayerService playerService, int i) {
+        playerService.seekTo(i);
+    }
+
+    static void m84$$Nest$mstopPlayback(PlayerService playerService) {
+        playerService.stopPlayback();
+    }
+
+    static void m85$$Nest$mtoggle(PlayerService playerService) {
+        playerService.toggle();
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
         instance = this;
         createChannel();
-        mediaSession = new MediaSession(this, "MP3 Player");
-        mediaSession.setCallback(new MediaSession.Callback() {
-            @Override public void onPlay() { toggle(); }
-            @Override public void onPause() { toggle(); }
-            @Override public void onSkipToNext() { playNext(); }
-            @Override public void onSkipToPrevious() { playPrevious(); }
-            @Override public void onSeekTo(long pos) { seekTo((int) pos); }
-            @Override public void onStop() {
-                stopPlayback();
-                stopSelf();
-            }
-        });
-        mediaSession.setActive(true);
-        queue.addAll(TrackStore.load(this));
+        this.mediaSession = new MediaSession(this, "MP3 Player");
+        this.mediaSession.setCallback(new AnonymousClass1());
+        this.mediaSession.setActive(true);
+        this.queue.addAll(TrackStore.load(this));
+    }
+
+    class AnonymousClass1 extends MediaSession.Callback {
+        AnonymousClass1() {
+        }
+
+        @Override
+        public void onPlay() {
+            PlayerService.m85$$Nest$mtoggle(PlayerService.this);
+        }
+
+        @Override
+        public void onPause() {
+            PlayerService.m85$$Nest$mtoggle(PlayerService.this);
+        }
+
+        @Override
+        public void onSkipToNext() {
+            PlayerService.m81$$Nest$mplayNext(PlayerService.this);
+        }
+
+        @Override
+        public void onSkipToPrevious() {
+            PlayerService.m82$$Nest$mplayPrevious(PlayerService.this);
+        }
+
+        @Override
+        public void onSeekTo(long j) {
+            PlayerService.m83$$Nest$mseekTo(PlayerService.this, (int) j);
+        }
+
+        @Override
+        public void onStop() {
+            PlayerService.m84$$Nest$mstopPlayback(PlayerService.this);
+            PlayerService.this.stopSelf();
+        }
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(Intent intent, int i, int i2) {
         String action = intent == null ? "" : intent.getAction();
         startForeground(NOTIFICATION_ID, buildNotification());
-
         if (ACTION_PLAY_INDEX.equals(action)) {
-            oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
+            this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
             playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
-        } else if (ACTION_TOGGLE.equals(action)) {
+            return 1;
+        }
+        if (ACTION_TOGGLE.equals(action)) {
             toggle();
-        } else if (ACTION_NEXT.equals(action)) {
-            oneShot = false;
+            return 1;
+        }
+        if (ACTION_NEXT.equals(action)) {
+            this.oneShot = false;
             playNext();
-        } else if (ACTION_PREV.equals(action)) {
-            oneShot = false;
+            return 1;
+        }
+        if (ACTION_PREV.equals(action)) {
+            this.oneShot = false;
             playPrevious();
-        } else if (ACTION_SEEK.equals(action)) {
+            return 1;
+        }
+        if (ACTION_SEEK.equals(action)) {
             seekTo(intent.getIntExtra(EXTRA_POSITION, 0));
-        } else if (ACTION_LOOP.equals(action)) {
-            loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, 0);
-            lastLoopMode = loopMode;
+            return 1;
+        }
+        if (ACTION_LOOP.equals(action)) {
+            this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, 0);
+            lastLoopMode = this.loopMode;
             startForeground(NOTIFICATION_ID, buildNotification());
-        } else if (ACTION_STOP.equals(action)) {
+            return 1;
+        }
+        if (ACTION_STOP.equals(action)) {
             stopPlayback();
             stopSelf();
+            return 1;
         }
-        return START_STICKY;
+        return 1;
     }
 
     @Override
@@ -103,99 +162,121 @@ public class PlayerService extends Service {
         return null;
     }
 
-    private void playIndex(int index) {
-        playIndex(index, null);
+    private void playIndex(int i) {
+        playIndex(i, null);
     }
 
-    private void playIndex(int index, ArrayList<String> queueUris) {
-        if (queueUris != null) {
-            queue.clear();
-            ArrayList<Track> allTracks = TrackStore.load(this);
-            for (String uri : queueUris) {
-                for (Track track : allTracks) {
-                    if (track.uri.equals(uri)) {
-                        queue.add(track);
-                        break;
+    private void playIndex(int i, ArrayList<String> arrayList) {
+        if (arrayList != null) {
+            this.queue.clear();
+            ArrayList<Track> arrayListLoad = TrackStore.load(this);
+            for (String str : arrayList) {
+                Iterator<Track> it = arrayListLoad.iterator();
+                while (true) {
+                    if (it.hasNext()) {
+                        Track next = it.next();
+                        if (next.uri.equals(str)) {
+                            this.queue.add(next);
+                            break;
+                        }
                     }
                 }
             }
-        } else if (queue.isEmpty()) {
-            queue.addAll(TrackStore.load(this));
+        } else if (this.queue.isEmpty()) {
+            this.queue.addAll(TrackStore.load(this));
         }
-        if (queue.isEmpty()) {
+        if (this.queue.isEmpty()) {
             stopPlayback();
             stopSelf();
             return;
         }
-
-        currentIndex = Math.max(0, Math.min(index, queue.size() - 1));
+        this.currentIndex = Math.max(0, Math.min(i, this.queue.size() - 1));
         releasePlayer();
-        player = new MediaPlayer();
-
+        this.player = new MediaPlayer();
         try {
-            player.setAudioAttributes(new AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .build());
-            player.setDataSource(this, queue.get(currentIndex).asUri());
-            player.setOnCompletionListener(mp -> {
-                if (loopMode == 1) {
-                    playIndex(currentIndex);
-                } else if (oneShot) {
-                    stopPlayback();
-                    stopSelf();
-                } else if (loopMode == 2 || currentIndex < queue.size() - 1) {
-                    playNext();
-                } else {
-                    stopPlayback();
-                    stopSelf();
+            this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(2).setUsage(1).build());
+            this.player.setDataSource(this, this.queue.get(this.currentIndex).asUri());
+            this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    PlayerService.this.lambda$playIndex$0(mediaPlayer);
                 }
             });
-            player.prepare();
-            player.start();
+            this.player.prepare();
+            this.player.start();
             updateState();
             startForeground(NOTIFICATION_ID, buildNotification());
-        } catch (Exception exception) {
+        } catch (Exception e) {
+            stopPlayback();
+            stopSelf();
+        }
+    }
+
+    private void lambda$playIndex$0(MediaPlayer mediaPlayer) {
+        if (this.loopMode == 1) {
+            playIndex(this.currentIndex);
+            return;
+        }
+        if (this.oneShot) {
+            stopPlayback();
+            stopSelf();
+        } else if (this.loopMode == 2 || this.currentIndex < this.queue.size() - 1) {
+            playNext();
+        } else {
             stopPlayback();
             stopSelf();
         }
     }
 
     private void toggle() {
-        if (player == null) {
-            playIndex(currentIndex < 0 ? 0 : currentIndex);
+        if (this.player == null) {
+            playIndex(this.currentIndex < 0 ? 0 : this.currentIndex);
             return;
         }
-        if (player.isPlaying()) player.pause();
-        else player.start();
+        if (this.player.isPlaying()) {
+            this.player.pause();
+        } else {
+            this.player.start();
+        }
         updateState();
         startForeground(NOTIFICATION_ID, buildNotification());
     }
 
     private void playNext() {
-        if (queue.isEmpty()) queue.addAll(TrackStore.load(this));
-        if (queue.isEmpty()) return;
-        playIndex(currentIndex < 0 ? 0 : (currentIndex + 1) % queue.size());
+        if (this.queue.isEmpty()) {
+            this.queue.addAll(TrackStore.load(this));
+        }
+        if (this.queue.isEmpty()) {
+            return;
+        }
+        playIndex(this.currentIndex < 0 ? 0 : (this.currentIndex + 1) % this.queue.size());
     }
 
     private void playPrevious() {
-        if (queue.isEmpty()) queue.addAll(TrackStore.load(this));
-        if (queue.isEmpty()) return;
-        playIndex(currentIndex <= 0 ? queue.size() - 1 : currentIndex - 1);
+        if (this.queue.isEmpty()) {
+            this.queue.addAll(TrackStore.load(this));
+        }
+        if (this.queue.isEmpty()) {
+            return;
+        }
+        playIndex((this.currentIndex <= 0 ? this.queue.size() : this.currentIndex) - 1);
     }
 
-    private void seekTo(int position) {
-        if (player == null) return;
+    private void seekTo(int i) {
+        if (this.player == null) {
+            return;
+        }
         try {
-            player.seekTo(Math.max(0, Math.min(position, player.getDuration())));
+            this.player.seekTo(Math.max(0, Math.min(i, this.player.getDuration())));
             updateState();
             startForeground(NOTIFICATION_ID, buildNotification());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+        }
     }
 
     private void stopPlayback() {
         releasePlayer();
-        currentIndex = -1;
+        this.currentIndex = -1;
         lastIndex = -1;
         lastPlaying = false;
         lastDuration = 0;
@@ -205,113 +286,98 @@ public class PlayerService extends Service {
     }
 
     private void releasePlayer() {
-        if (player == null) return;
+        if (this.player == null) {
+            return;
+        }
         try {
-            player.stop();
-        } catch (Exception ignored) {}
-        player.release();
-        player = null;
+            this.player.stop();
+        } catch (Exception e) {
+        }
+        this.player.release();
+        this.player = null;
     }
 
     private void updateState() {
-        lastIndex = currentIndex;
-        lastPlaying = player != null && player.isPlaying();
-        lastDuration = player == null ? 0 : player.getDuration();
-        lastPosition = player == null ? 0 : player.getCurrentPosition();
-        lastLoopMode = loopMode;
-        lastUri = currentIndex >= 0 && currentIndex < queue.size() ? queue.get(currentIndex).uri : "";
+        lastIndex = this.currentIndex;
+        lastPlaying = this.player != null && this.player.isPlaying();
+        lastDuration = this.player == null ? 0 : this.player.getDuration();
+        lastPosition = this.player != null ? this.player.getCurrentPosition() : 0;
+        lastLoopMode = this.loopMode;
+        lastUri = (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) ? "" : this.queue.get(this.currentIndex).uri;
     }
 
     public static void refreshSnapshot() {
-        if (instance != null) instance.updateState();
+        if (instance != null) {
+            instance.updateState();
+        }
     }
 
     private Notification buildNotification() {
+        Track track;
+        Notification.Builder builder;
         updateState();
-        Track track = currentIndex >= 0 && currentIndex < queue.size()
-                ? queue.get(currentIndex)
-                : new Track("", "MP3 Player", "РњСѓР·С‹РєР° РіРѕС‚РѕРІР°");
-
-        PendingIntent contentIntent = PendingIntent.getActivity(
-                this,
-                1,
-                new Intent(this, MainActivity.class),
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
-
-        builder.setSmallIcon(android.R.drawable.ic_media_play)
-                .setContentTitle(track.title)
-                .setContentText(track.artist)
-                .setContentIntent(contentIntent)
-                .setOngoing(player != null && player.isPlaying())
-                .setCategory(Notification.CATEGORY_TRANSPORT)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(android.R.drawable.ic_media_previous, "РќР°Р·Р°Рґ", serviceIntent(ACTION_PREV, 2))
-                .addAction(player != null && player.isPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                        player != null && player.isPlaying() ? "РџР°СѓР·Р°" : "РРіСЂР°С‚СЊ", serviceIntent(ACTION_TOGGLE, 3))
-                .addAction(android.R.drawable.ic_media_next, "Р”Р°Р»СЊС€Рµ", serviceIntent(ACTION_NEXT, 4));
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            updateMediaSession(track);
-            builder.setStyle(new Notification.MediaStyle()
-                    .setMediaSession(mediaSession.getSessionToken())
-                    .setShowActionsInCompactView(0, 1, 2));
+        if (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
+            track = this.queue.get(this.currentIndex);
+        } else {
+            track = new Track("", "MP3 Player", "Музыка готова");
         }
+        PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, (Class<?>) MainActivity.class), 201326592);
+        if (Build.VERSION.SDK_INT >= 26) {
+            builder = new Notification.Builder(this, CHANNEL_ID);
+        } else {
+            builder = new Notification.Builder(this);
+        }
+        int i = android.R.drawable.ic_media_play;
+        Notification.Builder builderAddAction = builder.setSmallIcon(android.R.drawable.ic_media_play).setContentTitle(track.title).setContentText(track.artist).setContentIntent(activity).setOngoing(this.player != null && this.player.isPlaying()).setCategory("transport").setPriority(-1).setVisibility(1).addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2));
+        if (this.player != null && this.player.isPlaying()) {
+            i = android.R.drawable.ic_media_pause;
+        }
+        builderAddAction.addAction(i, (this.player == null || !this.player.isPlaying()) ? "Играть" : "Пауза", serviceIntent(ACTION_TOGGLE, 3)).addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
+        updateMediaSession(track);
+        builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         return builder.build();
     }
 
     private void updateMediaSession(Track track) {
-        long position = player == null ? 0 : player.getCurrentPosition();
-        long duration = player == null ? 0 : player.getDuration();
-        int state = player != null && player.isPlaying() ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
-        mediaSession.setMetadata(new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, track.title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, track.artist)
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration)
-                .build());
-        mediaSession.setPlaybackState(new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY_PAUSE
-                        | PlaybackState.ACTION_PLAY
-                        | PlaybackState.ACTION_PAUSE
-                        | PlaybackState.ACTION_SKIP_TO_NEXT
-                        | PlaybackState.ACTION_SKIP_TO_PREVIOUS
-                        | PlaybackState.ACTION_SEEK_TO)
-                .setState(state, position, 1f)
-                .build());
+        long currentPosition = this.player == null ? 0L : this.player.getCurrentPosition();
+        long duration = this.player != null ? this.player.getDuration() : 0L;
+        int i = (this.player == null || !this.player.isPlaying()) ? 2 : 3;
+        this.mediaSession.setMetadata(new MediaMetadata.Builder().putString("android.media.metadata.TITLE", track.title).putString("android.media.metadata.ARTIST", track.artist).putLong("android.media.metadata.DURATION", duration).build());
+        this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(822L).setState(i, currentPosition, 1.0f).build());
     }
 
-    private PendingIntent serviceIntent(String action, int requestCode) {
-        Intent intent = new Intent(this, PlayerService.class);
-        intent.setAction(action);
-        return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    private PendingIntent serviceIntent(String str, int i) {
+        Intent intent = new Intent(this, (Class<?>) PlayerService.class);
+        intent.setAction(str);
+        return PendingIntent.getService(this, i, intent, 201326592);
     }
 
     private void createChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "РњСѓР·С‹РєР°", NotificationManager.IMPORTANCE_LOW);
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager != null) manager.createNotificationChannel(channel);
+        if (Build.VERSION.SDK_INT < 26) {
+            return;
+        }
+        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "Музыка", 2);
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NotificationManager.class);
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
     }
 
     @Override
     public void onDestroy() {
         releasePlayer();
-        if (mediaSession != null) mediaSession.release();
+        if (this.mediaSession != null) {
+            this.mediaSession.release();
+        }
         instance = null;
         super.onDestroy();
     }
 
     @Override
-    public void onTaskRemoved(Intent rootIntent) {
-        if (player != null && player.isPlaying()) {
+    public void onTaskRemoved(Intent intent) {
+        if (this.player != null && this.player.isPlaying()) {
             startForeground(NOTIFICATION_ID, buildNotification());
         }
-        super.onTaskRemoved(rootIntent);
+        super.onTaskRemoved(intent);
     }
 }
-

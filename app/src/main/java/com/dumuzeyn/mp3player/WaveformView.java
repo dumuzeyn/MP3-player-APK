@@ -51,4 +51,3 @@ public class WaveformView extends View {
         if (active) postInvalidateDelayed(48);
     }
 }
-
