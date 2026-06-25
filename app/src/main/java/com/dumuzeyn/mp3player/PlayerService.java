@@ -10,9 +10,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
@@ -34,6 +37,7 @@ public class PlayerService extends Service {
     public static final String ACTION_STOP = "com.dumuzeyn.mp3player.STOP";
     public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
     private static final String CHANNEL_ID = "playback";
+    private static final int NOTIFICATION_COVER_SIZE = 512;
     public static final String EXTRA_INDEX = "index";
     public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_ONE_SHOT = "oneShot";
@@ -56,6 +60,8 @@ public class PlayerService extends Service {
     private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
     private String lastSavedQueueJson = "";
+    private String notificationCoverUri = "";
+    private Bitmap notificationCover;
     public static int lastIndex = -1;
     public static boolean lastPlaying = false;
     public static int lastDuration = 0;
@@ -485,22 +491,80 @@ public class PlayerService extends Service {
             builder = new Notification.Builder(this);
         }
         int i = android.R.drawable.ic_media_play;
-        Notification.Builder builderAddAction = builder.setSmallIcon(android.R.drawable.ic_media_play).setContentTitle(track.title).setContentText(track.artist).setContentIntent(activity).setOngoing(this.player != null && safeIsPlaying()).setCategory("transport").setPriority(-1).setVisibility(1).addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2));
+        Bitmap cover = readNotificationCover(track);
+        Notification.Builder builderAddAction = builder.setSmallIcon(android.R.drawable.ic_media_play).setContentTitle(track.title).setContentText(track.artist).setContentIntent(activity).setLargeIcon(cover).setOngoing(this.player != null && safeIsPlaying()).setCategory("transport").setPriority(-1).setVisibility(1).addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2));
         if (this.player != null && safeIsPlaying()) {
             i = android.R.drawable.ic_media_pause;
         }
         builderAddAction.addAction(i, (this.player == null || !safeIsPlaying()) ? "Играть" : "Пауза", serviceIntent(ACTION_TOGGLE, 3)).addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
-        updateMediaSession(track);
+        updateMediaSession(track, cover);
         builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         return builder.build();
     }
 
-    private void updateMediaSession(Track track) {
+    private void updateMediaSession(Track track, Bitmap cover) {
         long currentPosition = safePosition();
         long duration = safeDuration();
         int i = (this.player == null || !safeIsPlaying()) ? 2 : 3;
-        this.mediaSession.setMetadata(new MediaMetadata.Builder().putString("android.media.metadata.TITLE", track.title).putString("android.media.metadata.ARTIST", track.artist).putLong("android.media.metadata.DURATION", duration).build());
+        MediaMetadata.Builder metadata = new MediaMetadata.Builder()
+                .putString("android.media.metadata.TITLE", track.title)
+                .putString("android.media.metadata.ARTIST", track.artist)
+                .putString("android.media.metadata.ALBUM", track.album)
+                .putLong("android.media.metadata.DURATION", duration);
+        if (cover != null) {
+            metadata.putBitmap("android.media.metadata.ART", cover).putBitmap("android.media.metadata.ALBUM_ART", cover);
+        }
+        this.mediaSession.setMetadata(metadata.build());
         this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(822L).setState(i, currentPosition, 1.0f).build());
+    }
+
+    private Bitmap readNotificationCover(Track track) {
+        if (track == null || track.uri == null || track.uri.isEmpty()) {
+            return null;
+        }
+        if (track.uri.equals(this.notificationCoverUri)) {
+            return this.notificationCover;
+        }
+        this.notificationCoverUri = track.uri;
+        this.notificationCover = null;
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(this, track.asUri());
+            byte[] picture = retriever.getEmbeddedPicture();
+            if (picture == null || picture.length > 2 * 1024 * 1024) {
+                return null;
+            }
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(picture, 0, picture.length, bounds);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = notificationCoverSampleSize(bounds);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(picture, 0, picture.length, options);
+            if (bitmap != null && (bitmap.getWidth() > NOTIFICATION_COVER_SIZE || bitmap.getHeight() > NOTIFICATION_COVER_SIZE)) {
+                Bitmap scaled = Bitmap.createScaledBitmap(bitmap, NOTIFICATION_COVER_SIZE, NOTIFICATION_COVER_SIZE, true);
+                if (scaled != bitmap) {
+                    bitmap.recycle();
+                }
+                bitmap = scaled;
+            }
+            this.notificationCover = bitmap;
+            return this.notificationCover;
+        } catch (Throwable e) {
+            return null;
+        } finally {
+            try {
+                retriever.release();
+            } catch (Exception e) {
+            }
+        }
+    }
+
+    private int notificationCoverSampleSize(BitmapFactory.Options options) {
+        int sampleSize = 1;
+        while (options.outWidth / sampleSize > NOTIFICATION_COVER_SIZE * 2 || options.outHeight / sampleSize > NOTIFICATION_COVER_SIZE * 2) {
+            sampleSize *= 2;
+        }
+        return Math.max(1, sampleSize);
     }
 
     private int safeDuration() {
