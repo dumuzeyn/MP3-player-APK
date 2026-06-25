@@ -65,6 +65,8 @@ public class MainActivity extends Activity {
     private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
     private static final int TAB_CYCLES = 21;
     private static final String THEME = "theme";
+    private static final String CUSTOM_BG = "customBg";
+    private static final String CUSTOM_FG = "customFg";
     private int bg;
     private int fg;
     private int line;
@@ -102,6 +104,10 @@ public class MainActivity extends Activity {
     private boolean dark = false;
     private boolean animations = true;
     private String language = "en";
+    private String themeMode = "light";
+    private int customBg = -1;
+    private int customFg = -16777216;
+    private int preferredTabDirection = 0;
     private float swipeStartX = 0.0f;
     private float swipeStartY = 0.0f;
     private boolean tabAnimating = false;
@@ -463,7 +469,13 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         this.prefs = getSharedPreferences(PREFS, 0);
-        this.dark = "dark".equals(this.prefs.getString(THEME, "light"));
+        this.themeMode = this.prefs.getString(THEME, "light");
+        if (!"light".equals(this.themeMode) && !"dark".equals(this.themeMode) && !"custom".equals(this.themeMode)) {
+            this.themeMode = "light";
+        }
+        this.customBg = this.prefs.getInt(CUSTOM_BG, -1);
+        this.customFg = this.prefs.getInt(CUSTOM_FG, -16777216);
+        this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
         this.animations = this.prefs.getBoolean(ANIMATIONS, true);
         this.language = this.prefs.getString(LANGUAGE, "en");
         if (!"en".equals(this.language) && !"ru".equals(this.language)) {
@@ -694,7 +706,7 @@ public class MainActivity extends Activity {
     }
 
     private void saveState() {
-        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, playlistsJson()).putString(THEME, this.dark ? "dark" : "light").putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
+        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, playlistsJson()).putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
     }
 
     private String playlistsJson() {
@@ -717,11 +729,24 @@ public class MainActivity extends Activity {
     }
 
     private void colors() {
-        this.bg = this.dark ? -16777216 : -1;
-        this.fg = this.dark ? -1 : -16777216;
-        this.muted = this.dark ? Color.rgb(190, 190, 190) : Color.rgb(80, 80, 80);
-        this.line = this.dark ? Color.rgb(90, 90, 90) : Color.rgb(190, 190, 190);
+        this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
+        this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
+        this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
+        this.muted = mixColor(this.fg, this.bg, 0.55f);
+        this.line = mixColor(this.fg, this.bg, 0.28f);
         this.panel = this.bg;
+    }
+
+    private boolean isDarkColor(int color) {
+        return ((Color.red(color) * 299) + (Color.green(color) * 587) + (Color.blue(color) * 114)) / 1000 < 128;
+    }
+
+    private int mixColor(int first, int second, float amount) {
+        float clamped = Math.max(0.0f, Math.min(1.0f, amount));
+        int red = Math.round((Color.red(first) * clamped) + (Color.red(second) * (1.0f - clamped)));
+        int green = Math.round((Color.green(first) * clamped) + (Color.green(second) * (1.0f - clamped)));
+        int blue = Math.round((Color.blue(first) * clamped) + (Color.blue(second) * (1.0f - clamped)));
+        return Color.rgb(red, green, blue);
     }
 
     private void updateLauncherIcon() {
@@ -813,7 +838,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m74$$Nest$mswitchTabAnimated(this.this$0, this.val$index, this.val$index < MainActivity.m15$$Nest$fgettabIndex(this.this$0) ? -1 : 1);
+            MainActivity.m74$$Nest$mswitchTabAnimated(this.this$0, this.val$index, this.this$0.tabDirectionTo(this.val$index));
         }
     }
 
@@ -876,6 +901,7 @@ public class MainActivity extends Activity {
         if (this.tabs == null || i == this.tabIndex || this.tabAnimating) {
             return;
         }
+        this.preferredTabDirection = i2;
         if (!this.animations) {
             this.tabIndex = i;
             this.search = "";
@@ -952,12 +978,16 @@ public class MainActivity extends Activity {
             if (this.val$smooth) {
                 int scrollX = MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getScrollX() + (MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getWidth() / 2);
                 int i = Integer.MAX_VALUE;
+                int preferredDirection = this.this$0.preferredTabDirection;
                 for (int i2 = 0; i2 < MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildCount(); i2++) {
                     View childAt = MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildAt(i2);
                     Object tag = childAt.getTag();
                     if ((tag instanceof Integer) && ((Integer) tag).intValue() == iMax) {
                         int left2 = childAt.getLeft() + (childAt.getWidth() / 2);
                         int left3 = childAt.getLeft() - Math.max(0, (MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getWidth() - childAt.getWidth()) / 2);
+                        if ((preferredDirection > 0 && left2 < scrollX) || (preferredDirection < 0 && left2 > scrollX)) {
+                            continue;
+                        }
                         int iAbs = Math.abs(left2 - scrollX);
                         if (iAbs < i) {
                             i = iAbs;
@@ -987,6 +1017,16 @@ public class MainActivity extends Activity {
             return;
         }
         this.tabsScroll.post(new AnonymousClass5(this, i, z));
+    }
+
+    private int tabDirectionTo(int targetIndex) {
+        if (this.tabs == null || this.tabs.length == 0 || targetIndex == this.tabIndex) {
+            return 1;
+        }
+        int length = this.tabs.length;
+        int forward = (targetIndex - this.tabIndex + length) % length;
+        int backward = (this.tabIndex - targetIndex + length) % length;
+        return forward <= backward ? 1 : -1;
     }
 
     private void animateTabsScrollTo(int i) {
@@ -1235,7 +1275,12 @@ public class MainActivity extends Activity {
     }
 
     private void renderSettings() {
-        addSettingsButton(tr3(this.dark ? "Switch to light theme" : "Switch to dark theme", this.dark ? "Светлая тема" : "Темная тема", this.dark ? "☼" : "●"), new AnonymousClass16());
+        addSettingsButton(tr("Theme: ", "Тема: ") + themeName(), new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.openThemeDialog();
+            }
+        });
         addSettingsButton(tr3(this.animations ? "Turn animations off" : "Turn animations on", this.animations ? "Отключить анимации" : "Включить анимации", this.animations ? "◌" : "◍"), new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1259,6 +1304,95 @@ public class MainActivity extends Activity {
         addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new AnonymousClass20());
         addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new AnonymousClass21());
         addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new AnonymousClass19());
+    }
+
+    private String themeName() {
+        if ("dark".equals(this.themeMode)) {
+            return tr("Dark", "Темная");
+        }
+        if ("custom".equals(this.themeMode)) {
+            return tr("Custom", "Своя");
+        }
+        return tr("Light", "Светлая");
+    }
+
+    private void openThemeDialog() {
+        final FrameLayout frameLayoutShade = shade();
+        LinearLayout linearLayoutPanelCard = panelCard();
+        linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        linearLayoutPanelCard.addView(text(tr("Theme", "Тема"), 22, true), new LinearLayout.LayoutParams(-1, dp(46)));
+        addChoiceButton(linearLayoutPanelCard, tr("Light", "Светлая"), "light".equals(this.themeMode), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.themeMode = "light";
+                MainActivity.this.dark = false;
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.updateLauncherIcon();
+                MainActivity.this.buildUi();
+            }
+        });
+        addChoiceButton(linearLayoutPanelCard, tr("Dark", "Темная"), "dark".equals(this.themeMode), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.themeMode = "dark";
+                MainActivity.this.dark = true;
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.updateLauncherIcon();
+                MainActivity.this.buildUi();
+            }
+        });
+        addChoiceButton(linearLayoutPanelCard, tr("Custom", "Своя"), "custom".equals(this.themeMode), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.themeMode = "custom";
+                MainActivity.this.dark = MainActivity.this.isDarkColor(MainActivity.this.customBg);
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.updateLauncherIcon();
+                MainActivity.this.buildUi();
+            }
+        });
+        linearLayoutPanelCard.addView(text(tr("Background", "Фон"), 16, true), new LinearLayout.LayoutParams(-1, dp(34)));
+        addColorRow(linearLayoutPanelCard, true, new int[]{-1, -16777216, Color.rgb(245, 245, 245), Color.rgb(20, 20, 20), Color.rgb(232, 238, 235), Color.rgb(235, 232, 240)});
+        linearLayoutPanelCard.addView(text(tr("Text and accent", "Текст и акцент"), 16, true), new LinearLayout.LayoutParams(-1, dp(34)));
+        addColorRow(linearLayoutPanelCard, false, new int[]{-16777216, -1, Color.rgb(32, 80, 62), Color.rgb(72, 52, 105), Color.rgb(128, 36, 36), Color.rgb(35, 68, 120)});
+        frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(340), -2));
+        this.overlayHost.addView(frameLayoutShade);
+        updateMini();
+    }
+
+    private void addColorRow(LinearLayout parent, final boolean background, int[] colors) {
+        LinearLayout linearLayoutRow = row();
+        for (final int color : colors) {
+            Button button = icon(background && color == this.customBg || !background && color == this.customFg ? "✓" : "");
+            button.setTextSize(18.0f);
+            applyButtonColors(button, color, readableOn(color));
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    MainActivity.this.themeMode = "custom";
+                    if (background) {
+                        MainActivity.this.customBg = color;
+                    } else {
+                        MainActivity.this.customFg = color;
+                    }
+                    MainActivity.this.dark = MainActivity.this.isDarkColor(MainActivity.this.customBg);
+                    MainActivity.this.saveState();
+                    MainActivity.this.updateLauncherIcon();
+                    MainActivity.this.overlayHost.removeAllViews();
+                    MainActivity.this.buildUi();
+                    MainActivity.this.openThemeDialog();
+                }
+            });
+            linearLayoutRow.addView(button, square(44));
+        }
+        parent.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(56)));
+    }
+
+    private int readableOn(int color) {
+        return isDarkColor(color) ? -1 : -16777216;
     }
 
     class AnonymousClass17 implements View.OnClickListener {
