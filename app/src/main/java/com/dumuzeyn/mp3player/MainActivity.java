@@ -585,12 +585,24 @@ public class MainActivity extends Activity {
         return "en".equals(this.language);
     }
 
+    private boolean symbols() {
+        return "sym".equals(this.language);
+    }
+
     private String tr(String str, String str2) {
-        return english() ? str : str2;
+        return symbols() ? str : english() ? str : str2;
+    }
+
+    private String tr3(String str, String str2, String str3) {
+        return symbols() ? str3 : english() ? str : str2;
+    }
+
+    private String languageName() {
+        return symbols() ? "◐" : english() ? "English" : "Русский";
     }
 
     private void refreshTabLabels() {
-        this.tabs = new String[]{tr("Songs", "Песни"), tr("Favorites", "Избранное"), tr("Playlists", "Плейлисты"), tr("Genres", "Жанры"), tr("Artists", "Исполнители"), tr("Albums", "Альбомы"), tr("Settings", "Настройки")};
+        this.tabs = new String[]{tr3("Songs", "Песни", "♪"), tr3("Favorites", "Избранное", "♥"), tr3("Playlists", "Плейлисты", "▤"), tr3("Genres", "Жанры", "◇"), tr3("Artists", "Исполнители", "♙"), tr3("Albums", "Альбомы", "▣"), tr3("Settings", "Настройки", "⚙")};
         if (this.tabIndex >= this.tabs.length) {
             this.tabIndex = 0;
         }
@@ -1081,7 +1093,7 @@ public class MainActivity extends Activity {
         linearLayout.setOrientation(1);
         String str = this.tabs[this.tabIndex];
         if (this.tabIndex == 0) {
-            str = tr("Songs ", "Песен ") + this.tracks.size();
+            str = tr3("Songs ", "Песен ", "♪ ") + this.tracks.size();
         }
         TextView textViewText = text(str, 22, true);
         textViewText.setSingleLine(true);
@@ -1209,8 +1221,8 @@ public class MainActivity extends Activity {
     }
 
     private void renderSettings() {
-        addSettingsButton(tr(this.dark ? "Switch to light theme" : "Switch to dark theme", this.dark ? "Светлая тема" : "Темная тема"), new AnonymousClass16());
-        addSettingsButton(tr(this.animations ? "Turn animations off" : "Turn animations on", this.animations ? "Отключить анимации" : "Включить анимации"), new View.OnClickListener() {
+        addSettingsButton(tr3(this.dark ? "Switch to light theme" : "Switch to dark theme", this.dark ? "Светлая тема" : "Темная тема", this.dark ? "☼" : "●"), new AnonymousClass16());
+        addSettingsButton(tr3(this.animations ? "Turn animations off" : "Turn animations on", this.animations ? "Отключить анимации" : "Включить анимации", this.animations ? "◌" : "◍"), new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 MainActivity.this.animations = !MainActivity.this.animations;
@@ -1218,21 +1230,21 @@ public class MainActivity extends Activity {
                 MainActivity.this.render();
             }
         });
-        addSettingsButton(tr("Language: ", "Язык: ") + (english() ? "English" : "Русский"), new View.OnClickListener() {
+        addSettingsButton(tr3("Language: ", "Язык: ", "◐ ") + languageName(), new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 MainActivity.this.openLanguageDialog();
             }
         });
-        addSettingsButton(tr("Mini-player memory: ", "Память мини-плеера: ") + resumeWindowText(), new View.OnClickListener() {
+        addSettingsButton(tr3("Mini-player memory: ", "Память мини-плеера: ", "▣ ") + resumeWindowText(), new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 MainActivity.this.openResumeWindowDialog();
             }
         });
-        addSettingsButton(tr("Delete all songs from app", "Удалить все песни из приложения"), new AnonymousClass20());
-        addSettingsButton(tr("Delete all playlists", "Удалить все плейлисты"), new AnonymousClass21());
-        addSettingsButton(tr("GitHub project", "GitHub проект"), new AnonymousClass19());
+        addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new AnonymousClass20());
+        addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new AnonymousClass21());
+        addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new AnonymousClass19());
     }
 
     class AnonymousClass17 implements View.OnClickListener {
@@ -1291,20 +1303,20 @@ public class MainActivity extends Activity {
 
     private String resumeWindowText() {
         if (this.resumeWindowMinutes <= 0) {
-            return tr("off", "выкл");
+            return tr3("off", "выкл", "○");
         }
         if (this.resumeWindowMinutes % 60 == 0) {
             int hours = this.resumeWindowMinutes / 60;
-            return hours + " " + tr(hours == 1 ? "hour" : "hours", "ч");
+            return hours + " " + tr3(hours == 1 ? "hour" : "hours", "ч", "◷");
         }
-        return this.resumeWindowMinutes + " " + tr("min", "мин");
+        return this.resumeWindowMinutes + " " + tr3("min", "мин", "′");
     }
 
     private void openLanguageDialog() {
         final FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        linearLayoutPanelCard.addView(text(tr("Language", "Язык"), 22, true), new LinearLayout.LayoutParams(-1, dp(50)));
+        linearLayoutPanelCard.addView(text(tr3("Language", "Язык", "◐"), 22, true), new LinearLayout.LayoutParams(-1, dp(50)));
         addChoiceButton(linearLayoutPanelCard, "English", english(), new Runnable() {
             @Override
             public void run() {
@@ -1314,10 +1326,19 @@ public class MainActivity extends Activity {
                 MainActivity.this.buildUi();
             }
         });
-        addChoiceButton(linearLayoutPanelCard, "Русский", !english(), new Runnable() {
+        addChoiceButton(linearLayoutPanelCard, "Русский", "ru".equals(MainActivity.this.language), new Runnable() {
             @Override
             public void run() {
                 MainActivity.this.language = "ru";
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.buildUi();
+            }
+        });
+        addChoiceButton(linearLayoutPanelCard, "◐", symbols(), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.language = "sym";
                 MainActivity.this.saveState();
                 MainActivity.this.overlayHost.removeView(frameLayoutShade);
                 MainActivity.this.buildUi();
@@ -1634,7 +1655,7 @@ public class MainActivity extends Activity {
             }
         }
         if (arrayList.isEmpty()) {
-            TextView textViewText = text(tr("No playlists yet", "Плейлистов пока нет"), 18, true);
+            TextView textViewText = text(tr3("No playlists yet", "Плейлистов пока нет", "∅ ▤"), 18, true);
             textViewText.setPadding(dp(12), dp(24), dp(12), dp(24));
             this.list.addView(textViewText);
             return;
@@ -1650,7 +1671,7 @@ public class MainActivity extends Activity {
             linearLayout2.setOrientation(1);
             TextView textViewText2 = text(playlist2.name, 22, true);
             makeMarquee(textViewText2);
-            TextView textViewText3 = text(playlist2.uris.size() + " " + tr("songs", "песен"), 13, false);
+            TextView textViewText3 = text(playlist2.uris.size() + " " + tr3("songs", "песен", "♪"), 13, false);
             linearLayout2.addView(textViewText2);
             linearLayout2.addView(textViewText3);
             linearLayoutRow.addView(linearLayout2, new LinearLayout.LayoutParams(0, -2, 1.0f));
@@ -1758,7 +1779,7 @@ public class MainActivity extends Activity {
 
     private String previewText(ArrayList<Track> arrayList) {
         if (arrayList.isEmpty()) {
-            return tr("No songs in this playlist yet.", "В плейлисте пока нет песен.");
+            return tr3("No songs in this playlist yet.", "В плейлисте пока нет песен.", "∅ ♪");
         }
         StringBuilder sb = new StringBuilder();
         int iMin = Math.min(3, arrayList.size());
@@ -1803,7 +1824,7 @@ public class MainActivity extends Activity {
             TextView textViewText = text(entry.getKey(), 20, true);
             textViewText.setSingleLine(true);
             textViewText.setEllipsize(TextUtils.TruncateAt.END);
-            TextView textViewText2 = text(entry.getValue().size() + " " + tr("songs", "песен"), 13, false);
+            TextView textViewText2 = text(entry.getValue().size() + " " + tr3("songs", "песен", "♪"), 13, false);
             linearLayout.addView(textViewText);
             linearLayout.addView(textViewText2);
             linearLayoutRow.addView(linearLayout, new LinearLayout.LayoutParams(0, dp(72), 1.0f));
@@ -2176,7 +2197,7 @@ public class MainActivity extends Activity {
         FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         LinearLayout linearLayoutRow = row();
-        linearLayoutRow.addView(text(tr("Now playing", "Список проигрывания"), 20, true), new LinearLayout.LayoutParams(0, dp(58), 1.0f));
+        linearLayoutRow.addView(text(tr3("Now playing", "Список проигрывания", "▶ ▤"), 20, true), new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button buttonIcon = icon("+");
         buttonIcon.setOnClickListener(new AnonymousClass44());
         linearLayoutRow.addView(buttonIcon, square(52));
@@ -2304,7 +2325,7 @@ public class MainActivity extends Activity {
     }
 
     private void openAddToQueue() {
-        showPickPanel(tr("Add to queue", "Добавить в список"), new HashSet<>(), new AnonymousClass48());
+        showPickPanel(tr3("Add to queue", "Добавить в список", "+ ▤"), new HashSet<>(), new AnonymousClass48());
     }
 
     private void removeFromQueue(Track track) {
@@ -2362,7 +2383,7 @@ public class MainActivity extends Activity {
     }
 
     private void openAddFavorites() {
-        showPickPanel(tr("Add to favorites", "Добавить в избранное"), new HashSet<>(), new AnonymousClass49());
+        showPickPanel(tr3("Add to favorites", "Добавить в избранное", "+ ♥"), new HashSet<>(), new AnonymousClass49());
     }
 
     class AnonymousClass50 implements PickDone {
@@ -2389,7 +2410,7 @@ public class MainActivity extends Activity {
     }
 
     private void openAddToPlaylist(Playlist playlist) {
-        showPickPanel(tr("Add to ", "Добавить в ") + playlist.name, new HashSet<>(), new AnonymousClass50(this, playlist));
+        showPickPanel(tr3("Add to ", "Добавить в ", "+ ") + playlist.name, new HashSet<>(), new AnonymousClass50(this, playlist));
     }
 
     private void showPickPanel(String str, HashSet<String> hashSet, PickDone pickDone) {
@@ -2594,13 +2615,13 @@ public class MainActivity extends Activity {
         Button button = button(tr(str, str2));
         button.setOnClickListener(new AnonymousClass55(this, track, frameLayoutShade));
         linearLayoutPanelCard.addView(button, new LinearLayout.LayoutParams(-1, dp(54)));
-        Button button2 = button(tr("+ Add to playlist", "+ Добавить в плейлист"));
+        Button button2 = button(tr3("+ Add to playlist", "+ Добавить в плейлист", "+ ▤"));
         button2.setOnClickListener(new AnonymousClass56(this, frameLayoutShade, track));
         linearLayoutPanelCard.addView(button2, new LinearLayout.LayoutParams(-1, dp(54)));
-        Button button3 = button(tr("? Remove from app", "× Удалить из приложения"));
+        Button button3 = button(tr3("× Remove from app", "× Удалить из приложения", "⌫ ♪"));
         button3.setOnClickListener(new AnonymousClass57(this, frameLayoutShade, track));
         linearLayoutPanelCard.addView(button3, new LinearLayout.LayoutParams(-1, dp(54)));
-        Button button4 = button(tr("Close", "Закрыть"));
+        Button button4 = button(tr3("Close", "Закрыть", "×"));
         button4.setOnClickListener(new AnonymousClass58(this, frameLayoutShade));
         linearLayoutPanelCard.addView(button4, new LinearLayout.LayoutParams(-1, dp(54)));
         frameLayoutShade.addView(linearLayoutPanelCard, bottomParams());
@@ -2683,7 +2704,7 @@ public class MainActivity extends Activity {
         FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        linearLayoutPanelCard.addView(text(tr("Add to playlist", "Добавить в плейлист"), 22, true), new LinearLayout.LayoutParams(-1, dp(48)));
+        linearLayoutPanelCard.addView(text(tr3("Add to playlist", "Добавить в плейлист", "+ ▤"), 22, true), new LinearLayout.LayoutParams(-1, dp(48)));
         ScrollView scrollView = new ScrollView(this);
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
@@ -2694,7 +2715,7 @@ public class MainActivity extends Activity {
             layoutParams.setMargins(0, dp(4), 0, dp(4));
             linearLayout.addView(button, layoutParams);
         }
-        Button button2 = button(tr("Create new", "Создать новый"));
+        Button button2 = button(tr3("Create new", "Создать новый", "+"));
         applyButtonColors(button2, this.fg, this.bg);
         button2.setOnClickListener(new AnonymousClass60(this, frameLayoutShade, track));
         LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(-1, dp(52));
@@ -2773,7 +2794,7 @@ public class MainActivity extends Activity {
     }
 
     private void createPlaylistAndAdd(Track track) {
-        showInputPanel(tr("New playlist", "Новый плейлист"), tr("Playlist name", "Название плейлиста"), "", false, new AnonymousClass61(this, track));
+        showInputPanel(tr3("New playlist", "Новый плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new AnonymousClass61(this, track));
     }
 
     private void confirmDeleteTrack(Track track) {
@@ -2842,11 +2863,11 @@ public class MainActivity extends Activity {
     }
 
     private void createPlaylistDialog() {
-        showInputPanel(tr("Create playlist", "Создать плейлист"), tr("Playlist name", "Название плейлиста"), "", false, new AnonymousClass64());
+        showInputPanel(tr3("Create playlist", "Создать плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new AnonymousClass64());
     }
 
     private void renamePlaylistDialog(final Playlist playlist) {
-        showInputPanel(tr("Rename playlist", "Переименовать плейлист"), tr("Playlist name", "Название плейлиста"), playlist.name, false, new InputDone() {
+        showInputPanel(tr3("Rename playlist", "Переименовать плейлист", "✎ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), playlist.name, false, new InputDone() {
             @Override
             public void done(String value) {
                 String name = cleanPlaylistName(value);
@@ -2869,11 +2890,11 @@ public class MainActivity extends Activity {
         FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        linearLayoutPanelCard.addView(text(tr("Search", "Поиск"), 22, true), new LinearLayout.LayoutParams(-1, dp(48)));
+        linearLayoutPanelCard.addView(text(tr3("Search", "Поиск", "⌕"), 22, true), new LinearLayout.LayoutParams(-1, dp(48)));
         EditText editText = new EditText(this);
         editText.setSingleLine(true);
         editText.setText(this.search);
-        editText.setHint(tr("Find", "Найти"));
+        editText.setHint(tr3("Find", "Найти", "⌕"));
         editText.setTextColor(this.fg);
         editText.setHintTextColor(this.muted);
         editText.setTextSize(18.0f);
@@ -2885,10 +2906,10 @@ public class MainActivity extends Activity {
         layoutParams.setMargins(0, dp(10), 0, dp(16));
         linearLayoutPanelCard.addView(editText, layoutParams);
         LinearLayout linearLayoutRow = row();
-        Button button = button(tr("Reset", "Сброс"));
+        Button button = button(tr3("Reset", "Сброс", "↺"));
         button.setOnClickListener(new AnonymousClass65(this, frameLayoutShade));
         linearLayoutRow.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
-        Button button2 = button(tr("Find", "Найти"));
+        Button button2 = button(tr3("Find", "Найти", "⌕"));
         applyButtonColors(button2, this.fg, this.bg);
         button2.setOnClickListener(new AnonymousClass66(this, editText, frameLayoutShade));
         linearLayoutRow.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
@@ -2960,10 +2981,10 @@ public class MainActivity extends Activity {
         layoutParams.setMargins(0, dp(10), 0, dp(16));
         linearLayoutPanelCard.addView(editText, layoutParams);
         LinearLayout linearLayoutRow2 = row();
-        Button button = button(tr("Cancel", "Отмена"));
+        Button button = button(tr3("Cancel", "Отмена", "×"));
         button.setOnClickListener(new AnonymousClass68(this, frameLayoutShade));
         linearLayoutRow2.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
-        Button button2 = button(tr("Done", "Готово"));
+        Button button2 = button(tr3("Done", "Готово", "✓"));
         applyButtonColors(button2, this.fg, this.bg);
         button2.setOnClickListener(new AnonymousClass69(this, editText, frameLayoutShade, inputDone));
         linearLayoutRow2.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
@@ -3066,14 +3087,14 @@ public class MainActivity extends Activity {
         TextView textViewText = text(track.title, 24, true);
         textViewText.setGravity(17);
         linearLayout.addView(textViewText, new LinearLayout.LayoutParams(-1, dp(54)));
-        TextView textViewText2 = text(track.artist + " ? " + (queueIndexOf(track) + 1) + " " + tr("of", "из") + " " + (this.playbackQueue.isEmpty() ? this.tracks : this.playbackQueue).size(), 15, false);
+        TextView textViewText2 = text(track.artist + " · " + (queueIndexOf(track) + 1) + " " + tr3("of", "из", "/") + " " + (this.playbackQueue.isEmpty() ? this.tracks : this.playbackQueue).size(), 15, false);
         textViewText2.setGravity(17);
         linearLayout.addView(textViewText2, new LinearLayout.LayoutParams(-1, dp(34)));
         LinearLayout linearLayoutRow2 = row();
         Button button = button(timerButtonText());
         button.setOnClickListener(new AnonymousClass72());
         linearLayoutRow2.addView(button, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
-        Button button2 = button(tr("? Like", this.favorites.contains(track.uri) ? "♥︎ Лайк" : "♡︎ Лайк"));
+        Button button2 = button(tr3("Like", this.favorites.contains(track.uri) ? "♥︎ Лайк" : "♡︎ Лайк", this.favorites.contains(track.uri) ? "♥" : "♡"));
         button2.setOnClickListener(new AnonymousClass73(this, track, frameLayout));
         linearLayoutRow2.addView(button2, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button button3 = button(loopLabel());
@@ -3336,7 +3357,7 @@ public class MainActivity extends Activity {
     }
 
     private String loopLabel() {
-        return this.loopMode == 1 ? tr("Repeat: song", "Повтор: песня") : this.loopMode == 2 ? tr("Repeat: list", "Повтор: список") : tr("Repeat: off", "Повтор: выкл");
+        return this.loopMode == 1 ? tr3("Repeat: song", "Повтор: песня", "↻ ♪") : this.loopMode == 2 ? tr3("Repeat: list", "Повтор: список", "↻ ▤") : tr3("Repeat: off", "Повтор: выкл", "↻ ○");
     }
 
     private String formatMs(int i) {
@@ -3450,7 +3471,7 @@ public class MainActivity extends Activity {
     }
 
     private void customTimerDialog() {
-        showInputPanel(tr("Custom time", "Свое время"), tr("Minutes", "Минуты"), String.valueOf(this.customTimerMinutes), true, new AnonymousClass83());
+        showInputPanel(tr3("Custom time", "Свое время", "◷"), tr3("Minutes", "Минуты", "′"), String.valueOf(this.customTimerMinutes), true, new AnonymousClass83());
     }
 
     private void startSleepTimer(int i) {
@@ -3488,10 +3509,10 @@ public class MainActivity extends Activity {
 
     private String timerButtonText() {
         if (this.sleepTimerEndsAt <= 0) {
-            return tr("Timer", "Таймер");
+            return tr3("Timer", "Таймер", "◷");
         }
         long jMax = Math.max(0L, this.sleepTimerEndsAt - System.currentTimeMillis());
-        return tr("Timer", "Таймер") + "\n" + formatSeconds((jMax + 999) / 1000);
+        return tr3("Timer", "Таймер", "◷") + "\n" + formatSeconds((jMax + 999) / 1000);
     }
 
     private void playTrack(Track track) {
@@ -3837,7 +3858,7 @@ public class MainActivity extends Activity {
         intent.setType("audio/*");
         intent.putExtra("android.intent.extra.ALLOW_MULTIPLE", true);
         intent.addFlags(65);
-        startActivityForResult(Intent.createChooser(intent, tr("Choose music", "Выберите музыку")), PICK_AUDIO);
+        startActivityForResult(Intent.createChooser(intent, tr3("Choose music", "Выберите музыку", "+ ♪")), PICK_AUDIO);
     }
 
     @Override
@@ -4116,10 +4137,10 @@ public class MainActivity extends Activity {
         textViewText.setPadding(0, dp(4), 0, dp(14));
         linearLayoutPanelCard.addView(textViewText, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout linearLayoutRow = row();
-        Button button = button(tr("No", "Нет"));
+        Button button = button(tr3("No", "Нет", "×"));
         button.setOnClickListener(new AnonymousClass89(this, frameLayoutShade));
         linearLayoutRow.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
-        Button button2 = button(tr("Yes", "Да"));
+        Button button2 = button(tr3("Yes", "Да", "✓"));
         applyButtonColors(button2, this.fg, this.bg);
         button2.setOnClickListener(new AnonymousClass90(this, frameLayoutShade, runnable));
         linearLayoutRow.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
