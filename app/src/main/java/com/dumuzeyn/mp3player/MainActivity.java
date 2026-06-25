@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
     private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
     private static final int MAX_COVER_BYTES = 2 * 1024 * 1024;
     private static final int COVER_THUMB_SIZE = 256;
+    private static final int FULL_PLAYER_COVER_SIZE = 900;
     private static final int COVER_PRELOAD_LIMIT = 36;
     private static final int PICK_AUDIO = 2001;
     private static final String PLAYLISTS = "playlists";
@@ -3116,7 +3117,7 @@ public class MainActivity extends Activity {
         linearLayoutRow.addView(buttonIcon2, square(58));
         linearLayout.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(72)));
         ImageView imageViewCoverView = coverView();
-        Bitmap bitmapCover = cover(track);
+        Bitmap bitmapCover = fullPlayerCover(track);
         if (bitmapCover != null) {
             imageViewCoverView.setImageBitmap(bitmapCover);
         } else {
@@ -3865,6 +3866,15 @@ public class MainActivity extends Activity {
     }
 
     private Bitmap readCover(Track track) {
+        return readCover(track, COVER_THUMB_SIZE);
+    }
+
+    private Bitmap fullPlayerCover(Track track) {
+        Bitmap cover = readCover(track, FULL_PLAYER_COVER_SIZE);
+        return cover == null ? cachedCover(track) : cover;
+    }
+
+    private Bitmap readCover(Track track, int maxSize) {
         MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
         try {
             mediaMetadataRetriever.setDataSource(this, track.asUri());
@@ -3880,10 +3890,13 @@ public class MainActivity extends Activity {
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(embeddedPicture, 0, embeddedPicture.length, bounds);
             BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = coverSampleSize(bounds);
+            options.inSampleSize = coverSampleSize(bounds, maxSize);
             Bitmap bitmapDecodeByteArray = BitmapFactory.decodeByteArray(embeddedPicture, 0, embeddedPicture.length, options);
-            if (bitmapDecodeByteArray != null && (bitmapDecodeByteArray.getWidth() > COVER_THUMB_SIZE || bitmapDecodeByteArray.getHeight() > COVER_THUMB_SIZE)) {
-                Bitmap scaled = Bitmap.createScaledBitmap(bitmapDecodeByteArray, COVER_THUMB_SIZE, COVER_THUMB_SIZE, true);
+            if (bitmapDecodeByteArray != null && (bitmapDecodeByteArray.getWidth() > maxSize || bitmapDecodeByteArray.getHeight() > maxSize)) {
+                float scale = Math.min((float) maxSize / (float) bitmapDecodeByteArray.getWidth(), (float) maxSize / (float) bitmapDecodeByteArray.getHeight());
+                int width = Math.max(1, Math.round(bitmapDecodeByteArray.getWidth() * scale));
+                int height = Math.max(1, Math.round(bitmapDecodeByteArray.getHeight() * scale));
+                Bitmap scaled = Bitmap.createScaledBitmap(bitmapDecodeByteArray, width, height, true);
                 if (scaled != bitmapDecodeByteArray) {
                     bitmapDecodeByteArray.recycle();
                 }
@@ -3903,11 +3916,11 @@ public class MainActivity extends Activity {
         }
     }
 
-    private int coverSampleSize(BitmapFactory.Options options) {
+    private int coverSampleSize(BitmapFactory.Options options, int maxSize) {
         int sampleSize = 1;
         int width = options.outWidth;
         int height = options.outHeight;
-        while (width / sampleSize > COVER_THUMB_SIZE * 2 || height / sampleSize > COVER_THUMB_SIZE * 2) {
+        while (width / sampleSize > maxSize * 2 || height / sampleSize > maxSize * 2) {
             sampleSize *= 2;
         }
         return Math.max(1, sampleSize);
