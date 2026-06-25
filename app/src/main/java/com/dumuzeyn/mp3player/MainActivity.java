@@ -1506,11 +1506,19 @@ public class MainActivity extends Activity {
         ArrayList<Track> arrayList2 = new ArrayList<>();
         String lowerCase = this.search.toLowerCase(Locale.ROOT);
         for (Track track : arrayList) {
-            if (track.title.toLowerCase(Locale.ROOT).contains(lowerCase) || track.artist.toLowerCase(Locale.ROOT).contains(lowerCase)) {
+            if (matchesTrackSearch(track, lowerCase)) {
                 arrayList2.add(track);
             }
         }
         return arrayList2;
+    }
+
+    private boolean matchesTrackSearch(Track track, String query) {
+        return containsSearch(track.title, query) || containsSearch(track.artist, query) || containsSearch(track.album, query) || containsSearch(track.genre, query);
+    }
+
+    private boolean containsSearch(String value, String query) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
     }
 
     private void renderSongs(ArrayList<Track> arrayList) {
@@ -1663,8 +1671,9 @@ public class MainActivity extends Activity {
 
     private void renderPlaylists() {
         ArrayList<Playlist> arrayList = new ArrayList();
+        String lowerCase = this.search.toLowerCase(Locale.ROOT);
         for (Playlist playlist : this.playlists) {
-            if (this.search.trim().isEmpty() || playlist.name.toLowerCase(Locale.ROOT).contains(this.search.toLowerCase(Locale.ROOT))) {
+            if (this.search.trim().isEmpty() || containsSearch(playlist.name, lowerCase) || playlistContainsSearch(playlist, lowerCase)) {
                 arrayList.add(playlist);
             }
         }
@@ -1818,8 +1827,21 @@ public class MainActivity extends Activity {
         return arrayList;
     }
 
+    private boolean playlistContainsSearch(Playlist playlist, String query) {
+        for (Track track : playlistTracks(playlist)) {
+            if (matchesTrackSearch(track, query)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void renderGroups(String str) {
         for (Map.Entry<String, ArrayList<Track>> entry : groupedTracks().entrySet()) {
+            String lowerCase = this.search.toLowerCase(Locale.ROOT);
+            if (!this.search.trim().isEmpty() && !containsSearch(entry.getKey(), lowerCase) && !groupContainsSearch(entry.getValue(), lowerCase)) {
+                continue;
+            }
             LinearLayout linearLayoutRow = row();
             linearLayoutRow.setPadding(dp(12), dp(12), dp(12), dp(12));
             setSurface(linearLayoutRow, this.panel, false);
@@ -1851,6 +1873,21 @@ public class MainActivity extends Activity {
             linearLayoutRow.setOnClickListener(new AnonymousClass34(this, entry));
             this.list.addView(spaced(linearLayoutRow));
         }
+    }
+
+    private boolean groupContainsSearch(ArrayList<Track> tracks) {
+        String lowerCase = this.search.toLowerCase(Locale.ROOT);
+        return groupContainsSearch(tracks, lowerCase);
+    }
+
+    private boolean groupContainsSearch(ArrayList<Track> tracks, String query) {
+        Iterator<Track> it = tracks.iterator();
+        while (it.hasNext()) {
+            if (matchesTrackSearch(it.next(), query)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     class AnonymousClass32 implements View.OnClickListener {
