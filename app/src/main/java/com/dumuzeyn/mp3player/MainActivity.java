@@ -46,6 +46,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -88,6 +90,7 @@ public class MainActivity extends Activity {
     private final ArrayList<Playlist> playlists = new ArrayList<>();
     private final ArrayList<Track> playbackQueue = new ArrayList<>();
     private final LruCache<String, Bitmap> coverCache = createCoverCache();
+    private final ExecutorService coverExecutor = Executors.newFixedThreadPool(2);
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Handler playbackHandler = new Handler(Looper.getMainLooper());
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
@@ -1686,18 +1689,13 @@ public class MainActivity extends Activity {
         linearLayout.setPadding(dp(10), dp(8), dp(10), dp(8));
         setSurface(linearLayout, isCurrent(track) ? this.fg : this.panel, false);
         ImageView imageViewCoverView = coverView();
-        Bitmap bitmapCachedCover = cover(track);
-        if (bitmapCachedCover != null) {
-            imageViewCoverView.setImageBitmap(bitmapCachedCover);
+        if (isCurrent(track)) {
+            iRgb = this.bg;
         } else {
-            if (isCurrent(track)) {
-                iRgb = this.bg;
-            } else {
-                int i = this.dark ? 28 : 235;
-                iRgb = Color.rgb(i, i, i);
-            }
-            imageViewCoverView.setBackgroundColor(iRgb);
+            int i = this.dark ? 28 : 235;
+            iRgb = Color.rgb(i, i, i);
         }
+        loadCover(imageViewCoverView, track, iRgb);
         imageViewCoverView.setOnClickListener(new AnonymousClass24(this, track));
         linearLayout.addView(imageViewCoverView, square(58));
         LinearLayout linearLayout2 = new LinearLayout(this);
@@ -1850,12 +1848,11 @@ public class MainActivity extends Activity {
             linearLayout.addView(linearLayoutRow);
             LinearLayout linearLayoutRow2 = row();
             ImageView imageViewCoverView = coverView();
-            Bitmap bitmapCachedCover = arrayListPlaylistTracks.isEmpty() ? null : cover(arrayListPlaylistTracks.get(0));
-            if (bitmapCachedCover != null) {
-                imageViewCoverView.setImageBitmap(bitmapCachedCover);
-            } else {
-                int i = this.dark ? 28 : 235;
+            int i = this.dark ? 28 : 235;
+            if (arrayListPlaylistTracks.isEmpty()) {
                 imageViewCoverView.setBackgroundColor(Color.rgb(i, i, i));
+            } else {
+                loadCover(imageViewCoverView, arrayListPlaylistTracks.get(0), Color.rgb(i, i, i));
             }
             linearLayoutRow2.addView(imageViewCoverView, square(86));
             TextView textViewText4 = text(previewText(arrayListPlaylistTracks), 16, true);
@@ -1978,12 +1975,11 @@ public class MainActivity extends Activity {
             linearLayoutRow.setPadding(dp(12), dp(12), dp(12), dp(12));
             setSurface(linearLayoutRow, this.panel, false);
             ImageView imageViewCoverView = coverView();
-            Bitmap bitmapCachedCover = entry.getValue().isEmpty() ? null : cover(entry.getValue().get(0));
-            if (bitmapCachedCover != null) {
-                imageViewCoverView.setImageBitmap(bitmapCachedCover);
-            } else {
-                int i = this.dark ? 28 : 235;
+            int i = this.dark ? 28 : 235;
+            if (entry.getValue().isEmpty()) {
                 imageViewCoverView.setBackgroundColor(Color.rgb(i, i, i));
+            } else {
+                loadCover(imageViewCoverView, entry.getValue().get(0), Color.rgb(i, i, i));
             }
             linearLayoutRow.addView(imageViewCoverView, square(72));
             LinearLayout linearLayout = new LinearLayout(this);
@@ -2161,12 +2157,7 @@ public class MainActivity extends Activity {
                 linearLayout2.setPadding(dp(10), dp(8), dp(10), dp(8));
                 setSurface(linearLayout2, isCurrent(track) ? this.fg : this.panel, false);
                 ImageView imageViewCoverView = coverView();
-                Bitmap bitmapCachedCover = cover(track);
-                if (bitmapCachedCover != null) {
-                    imageViewCoverView.setImageBitmap(bitmapCachedCover);
-                } else {
-                    imageViewCoverView.setBackgroundColor(isCurrent(track) ? this.bg : this.dark ? -16777216 : Color.rgb(235, 235, 235));
-                }
+                loadCover(imageViewCoverView, track, isCurrent(track) ? this.bg : this.dark ? -16777216 : Color.rgb(235, 235, 235));
                 imageViewCoverView.setOnClickListener(new AnonymousClass41(this, track, frameLayoutShade));
                 linearLayout2.addView(imageViewCoverView, square(58));
                 LinearLayout linearLayout3 = new LinearLayout(this);
@@ -2398,10 +2389,7 @@ public class MainActivity extends Activity {
             linearLayout2.setPadding(dp(10), dp(8), dp(10), dp(8));
             setSurface(linearLayout2, isCurrent(track) ? this.fg : this.panel, false);
             ImageView imageViewCoverView = coverView();
-            Bitmap bitmapCachedCover = cover(track);
-            if (bitmapCachedCover != null) {
-                imageViewCoverView.setImageBitmap(bitmapCachedCover);
-            }
+            loadCover(imageViewCoverView, track, this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235));
             linearLayout2.addView(imageViewCoverView, square(58));
             TextView textViewText = text(track.title, 17, true);
             textViewText.setPadding(dp(12), 0, dp(8), 0);
@@ -2667,18 +2655,13 @@ public class MainActivity extends Activity {
         linearLayout.setPadding(dp(10), dp(8), dp(10), dp(8));
         setSurface(linearLayout, hashSet.contains(track.uri) ? this.fg : this.panel, false);
         ImageView imageViewCoverView = coverView();
-        Bitmap bitmapCachedCover = cover(track);
-        if (bitmapCachedCover != null) {
-            imageViewCoverView.setImageBitmap(bitmapCachedCover);
+        if (hashSet.contains(track.uri)) {
+            iRgb = this.bg;
         } else {
-            if (hashSet.contains(track.uri)) {
-                iRgb = this.bg;
-            } else {
-                int i = this.dark ? 28 : 235;
-                iRgb = Color.rgb(i, i, i);
-            }
-            imageViewCoverView.setBackgroundColor(iRgb);
+            int i = this.dark ? 28 : 235;
+            iRgb = Color.rgb(i, i, i);
         }
+        loadCover(imageViewCoverView, track, iRgb);
         linearLayout.addView(imageViewCoverView, square(58));
         LinearLayout linearLayout2 = new LinearLayout(this);
         linearLayout2.setOrientation(1);
@@ -3258,12 +3241,7 @@ public class MainActivity extends Activity {
         linearLayoutRow.addView(buttonIcon2, square(58));
         linearLayout.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(72)));
         ImageView imageViewCoverView = coverView();
-        Bitmap bitmapCover = cover(track);
-        if (bitmapCover != null) {
-            imageViewCoverView.setImageBitmap(bitmapCover);
-        } else {
-            imageViewCoverView.setBackgroundColor(this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235));
-        }
+        loadCover(imageViewCoverView, track, this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235));
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(dp(280), dp(280));
         layoutParams.gravity = 1;
         linearLayout.addView(imageViewCoverView, layoutParams);
@@ -3941,6 +3919,34 @@ public class MainActivity extends Activity {
             this.coverCache.put(track.uri, cover);
         }
         return cover;
+    }
+
+    private void loadCover(final ImageView imageView, final Track track, int fallbackColor) {
+        imageView.setTag(track.uri);
+        imageView.setImageDrawable(null);
+        Bitmap cached = this.coverCache.get(track.uri);
+        if (cached != null) {
+            imageView.setImageBitmap(cached);
+            return;
+        }
+        imageView.setBackgroundColor(fallbackColor);
+        this.coverExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Bitmap bitmap = MainActivity.this.readCover(track);
+                if (bitmap != null) {
+                    MainActivity.this.coverCache.put(track.uri, bitmap);
+                }
+                MainActivity.this.uiHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (bitmap != null && track.uri.equals(imageView.getTag())) {
+                            imageView.setImageBitmap(bitmap);
+                        }
+                    }
+                });
+            }
+        });
     }
 
     private Bitmap readCover(Track track) {
