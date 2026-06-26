@@ -665,6 +665,12 @@ public class MainActivity extends Activity {
                     this.root.getParent().requestDisallowInterceptTouchEvent(true);
                 }
             }
+            if (this.pageSwipeConsuming && this.list != null) {
+                float width = (this.root == null || this.root.getWidth() <= 0) ? getResources().getDisplayMetrics().widthPixels : this.root.getWidth();
+                float drag = Math.max(-width * 0.82f, Math.min(width * 0.82f, x));
+                this.list.setTranslationX(drag);
+                this.list.setAlpha(Math.max(0.72f, 1.0f - (Math.abs(drag) / width) * 0.24f));
+            }
             return this.pageSwipeConsuming;
         }
         if (motionEvent.getActionMasked() != 1 && motionEvent.getActionMasked() != 3) {
@@ -690,6 +696,9 @@ public class MainActivity extends Activity {
             }
             switchTabAnimated(length % length2, x2 < 0.0f ? 1 : -1);
             return true;
+        }
+        if (z && this.list != null) {
+            this.list.animate().translationX(0.0f).alpha(1.0f).setDuration(90L).setInterpolator(new DecelerateInterpolator()).start();
         }
         return z;
     }
@@ -3934,9 +3943,6 @@ public class MainActivity extends Activity {
             int i = 0;
             int scanned = 0;
             for (Track track : new ArrayList<Track>(MainActivity.m19$$Nest$fgettracks(MainActivity.this))) {
-                if (scanned >= COVER_PRELOAD_LIMIT) {
-                    break;
-                }
                 scanned++;
                 if (MainActivity.m1$$Nest$fgetcoverCache(MainActivity.this).get(track.uri) == null) {
                     Bitmap bitmapM65$$Nest$mreadCover = MainActivity.m65$$Nest$mreadCover(MainActivity.this, track);

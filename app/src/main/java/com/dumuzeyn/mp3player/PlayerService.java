@@ -19,6 +19,7 @@ import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -69,9 +70,9 @@ public class PlayerService extends Service {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
                 PlayerService.this.pause();
-            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
                 if (PlayerService.this.player != null) {
                     PlayerService.this.player.setVolume(0.35f, 0.35f);
                 }
@@ -250,6 +251,7 @@ public class PlayerService extends Service {
         this.player = new MediaPlayer();
         try {
             this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(2).setUsage(1).build());
+            this.player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
             this.player.setDataSource(this, this.queue.get(this.currentIndex).asUri());
             this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
