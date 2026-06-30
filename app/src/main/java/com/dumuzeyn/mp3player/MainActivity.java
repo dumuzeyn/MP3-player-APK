@@ -9,7 +9,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -144,6 +146,10 @@ public class MainActivity extends Activity {
 
     private interface PickDone {
         void done(Set<String> set);
+    }
+
+    private interface ColorPickDone {
+        void picked(int color);
     }
 
     static int m0$$Nest$fgetbg(MainActivity mainActivity) {
@@ -475,12 +481,11 @@ public class MainActivity extends Activity {
         super.onCreate(bundle);
         this.prefs = getSharedPreferences(PREFS, 0);
         this.themeMode = this.prefs.getString(THEME, "light");
-        if (!"light".equals(this.themeMode) && !"dark".equals(this.themeMode) && !"custom".equals(this.themeMode)) {
+        if (!"light".equals(this.themeMode) && !"dark".equals(this.themeMode) && !"custom".equals(this.themeMode) && !"adaptive".equals(this.themeMode)) {
             this.themeMode = "light";
         }
         this.customBg = this.prefs.getInt(CUSTOM_BG, -1);
         this.customFg = this.prefs.getInt(CUSTOM_FG, -16777216);
-        this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
         this.animations = this.prefs.getBoolean(ANIMATIONS, true);
         this.language = this.prefs.getString(LANGUAGE, "en");
         if (!"en".equals(this.language) && !"ru".equals(this.language)) {
@@ -488,12 +493,13 @@ public class MainActivity extends Activity {
         }
         this.customTimerMinutes = this.prefs.getInt(CUSTOM_TIMER, 10);
         this.resumeWindowMinutes = Math.max(0, this.prefs.getInt(RESUME_WINDOW_MINUTES, 120));
-        updateLauncherIcon();
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
         }
         loadState();
         restoreRecentPlayback();
+        colors();
+        updateLauncherIcon();
         buildUi();
         refreshMissingMetadataAsync();
     }
@@ -746,12 +752,70 @@ public class MainActivity extends Activity {
     }
 
     private void colors() {
-        this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
-        this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
-        this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
+        if ("adaptive".equals(this.themeMode)) {
+            applyAdaptiveColors();
+        } else {
+            this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
+            this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
+            this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
+        }
         this.muted = mixColor(this.fg, this.bg, 0.55f);
         this.line = mixColor(this.fg, this.bg, 0.28f);
         this.panel = this.bg;
+    }
+
+    private void applyAdaptiveColors() {
+        int base = adaptiveBaseColor();
+        this.dark = isDarkColor(base);
+        this.bg = this.dark ? mixColor(base, -16777216, 0.62f) : mixColor(base, -1, 0.58f);
+        this.fg = readableOn(this.bg);
+    }
+
+    private int adaptiveBaseColor() {
+        try {
+            if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size()) {
+                return Color.rgb(245, 245, 245);
+            }
+            Bitmap bitmap = cover(this.tracks.get(this.currentIndex));
+            if (bitmap == null || bitmap.isRecycled() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
+                return Color.rgb(245, 245, 245);
+            }
+            long red = 0;
+            long green = 0;
+            long blue = 0;
+            int count = 0;
+            int stepX = Math.max(1, bitmap.getWidth() / 18);
+            int stepY = Math.max(1, bitmap.getHeight() / 18);
+            for (int y = stepY / 2; y < bitmap.getHeight(); y += stepY) {
+                for (int x = stepX / 2; x < bitmap.getWidth(); x += stepX) {
+                    int color = bitmap.getPixel(x, y);
+                    red += Color.red(color);
+                    green += Color.green(color);
+                    blue += Color.blue(color);
+                    count++;
+                }
+            }
+            if (count <= 0) {
+                return Color.rgb(245, 245, 245);
+            }
+            return Color.rgb((int) (red / count), (int) (green / count), (int) (blue / count));
+        } catch (Throwable e) {
+            return Color.rgb(245, 245, 245);
+        }
+    }
+
+    private boolean adaptiveTheme() {
+        return "adaptive".equals(this.themeMode);
+    }
+
+    private void refreshAfterTrackChange() {
+        if (adaptiveTheme()) {
+            colors();
+            updateLauncherIcon();
+            buildUi();
+        } else {
+            render();
+        }
     }
 
     private boolean isDarkColor(int color) {
@@ -1336,6 +1400,9 @@ public class MainActivity extends Activity {
         if ("custom".equals(this.themeMode)) {
             return tr("Custom", "Своя");
         }
+        if ("adaptive".equals(this.themeMode)) {
+            return tr("Adaptive", "Адаптивная");
+        }
         return tr("Light", "Светлая");
     }
 
@@ -1377,13 +1444,93 @@ public class MainActivity extends Activity {
                 MainActivity.this.buildUi();
             }
         });
+        addChoiceButton(linearLayoutPanelCard, tr("Adaptive", "Адаптивная"), "adaptive".equals(this.themeMode), new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.themeMode = "adaptive";
+                MainActivity.this.colors();
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.updateLauncherIcon();
+                MainActivity.this.buildUi();
+            }
+        });
         linearLayoutPanelCard.addView(text(tr("Background", "Фон"), 16, true), new LinearLayout.LayoutParams(-1, dp(34)));
-        addColorRow(linearLayoutPanelCard, true, new int[]{-1, -16777216, Color.rgb(245, 245, 245), Color.rgb(20, 20, 20), Color.rgb(232, 238, 235), Color.rgb(235, 232, 240)});
+        addColorPickerButton(linearLayoutPanelCard, true);
         linearLayoutPanelCard.addView(text(tr("Text and accent", "Текст и акцент"), 16, true), new LinearLayout.LayoutParams(-1, dp(34)));
-        addColorRow(linearLayoutPanelCard, false, new int[]{-16777216, -1, Color.rgb(32, 80, 62), Color.rgb(72, 52, 105), Color.rgb(128, 36, 36), Color.rgb(35, 68, 120)});
+        addColorPickerButton(linearLayoutPanelCard, false);
         frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(340), -2));
         this.overlayHost.addView(frameLayoutShade);
         updateMini();
+    }
+
+    private void addColorPickerButton(LinearLayout parent, final boolean background) {
+        int color = background ? this.customBg : this.customFg;
+        Button button = button(colorHex(color));
+        applyButtonColors(button, color, readableOn(color));
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.overlayHost.removeAllViews();
+                MainActivity.this.openColorPickerDialog(background);
+            }
+        });
+        parent.addView(button, new LinearLayout.LayoutParams(-1, dp(52)));
+    }
+
+    private String colorHex(int color) {
+        return String.format(Locale.ROOT, "#%02X%02X%02X", Integer.valueOf(Color.red(color)), Integer.valueOf(Color.green(color)), Integer.valueOf(Color.blue(color)));
+    }
+
+    private void openColorPickerDialog(final boolean background) {
+        final FrameLayout frameLayoutShade = shade();
+        LinearLayout linearLayoutPanelCard = panelCard();
+        linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        linearLayoutPanelCard.addView(text(background ? tr("Background", "Фон") : tr("Text and accent", "Текст и акцент"), 22, true), new LinearLayout.LayoutParams(-1, dp(46)));
+        final View preview = new View(this);
+        preview.setBackgroundColor(background ? this.customBg : this.customFg);
+        linearLayoutPanelCard.addView(preview, new LinearLayout.LayoutParams(-1, dp(34)));
+        ColorWheelView colorWheelView = new ColorWheelView(background ? this.customBg : this.customFg, new ColorPickDone() {
+            @Override
+            public void picked(int color) {
+                MainActivity.this.themeMode = "custom";
+                if (background) {
+                    MainActivity.this.customBg = color;
+                } else {
+                    MainActivity.this.customFg = color;
+                }
+                preview.setBackgroundColor(color);
+            }
+        });
+        LinearLayout.LayoutParams wheelParams = new LinearLayout.LayoutParams(-1, dp(280));
+        wheelParams.setMargins(0, dp(12), 0, dp(12));
+        linearLayoutPanelCard.addView(colorWheelView, wheelParams);
+        LinearLayout linearLayoutRow = row();
+        Button buttonBack = button(tr("Back", "Назад"));
+        buttonBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.openThemeDialog();
+            }
+        });
+        linearLayoutRow.addView(buttonBack, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
+        Button buttonDone = button(tr3("Done", "Готово", "✓"));
+        applyButtonColors(buttonDone, this.fg, this.bg);
+        buttonDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.dark = MainActivity.this.isDarkColor(MainActivity.this.customBg);
+                MainActivity.this.saveState();
+                MainActivity.this.overlayHost.removeView(frameLayoutShade);
+                MainActivity.this.updateLauncherIcon();
+                MainActivity.this.buildUi();
+            }
+        });
+        linearLayoutRow.addView(buttonDone, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
+        linearLayoutPanelCard.addView(linearLayoutRow);
+        frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(340), -2));
+        this.overlayHost.addView(frameLayoutShade);
     }
 
     private void addColorRow(LinearLayout parent, final boolean background, int[] colors) {
@@ -3708,7 +3855,7 @@ public class MainActivity extends Activity {
         startPlaybackWatcher();
         updateMini();
         if (z) {
-            render();
+            refreshAfterTrackChange();
         }
     }
 
@@ -3732,7 +3879,7 @@ public class MainActivity extends Activity {
         this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, 0, false);
         startPlaybackWatcher();
-        render();
+        refreshAfterTrackChange();
     }
 
     private void toggleCurrent() {
@@ -3755,7 +3902,7 @@ public class MainActivity extends Activity {
         }
         startPlaybackWatcher();
         updateMini();
-        render();
+        refreshAfterTrackChange();
     }
 
     private void next() {
@@ -3769,7 +3916,7 @@ public class MainActivity extends Activity {
         this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, iQueueIndexOf, false);
         startPlaybackWatcher();
-        render();
+        refreshAfterTrackChange();
     }
 
     private void previous() {
@@ -3787,7 +3934,7 @@ public class MainActivity extends Activity {
         this.resumePosition = 0;
         startServiceAction(PlayerService.ACTION_PLAY_INDEX, i, false);
         startPlaybackWatcher();
-        render();
+        refreshAfterTrackChange();
     }
 
     class AnonymousClass85 implements Runnable {
@@ -3812,7 +3959,7 @@ public class MainActivity extends Activity {
             MainActivity.this.resumePosition = Math.max(0, PlayerService.lastPosition);
             if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && (trackM43$$Nest$mfindTrack = MainActivity.m43$$Nest$mfindTrack(MainActivity.this, PlayerService.lastUri)) != null && !MainActivity.m45$$Nest$misCurrent(MainActivity.this, trackM43$$Nest$mfindTrack)) {
                 MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, MainActivity.m19$$Nest$fgettracks(MainActivity.this).indexOf(trackM43$$Nest$mfindTrack));
-                MainActivity.m67$$Nest$mrender(MainActivity.this);
+                MainActivity.this.refreshAfterTrackChange();
             } else {
                 MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
             }
@@ -4263,6 +4410,134 @@ public class MainActivity extends Activity {
         imageView.setBackground(gradientDrawable);
         imageView.setClipToOutline(false);
         return imageView;
+    }
+
+    private class ColorWheelView extends View {
+        private final Paint paint = new Paint(1);
+        private final float[] hsv = new float[]{0.0f, 0.0f, 1.0f};
+        private final ColorPickDone done;
+        private Bitmap wheelBitmap;
+        private int wheelSize;
+        private int wheelRadius;
+        private int wheelCenterX;
+        private int wheelCenterY;
+        private int brightnessTop;
+        private int brightnessHeight;
+
+        ColorWheelView(int initialColor, ColorPickDone colorPickDone) {
+            super(MainActivity.this);
+            this.done = colorPickDone;
+            Color.colorToHSV(initialColor, this.hsv);
+            this.hsv[2] = Math.max(0.02f, this.hsv[2]);
+        }
+
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            this.brightnessHeight = dp(28);
+            this.wheelSize = Math.max(1, Math.min(w, h - dp(52)));
+            this.wheelRadius = Math.max(1, this.wheelSize / 2);
+            this.wheelCenterX = w / 2;
+            this.wheelCenterY = this.wheelRadius;
+            this.brightnessTop = this.wheelSize + dp(18);
+            this.wheelBitmap = buildWheelBitmap(this.wheelSize);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (this.wheelBitmap == null) {
+                return;
+            }
+            int left = this.wheelCenterX - this.wheelRadius;
+            canvas.drawBitmap(this.wheelBitmap, left, 0, this.paint);
+            this.paint.setStyle(Paint.Style.STROKE);
+            this.paint.setStrokeWidth(dp(2));
+            this.paint.setColor(mixColor(fg, bg, 0.65f));
+            canvas.drawCircle(this.wheelCenterX, this.wheelCenterY, this.wheelRadius - dp(1), this.paint);
+            float angle = (float) Math.toRadians(this.hsv[0]);
+            float selectorRadius = this.hsv[1] * (float) this.wheelRadius;
+            float selectorX = this.wheelCenterX + ((float) Math.cos(angle) * selectorRadius);
+            float selectorY = this.wheelCenterY + ((float) Math.sin(angle) * selectorRadius);
+            this.paint.setStyle(Paint.Style.STROKE);
+            this.paint.setStrokeWidth(dp(3));
+            this.paint.setColor(readableOn(Color.HSVToColor(this.hsv)));
+            canvas.drawCircle(selectorX, selectorY, dp(9), this.paint);
+            drawBrightness(canvas);
+        }
+
+        private Bitmap buildWheelBitmap(int size) {
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            int radius = Math.max(1, size / 2);
+            float[] pixelHsv = new float[]{0.0f, 0.0f, 1.0f};
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float dx = x - radius;
+                    float dy = y - radius;
+                    float distance = (float) Math.sqrt((dx * dx) + (dy * dy));
+                    if (distance > radius) {
+                        bitmap.setPixel(x, y, Color.TRANSPARENT);
+                    } else {
+                        float hue = (float) Math.toDegrees(Math.atan2(dy, dx));
+                        if (hue < 0.0f) {
+                            hue += 360.0f;
+                        }
+                        pixelHsv[0] = hue;
+                        pixelHsv[1] = Math.min(1.0f, distance / (float) radius);
+                        pixelHsv[2] = 1.0f;
+                        bitmap.setPixel(x, y, Color.HSVToColor(pixelHsv));
+                    }
+                }
+            }
+            return bitmap;
+        }
+
+        private void drawBrightness(Canvas canvas) {
+            int left = dp(2);
+            int right = getWidth() - dp(2);
+            for (int x = left; x <= right; x++) {
+                float value = (float) (x - left) / (float) Math.max(1, right - left);
+                float[] barHsv = new float[]{this.hsv[0], this.hsv[1], value};
+                this.paint.setStyle(Paint.Style.STROKE);
+                this.paint.setStrokeWidth(1.0f);
+                this.paint.setColor(Color.HSVToColor(barHsv));
+                canvas.drawLine(x, this.brightnessTop, x, this.brightnessTop + this.brightnessHeight, this.paint);
+            }
+            this.paint.setStyle(Paint.Style.STROKE);
+            this.paint.setStrokeWidth(dp(2));
+            this.paint.setColor(mixColor(fg, bg, 0.65f));
+            canvas.drawRect(left, this.brightnessTop, right, this.brightnessTop + this.brightnessHeight, this.paint);
+            float knobX = left + (this.hsv[2] * (right - left));
+            this.paint.setStrokeWidth(dp(3));
+            this.paint.setColor(readableOn(Color.HSVToColor(this.hsv)));
+            canvas.drawCircle(knobX, this.brightnessTop + (this.brightnessHeight / 2.0f), dp(8), this.paint);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (event.getActionMasked() != MotionEvent.ACTION_DOWN && event.getActionMasked() != MotionEvent.ACTION_MOVE) {
+                return true;
+            }
+            if (event.getY() >= this.brightnessTop - dp(8)) {
+                int left = dp(2);
+                int right = getWidth() - dp(2);
+                this.hsv[2] = Math.max(0.0f, Math.min(1.0f, (event.getX() - left) / (float) Math.max(1, right - left)));
+            } else {
+                float dx = event.getX() - this.wheelCenterX;
+                float dy = event.getY() - this.wheelCenterY;
+                float distance = (float) Math.sqrt((dx * dx) + (dy * dy));
+                if (distance <= this.wheelRadius) {
+                    float hue = (float) Math.toDegrees(Math.atan2(dy, dx));
+                    if (hue < 0.0f) {
+                        hue += 360.0f;
+                    }
+                    this.hsv[0] = hue;
+                    this.hsv[1] = Math.min(1.0f, distance / (float) this.wheelRadius);
+                }
+            }
+            this.done.picked(Color.HSVToColor(this.hsv));
+            invalidate();
+            return true;
+        }
     }
 
     private FrameLayout shade() {

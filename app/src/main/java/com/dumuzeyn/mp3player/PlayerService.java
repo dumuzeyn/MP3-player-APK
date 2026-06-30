@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -509,7 +510,11 @@ public class PlayerService extends Service {
         } else {
             track = new Track("", "MP3 Player", "Музыка готова");
         }
-        Class<?> launchClass = "dark".equals(getSharedPreferences("mp3_player_ui", 0).getString("theme", "light")) ? DarkMainActivity.class : MainActivity.class;
+        SharedPreferences uiPrefs = getSharedPreferences("mp3_player_ui", 0);
+        String theme = uiPrefs.getString("theme", "light");
+        int customBg = uiPrefs.getInt("customBg", -1);
+        boolean darkLaunch = "dark".equals(theme) || ("custom".equals(theme) && isDarkColor(customBg));
+        Class<?> launchClass = darkLaunch ? DarkMainActivity.class : MainActivity.class;
         PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), 201326592);
         if (Build.VERSION.SDK_INT >= 26) {
             builder = new Notification.Builder(this, CHANNEL_ID);
@@ -538,6 +543,10 @@ public class PlayerService extends Service {
                 .putLong("android.media.metadata.DURATION", duration);
         this.mediaSession.setMetadata(metadata.build());
         this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(822L).setState(i, currentPosition, 1.0f).build());
+    }
+
+    private boolean isDarkColor(int color) {
+        return ((Color.red(color) * 299) + (Color.green(color) * 587) + (Color.blue(color) * 114)) / 1000 < 128;
     }
 
     private int safeDuration() {
