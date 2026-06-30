@@ -18,6 +18,6 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowBackground">#000000</item>
         <item name="android:windowSplashScreenBackground">#000000</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_dark</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_dark_splash</item>
     </style>
 </resources>
