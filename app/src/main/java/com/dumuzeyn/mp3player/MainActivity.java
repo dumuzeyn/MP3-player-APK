@@ -57,8 +57,9 @@ public class MainActivity extends Activity {
     private static final String FAVORITES = "favorites";
     private static final String LANGUAGE = "language";
     private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
-    private static final int MAX_COVER_BYTES = 2 * 1024 * 1024;
+    private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
     private static final int COVER_THUMB_SIZE = 256;
+    private static final int COVER_FULL_SIZE = 1024;
     private static final int PICK_AUDIO = 2001;
     private static final String PLAYLISTS = "playlists";
     private static final String PREFS = "mp3_player_ui";
@@ -3241,7 +3242,7 @@ public class MainActivity extends Activity {
         linearLayoutRow.addView(buttonIcon2, square(58));
         linearLayout.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(72)));
         ImageView imageViewCoverView = coverView();
-        loadCover(imageViewCoverView, track, this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235));
+        loadCover(imageViewCoverView, track, this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), COVER_FULL_SIZE);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(dp(280), dp(280));
         layoutParams.gravity = 1;
         linearLayout.addView(imageViewCoverView, layoutParams);
@@ -3910,21 +3911,27 @@ public class MainActivity extends Activity {
     }
 
     private Bitmap cover(Track track) {
-        Bitmap cached = this.coverCache.get(track.uri);
+        String key = coverCacheKey(track, COVER_THUMB_SIZE);
+        Bitmap cached = this.coverCache.get(key);
         if (cached != null) {
             return cached;
         }
         Bitmap cover = readCover(track);
         if (cover != null) {
-            this.coverCache.put(track.uri, cover);
+            this.coverCache.put(key, cover);
         }
         return cover;
     }
 
     private void loadCover(final ImageView imageView, final Track track, int fallbackColor) {
+        loadCover(imageView, track, fallbackColor, COVER_THUMB_SIZE);
+    }
+
+    private void loadCover(final ImageView imageView, final Track track, int fallbackColor, final int maxSize) {
         imageView.setTag(track.uri);
         imageView.setImageDrawable(null);
-        Bitmap cached = this.coverCache.get(track.uri);
+        final String key = coverCacheKey(track, maxSize);
+        Bitmap cached = this.coverCache.get(key);
         if (cached != null) {
             imageView.setImageBitmap(cached);
             return;
@@ -3933,9 +3940,9 @@ public class MainActivity extends Activity {
         this.coverExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                final Bitmap bitmap = MainActivity.this.readCover(track);
+                final Bitmap bitmap = MainActivity.this.readCover(track, maxSize);
                 if (bitmap != null) {
-                    MainActivity.this.coverCache.put(track.uri, bitmap);
+                    MainActivity.this.coverCache.put(key, bitmap);
                 }
                 MainActivity.this.uiHandler.post(new Runnable() {
                     @Override
@@ -3947,6 +3954,10 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    private String coverCacheKey(Track track, int maxSize) {
+        return track.uri + "#" + maxSize;
     }
 
     private Bitmap readCover(Track track) {
