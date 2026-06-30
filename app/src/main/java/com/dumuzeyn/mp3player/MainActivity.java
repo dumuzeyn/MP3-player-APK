@@ -481,7 +481,7 @@ public class MainActivity extends Activity {
         super.onCreate(bundle);
         this.prefs = getSharedPreferences(PREFS, 0);
         this.themeMode = this.prefs.getString(THEME, "light");
-        if (!"light".equals(this.themeMode) && !"dark".equals(this.themeMode) && !"custom".equals(this.themeMode) && !"adaptive".equals(this.themeMode)) {
+        if (!"light".equals(this.themeMode) && !"dark".equals(this.themeMode) && !"custom".equals(this.themeMode)) {
             this.themeMode = "light";
         }
         this.customBg = this.prefs.getInt(CUSTOM_BG, -1);
@@ -752,70 +752,16 @@ public class MainActivity extends Activity {
     }
 
     private void colors() {
-        if ("adaptive".equals(this.themeMode)) {
-            applyAdaptiveColors();
-        } else {
-            this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
-            this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
-            this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
-        }
+        this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
+        this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
+        this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
         this.muted = mixColor(this.fg, this.bg, 0.55f);
         this.line = mixColor(this.fg, this.bg, 0.28f);
         this.panel = this.bg;
     }
 
-    private void applyAdaptiveColors() {
-        int base = adaptiveBaseColor();
-        this.dark = isDarkColor(base);
-        this.bg = this.dark ? mixColor(base, -16777216, 0.62f) : mixColor(base, -1, 0.58f);
-        this.fg = readableOn(this.bg);
-    }
-
-    private int adaptiveBaseColor() {
-        try {
-            if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size()) {
-                return Color.rgb(245, 245, 245);
-            }
-            Bitmap bitmap = cover(this.tracks.get(this.currentIndex));
-            if (bitmap == null || bitmap.isRecycled() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
-                return Color.rgb(245, 245, 245);
-            }
-            long red = 0;
-            long green = 0;
-            long blue = 0;
-            int count = 0;
-            int stepX = Math.max(1, bitmap.getWidth() / 18);
-            int stepY = Math.max(1, bitmap.getHeight() / 18);
-            for (int y = stepY / 2; y < bitmap.getHeight(); y += stepY) {
-                for (int x = stepX / 2; x < bitmap.getWidth(); x += stepX) {
-                    int color = bitmap.getPixel(x, y);
-                    red += Color.red(color);
-                    green += Color.green(color);
-                    blue += Color.blue(color);
-                    count++;
-                }
-            }
-            if (count <= 0) {
-                return Color.rgb(245, 245, 245);
-            }
-            return Color.rgb((int) (red / count), (int) (green / count), (int) (blue / count));
-        } catch (Throwable e) {
-            return Color.rgb(245, 245, 245);
-        }
-    }
-
-    private boolean adaptiveTheme() {
-        return "adaptive".equals(this.themeMode);
-    }
-
     private void refreshAfterTrackChange() {
-        if (adaptiveTheme()) {
-            colors();
-            updateLauncherIcon();
-            buildUi();
-        } else {
-            render();
-        }
+        render();
     }
 
     private boolean isDarkColor(int color) {
@@ -838,8 +784,9 @@ public class MainActivity extends Activity {
         ComponentName light = new ComponentName(this, getPackageName() + ".LauncherLight");
         ComponentName dark = new ComponentName(this, getPackageName() + ".LauncherDark");
         try {
-            packageManager.setComponentEnabledSetting(this.dark ? dark : light, enabled, flags);
-            packageManager.setComponentEnabledSetting(this.dark ? light : dark, disabled, flags);
+            boolean darkIcon = "dark".equals(this.themeMode);
+            packageManager.setComponentEnabledSetting(darkIcon ? dark : light, enabled, flags);
+            packageManager.setComponentEnabledSetting(darkIcon ? light : dark, disabled, flags);
         } catch (Exception e) {
         }
     }
@@ -1400,9 +1347,6 @@ public class MainActivity extends Activity {
         if ("custom".equals(this.themeMode)) {
             return tr("Custom", "Своя");
         }
-        if ("adaptive".equals(this.themeMode)) {
-            return tr("Adaptive", "Адаптивная");
-        }
         return tr("Light", "Светлая");
     }
 
@@ -1438,17 +1382,6 @@ public class MainActivity extends Activity {
             public void run() {
                 MainActivity.this.themeMode = "custom";
                 MainActivity.this.dark = MainActivity.this.isDarkColor(MainActivity.this.customBg);
-                MainActivity.this.saveState();
-                MainActivity.this.overlayHost.removeView(frameLayoutShade);
-                MainActivity.this.updateLauncherIcon();
-                MainActivity.this.buildUi();
-            }
-        });
-        addChoiceButton(linearLayoutPanelCard, tr("Adaptive", "Адаптивная"), "adaptive".equals(this.themeMode), new Runnable() {
-            @Override
-            public void run() {
-                MainActivity.this.themeMode = "adaptive";
-                MainActivity.this.colors();
                 MainActivity.this.saveState();
                 MainActivity.this.overlayHost.removeView(frameLayoutShade);
                 MainActivity.this.updateLauncherIcon();
