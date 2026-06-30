@@ -60,6 +60,8 @@ public class MainActivity extends Activity {
     private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
     private static final int COVER_THUMB_SIZE = 256;
     private static final int COVER_FULL_SIZE = 1024;
+    private static final int SWIPE_START_DP = 21;
+    private static final int SWIPE_COMMIT_DP = 52;
     private static final int PICK_AUDIO = 2001;
     private static final String PLAYLISTS = "playlists";
     private static final String PREFS = "mp3_player_ui";
@@ -661,13 +663,13 @@ public class MainActivity extends Activity {
             }
             float x = motionEvent.getX() - this.swipeStartX;
             float y = motionEvent.getY() - this.swipeStartY;
-            if (!this.pageSwipeConsuming && Math.abs(x) > dp(28) && Math.abs(x) > Math.abs(y) * 1.25f) {
+            if (!this.pageSwipeConsuming && Math.abs(x) > dp(SWIPE_START_DP) && Math.abs(x) > Math.abs(y)) {
                 this.pageSwipeConsuming = true;
                 if (this.root != null && this.root.getParent() != null) {
                     this.root.getParent().requestDisallowInterceptTouchEvent(true);
                 }
             }
-            if (this.pageSwipeConsuming && this.list != null) {
+            if (this.pageSwipeConsuming && this.animations && this.list != null) {
                 float width = (this.root == null || this.root.getWidth() <= 0) ? getResources().getDisplayMetrics().widthPixels : this.root.getWidth();
                 float drag = Math.max(-width * 0.82f, Math.min(width * 0.82f, x));
                 this.list.setTranslationX(drag);
@@ -687,7 +689,7 @@ public class MainActivity extends Activity {
         float y2 = motionEvent.getY() - this.swipeStartY;
         boolean z = this.pageSwipeConsuming;
         this.pageSwipeConsuming = false;
-        if (motionEvent.getActionMasked() == 1 && Math.abs(x2) > dp(70) && Math.abs(x2) > Math.abs(y2) * 1.35f) {
+        if (motionEvent.getActionMasked() == 1 && Math.abs(x2) > dp(SWIPE_COMMIT_DP) && Math.abs(x2) > Math.abs(y2)) {
             int i = this.tabIndex;
             if (x2 < 0.0f) {
                 length = i + 1;
@@ -699,8 +701,12 @@ public class MainActivity extends Activity {
             switchTabAnimated(length % length2, x2 < 0.0f ? 1 : -1);
             return true;
         }
-        if (z && this.list != null) {
+        if (z && this.animations && this.list != null) {
             this.list.animate().translationX(0.0f).alpha(1.0f).setDuration(90L).setInterpolator(new DecelerateInterpolator()).start();
+        }
+        if (z && !this.animations && this.list != null) {
+            this.list.setTranslationX(0.0f);
+            this.list.setAlpha(1.0f);
         }
         return z;
     }
@@ -1296,6 +1302,12 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View view) {
                 MainActivity.this.animations = !MainActivity.this.animations;
+                MainActivity.this.tabAnimating = false;
+                if (!MainActivity.this.animations && MainActivity.this.list != null) {
+                    MainActivity.this.list.animate().cancel();
+                    MainActivity.this.list.setTranslationX(0.0f);
+                    MainActivity.this.list.setAlpha(1.0f);
+                }
                 MainActivity.this.saveState();
                 MainActivity.this.render();
             }
@@ -4247,9 +4259,9 @@ public class MainActivity extends Activity {
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         GradientDrawable gradientDrawable = new GradientDrawable();
         gradientDrawable.setColor(0);
-        gradientDrawable.setCornerRadius(dp(12));
+        gradientDrawable.setCornerRadius(0.0f);
         imageView.setBackground(gradientDrawable);
-        imageView.setClipToOutline(true);
+        imageView.setClipToOutline(false);
         return imageView;
     }
 
