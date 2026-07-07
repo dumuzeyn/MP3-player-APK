@@ -872,22 +872,24 @@ public class MainActivity extends Activity {
     private void buildHeader() {
         FrameLayout header = new FrameLayout(this);
         header.setBackground(createCardBackground());
-        header.setPadding(dp(10), 0, dp(10), 0);
+        header.setPadding(dp(12), 0, dp(12), 0);
         LinearLayout linearLayoutRow = row();
         linearLayoutRow.setGravity(16);
         ImageView imageView = new ImageView(this);
         imageView.setImageResource(getResources().getIdentifier("ic_music_vector", "drawable", getPackageName()));
-        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        imageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         imageView.clearColorFilter();
         imageView.setContentDescription("MP3 Player");
-        linearLayoutRow.addView(imageView, square(42));
+        LinearLayout.LayoutParams iconParams = square(40);
+        iconParams.setMargins(0, 0, dp(8), 0);
+        linearLayoutRow.addView(imageView, iconParams);
         TextView title = text("MP3 Player", 20, true);
         title.setTextColor(this.primaryText);
         linearLayoutRow.addView(title, new LinearLayout.LayoutParams(0, dp(60), 1.0f));
-        linearLayoutRow.addView(createTriangleArtwork(TriangleDecorView.HEADER), new LinearLayout.LayoutParams(dp(82), dp(56)));
+        linearLayoutRow.addView(createTriangleArtwork(TriangleDecorView.HEADER), new LinearLayout.LayoutParams(dp(76), dp(52)));
         header.addView(linearLayoutRow, new FrameLayout.LayoutParams(-1, -1));
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(70));
-        layoutParams.setMargins(0, 0, 0, dp(8));
+        layoutParams.setMargins(0, 0, 0, dp(10));
         this.page.addView(header, layoutParams);
     }
 
