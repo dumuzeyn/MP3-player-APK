@@ -3443,7 +3443,7 @@ public class MainActivity extends Activity {
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     float dx = motionEvent.getX() - this.startX;
                     float dy = motionEvent.getY() - this.startY;
-                    if (!this.draggingDown && dy > dp(22) && dy > Math.abs(dx) * 1.2f) {
+                    if (!this.draggingDown && this.startY > getHeight() * 0.28f && this.startY < getHeight() * 0.82f && dy > dp(10) && dy > Math.abs(dx) * 0.75f) {
                         this.draggingDown = true;
                         getParent().requestDisallowInterceptTouchEvent(true);
                     }
@@ -3459,7 +3459,7 @@ public class MainActivity extends Activity {
                     if (this.draggingDown) {
                         float dy2 = motionEvent.getY() - this.startY;
                         this.draggingDown = false;
-                        if (action == MotionEvent.ACTION_UP && dy2 > dp(86)) {
+                        if (action == MotionEvent.ACTION_UP && dy2 > dp(34)) {
                             MainActivity.this.closeFullPlayer(this, true);
                         } else if (MainActivity.this.animations) {
                             animate().translationY(0.0f).alpha(1.0f).setDuration(110L).setInterpolator(new DecelerateInterpolator()).start();
@@ -4178,15 +4178,20 @@ public class MainActivity extends Activity {
     }
 
     private void loadCover(final ImageView imageView, final Track track, int fallbackColor, final int maxSize) {
-        imageView.setTag(track.uri);
-        imageView.setImageDrawable(null);
         final String key = coverCacheKey(track, maxSize);
+        imageView.setTag(key);
         Bitmap cached = this.coverCache.get(key);
         if (cached != null) {
             imageView.setImageBitmap(cached);
             return;
         }
-        imageView.setBackgroundColor(fallbackColor);
+        Bitmap thumbCached = maxSize == COVER_THUMB_SIZE ? null : this.coverCache.get(coverCacheKey(track, COVER_THUMB_SIZE));
+        if (thumbCached != null) {
+            imageView.setImageBitmap(thumbCached);
+        } else {
+            imageView.setImageDrawable(null);
+            imageView.setBackgroundColor(fallbackColor);
+        }
         this.coverExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -4197,7 +4202,7 @@ public class MainActivity extends Activity {
                 MainActivity.this.uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (bitmap != null && track.uri.equals(imageView.getTag())) {
+                        if (bitmap != null && key.equals(imageView.getTag())) {
                             imageView.setImageBitmap(bitmap);
                         }
                     }
