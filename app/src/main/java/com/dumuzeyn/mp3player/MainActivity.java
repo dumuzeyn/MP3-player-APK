@@ -3385,6 +3385,37 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void closeFullPlayer(FrameLayout frameLayout, boolean animate) {
+        if (frameLayout == null || frameLayout.getParent() == null) {
+            updateMini();
+            return;
+        }
+        if (animate && this.animations) {
+            frameLayout.animate().translationY(getResources().getDisplayMetrics().heightPixels).alpha(0.0f).setDuration(135L).setInterpolator(new DecelerateInterpolator()).withEndAction(new AnonymousClassFullPlayerClose(this, frameLayout)).start();
+            return;
+        }
+        this.overlayHost.removeView(frameLayout);
+        updateMini();
+    }
+
+    class AnonymousClassFullPlayerClose implements Runnable {
+        final MainActivity this$0;
+        final FrameLayout val$sheet;
+
+        AnonymousClassFullPlayerClose(MainActivity mainActivity, FrameLayout frameLayout) {
+            this.val$sheet = frameLayout;
+            this.this$0 = mainActivity;
+        }
+
+        @Override
+        public void run() {
+            if (this.val$sheet.getParent() != null) {
+                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
+            }
+            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+        }
+    }
+
     private void openFullPlayer() {
         if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
             this.currentIndex = 0;
@@ -3394,7 +3425,54 @@ public class MainActivity extends Activity {
         }
         this.miniPlayer.setVisibility(8);
         Track track = this.tracks.get(this.currentIndex);
-        FrameLayout frameLayout = new FrameLayout(this);
+        FrameLayout frameLayout = new FrameLayout(this) {
+            private boolean draggingDown = false;
+            private float startX = 0.0f;
+            private float startY = 0.0f;
+
+            @Override
+            public boolean dispatchTouchEvent(MotionEvent motionEvent) {
+                int action = motionEvent.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    this.draggingDown = false;
+                    this.startX = motionEvent.getX();
+                    this.startY = motionEvent.getY();
+                    animate().cancel();
+                    setAlpha(1.0f);
+                    setTranslationY(0.0f);
+                } else if (action == MotionEvent.ACTION_MOVE) {
+                    float dx = motionEvent.getX() - this.startX;
+                    float dy = motionEvent.getY() - this.startY;
+                    if (!this.draggingDown && dy > dp(22) && dy > Math.abs(dx) * 1.2f) {
+                        this.draggingDown = true;
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    if (this.draggingDown) {
+                        float drag = Math.max(0.0f, dy);
+                        if (MainActivity.this.animations) {
+                            setTranslationY(drag);
+                            setAlpha(Math.max(0.55f, 1.0f - (drag / Math.max(1, getHeight()))));
+                        }
+                        return true;
+                    }
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    if (this.draggingDown) {
+                        float dy2 = motionEvent.getY() - this.startY;
+                        this.draggingDown = false;
+                        if (action == MotionEvent.ACTION_UP && dy2 > dp(86)) {
+                            MainActivity.this.closeFullPlayer(this, true);
+                        } else if (MainActivity.this.animations) {
+                            animate().translationY(0.0f).alpha(1.0f).setDuration(110L).setInterpolator(new DecelerateInterpolator()).start();
+                        } else {
+                            setTranslationY(0.0f);
+                            setAlpha(1.0f);
+                        }
+                        return true;
+                    }
+                }
+                return super.dispatchTouchEvent(motionEvent);
+            }
+        };
         frameLayout.setBackgroundColor(this.bg);
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
