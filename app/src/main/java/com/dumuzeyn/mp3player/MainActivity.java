@@ -3416,6 +3416,69 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void attachFullPlayerSwipe(View view, FrameLayout frameLayout) {
+        view.setOnTouchListener(new FullPlayerSwipeTouchListener(frameLayout));
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                attachFullPlayerSwipe(viewGroup.getChildAt(i), frameLayout);
+            }
+        }
+    }
+
+    class FullPlayerSwipeTouchListener implements View.OnTouchListener {
+        private boolean closingDown = false;
+        private boolean draggingDown = false;
+        private float startX = 0.0f;
+        private float startY = 0.0f;
+        final FrameLayout val$sheet;
+
+        FullPlayerSwipeTouchListener(FrameLayout frameLayout) {
+            this.val$sheet = frameLayout;
+        }
+
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            int action = motionEvent.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                this.draggingDown = false;
+                this.closingDown = false;
+                this.startX = motionEvent.getRawX();
+                this.startY = motionEvent.getRawY();
+                return false;
+            }
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (this.closingDown) {
+                    return true;
+                }
+                float dx = motionEvent.getRawX() - this.startX;
+                float dy = motionEvent.getRawY() - this.startY;
+                if (!this.draggingDown && dy > dp(8) && dy > Math.abs(dx) * 0.55f) {
+                    this.draggingDown = true;
+                    if (view.getParent() != null) {
+                        view.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                }
+                if (this.draggingDown) {
+                    if (dy > dp(26)) {
+                        this.closingDown = true;
+                        MainActivity.this.closeFullPlayer(this.val$sheet, true);
+                    }
+                    return true;
+                }
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (this.closingDown) {
+                    return true;
+                }
+                if (this.draggingDown) {
+                    this.draggingDown = false;
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     private void openFullPlayer() {
         if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
             this.currentIndex = 0;
@@ -3541,6 +3604,7 @@ public class MainActivity extends Activity {
         linearLayout.addView(linearLayoutRow4, new LinearLayout.LayoutParams(-1, dp(112)));
         boolean animateOpen = this.animations && this.fullPlayerOpening;
         this.fullPlayerOpening = false;
+        attachFullPlayerSwipe(frameLayout, frameLayout);
         this.overlayHost.addView(frameLayout, new FrameLayout.LayoutParams(-1, -1));
         if (animateOpen) {
             frameLayout.setTranslationY(getResources().getDisplayMetrics().heightPixels);
