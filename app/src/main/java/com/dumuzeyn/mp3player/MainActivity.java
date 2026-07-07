@@ -876,7 +876,7 @@ public class MainActivity extends Activity {
         LinearLayout linearLayoutRow = row();
         linearLayoutRow.setGravity(16);
         ImageView imageView = new ImageView(this);
-        imageView.setImageResource(getResources().getIdentifier("ic_music_vector", "drawable", getPackageName()));
+        imageView.setImageResource(getResources().getIdentifier(this.dark ? "ic_music_vector_dark" : "ic_music_vector", "drawable", getPackageName()));
         imageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         imageView.clearColorFilter();
         imageView.setContentDescription("MP3 Player");
