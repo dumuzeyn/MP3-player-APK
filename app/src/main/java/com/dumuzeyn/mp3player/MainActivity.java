@@ -877,7 +877,8 @@ public class MainActivity extends Activity {
         linearLayoutRow.setGravity(16);
         ImageView imageView = new ImageView(this);
         imageView.setImageResource(getResources().getIdentifier("ic_music_vector", "drawable", getPackageName()));
-        imageView.setColorFilter(this.purple);
+        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        imageView.clearColorFilter();
         imageView.setContentDescription("MP3 Player");
         linearLayoutRow.addView(imageView, square(42));
         TextView title = text("MP3 Player", 20, true);
@@ -1709,6 +1710,9 @@ public class MainActivity extends Activity {
         button.setGravity(8388627);
         button.setPadding(dp(18), 0, dp(12), 0);
         applySecondaryButtonStyle(button);
+        if (str.toLowerCase(Locale.ROOT).contains("delete") || str.toLowerCase(Locale.ROOT).contains("удал")) {
+            button.setTextColor(Color.rgb(190, 45, 45));
+        }
         button.setOnClickListener(onClickListener);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(58));
         layoutParams.setMargins(0, dp(6), 0, dp(6));
@@ -1870,12 +1874,12 @@ public class MainActivity extends Activity {
         if (this.tabIndex == 1) {
             Button buttonIcon = icon(this.favorites.contains(track.uri) ? "♥︎" : "♡︎");
             buttonIcon.setTextSize(14.0f);
-            applyButtonColors(buttonIcon, this.card, this.favorites.contains(track.uri) ? this.purple : this.secondaryText);
+            applyPlainIconStyle(buttonIcon, this.favorites.contains(track.uri) ? this.purple : this.secondaryText);
             buttonIcon.setOnClickListener(new AnonymousClass25(this, track));
             linearLayout.addView(buttonIcon, square(42));
         } else if (z) {
             Button buttonIcon2 = icon("⋯");
-            applyButtonColors(buttonIcon2, this.card, this.secondaryText);
+            applyPlainIconStyle(buttonIcon2);
             buttonIcon2.setOnClickListener(new AnonymousClass26(this, track));
             linearLayout.addView(buttonIcon2, square(48));
         }
@@ -1988,9 +1992,11 @@ public class MainActivity extends Activity {
             linearLayout2.addView(textViewText3);
             linearLayoutRow.addView(linearLayout2, new LinearLayout.LayoutParams(0, -2, 1.0f));
             Button buttonIcon2 = icon("×");
+            applyPlainIconStyle(buttonIcon2, Color.rgb(190, 45, 45));
             buttonIcon2.setOnClickListener(new AnonymousClass30(this, playlist2));
             linearLayoutRow.addView(buttonIcon2, square(48));
             Button rename = icon("✎");
+            applyPlainIconStyle(rename);
             rename.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -1999,9 +2005,11 @@ public class MainActivity extends Activity {
             });
             linearLayoutRow.addView(rename, square(48));
             Button buttonIcon = icon(isPlayingSource(arrayListPlaylistTracks) ? "Ⅱ" : "▶");
+            applyPlainIconStyle(buttonIcon, this.purple);
             buttonIcon.setOnClickListener(new AnonymousClass28(this, playlist2));
             linearLayoutRow.addView(buttonIcon, square(48));
             Button buttonShuffleButton = shuffleButton();
+            applyPlainIconStyle(buttonShuffleButton);
             buttonShuffleButton.setOnClickListener(new AnonymousClass29(this, playlist2));
             linearLayoutRow.addView(buttonShuffleButton, square(48));
             linearLayout.addView(linearLayoutRow);
@@ -2152,9 +2160,11 @@ public class MainActivity extends Activity {
             linearLayout.addView(textViewText2);
             linearLayoutRow.addView(linearLayout, new LinearLayout.LayoutParams(0, dp(72), 1.0f));
             Button buttonIcon = icon(isPlayingSource(entry.getValue()) ? "Ⅱ" : "▶");
+            applyPlainIconStyle(buttonIcon, this.purple);
             buttonIcon.setOnClickListener(new AnonymousClass32(this, entry));
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
+            applyPlainIconStyle(buttonShuffleButton);
             buttonShuffleButton.setOnClickListener(new AnonymousClass33(this, entry));
             linearLayoutRow.addView(buttonShuffleButton, square(52));
             linearLayoutRow.setOnClickListener(new AnonymousClass34(this, entry));
@@ -4331,7 +4341,7 @@ public class MainActivity extends Activity {
         button.setTranslationZ(0.0f);
         button.setMinWidth(0);
         button.setMinHeight(0);
-        setSurface(button, this.bg, false);
+        button.setBackgroundColor(Color.TRANSPARENT);
         return button;
     }
 
@@ -4362,6 +4372,17 @@ public class MainActivity extends Activity {
         GradientDrawable gradientDrawableRounded = rounded(i, false);
         gradientDrawableRounded.setStroke(1, i);
         button.setBackground(gradientDrawableRounded);
+    }
+
+    private void applyPlainIconStyle(Button button) {
+        applyPlainIconStyle(button, this.dark ? Color.rgb(230, 226, 236) : this.primaryText);
+    }
+
+    private void applyPlainIconStyle(Button button, int color) {
+        button.setTextColor(color);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setElevation(0.0f);
+        button.setTranslationZ(0.0f);
     }
 
     private GradientDrawable createCardBackground() {
@@ -4406,8 +4427,8 @@ public class MainActivity extends Activity {
     }
 
     private void applySecondaryButtonStyle(Button button) {
-        button.setTextColor(this.purple);
-        button.setBackground(createSecondaryButtonBackground());
+        button.setTextColor(this.primaryText);
+        button.setBackground(createCardBackground());
     }
 
     private void applySeekBarColors(SeekBar seekBar) {

@@ -532,7 +532,7 @@ public class PlayerService extends Service {
         PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
         int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        builder.setSmallIcon(android.R.drawable.ic_media_play)
+        builder.setSmallIcon(getResources().getIdentifier("ic_notification_music", "drawable", getPackageName()))
                 .setContentTitle(track.title)
                 .setContentText(track.artist)
                 .setContentIntent(activity)
