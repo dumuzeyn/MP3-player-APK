@@ -833,7 +833,7 @@ public class MainActivity extends Activity {
         ComponentName light = new ComponentName(this, getPackageName() + ".LauncherLight");
         ComponentName dark = new ComponentName(this, getPackageName() + ".LauncherDark");
         try {
-            boolean darkIcon = "dark".equals(this.themeMode);
+            boolean darkIcon = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
             packageManager.setComponentEnabledSetting(darkIcon ? dark : light, enabled, flags);
             packageManager.setComponentEnabledSetting(darkIcon ? light : dark, disabled, flags);
         } catch (Exception e) {
