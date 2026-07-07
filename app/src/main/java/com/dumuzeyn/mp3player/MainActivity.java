@@ -3,6 +3,7 @@ package com.dumuzeyn.mp3player;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -81,6 +82,16 @@ public class MainActivity extends Activity {
     private TextView miniSub;
     private TextView miniTitle;
     private int muted;
+    private int purple;
+    private int purpleDark;
+    private int purpleSoft;
+    private int yellow;
+    private int yellowDark;
+    private int yellowSoft;
+    private int card;
+    private int cardStroke;
+    private int primaryText;
+    private int secondaryText;
     private FrameLayout overlayHost;
     private LinearLayout page;
     private int panel;
@@ -753,11 +764,49 @@ public class MainActivity extends Activity {
 
     private void colors() {
         this.dark = "dark".equals(this.themeMode) || ("custom".equals(this.themeMode) && isDarkColor(this.customBg));
-        this.bg = "custom".equals(this.themeMode) ? this.customBg : this.dark ? -16777216 : -1;
-        this.fg = "custom".equals(this.themeMode) ? this.customFg : this.dark ? -1 : -16777216;
-        this.muted = mixColor(this.fg, this.bg, 0.55f);
-        this.line = mixColor(this.fg, this.bg, 0.28f);
-        this.panel = this.bg;
+        if ("custom".equals(this.themeMode)) {
+            this.bg = this.customBg;
+            this.fg = this.customFg;
+            this.primaryText = this.customFg;
+            this.secondaryText = mixColor(this.customFg, this.customBg, 0.58f);
+            this.card = mixColor(this.customBg, this.customFg, this.dark ? 0.92f : 0.96f);
+            this.cardStroke = mixColor(this.customFg, this.customBg, 0.18f);
+            this.purple = this.customFg;
+            this.purpleDark = mixColor(this.customFg, this.customBg, 0.82f);
+            this.purpleSoft = mixColor(this.customFg, this.customBg, 0.18f);
+            this.yellow = Color.rgb(255, 208, 0);
+            this.yellowDark = Color.rgb(231, 185, 0);
+            this.yellowSoft = Color.rgb(255, 245, 190);
+        } else if (this.dark) {
+            this.bg = Color.rgb(17, 16, 21);
+            this.fg = Color.WHITE;
+            this.primaryText = Color.WHITE;
+            this.secondaryText = Color.rgb(170, 164, 178);
+            this.card = Color.rgb(26, 24, 31);
+            this.cardStroke = Color.rgb(51, 46, 58);
+            this.purple = Color.rgb(163, 92, 255);
+            this.purpleDark = Color.rgb(124, 50, 232);
+            this.purpleSoft = Color.rgb(44, 35, 58);
+            this.yellow = Color.rgb(255, 212, 56);
+            this.yellowDark = Color.rgb(231, 185, 0);
+            this.yellowSoft = Color.rgb(72, 62, 33);
+        } else {
+            this.bg = Color.WHITE;
+            this.fg = Color.rgb(24, 21, 29);
+            this.primaryText = Color.rgb(24, 21, 29);
+            this.secondaryText = Color.rgb(118, 113, 125);
+            this.card = Color.rgb(250, 249, 252);
+            this.cardStroke = Color.rgb(233, 229, 238);
+            this.purple = Color.rgb(124, 50, 232);
+            this.purpleDark = Color.rgb(97, 32, 197);
+            this.purpleSoft = Color.rgb(238, 228, 255);
+            this.yellow = Color.rgb(255, 208, 0);
+            this.yellowDark = Color.rgb(231, 185, 0);
+            this.yellowSoft = Color.rgb(255, 245, 190);
+        }
+        this.muted = this.secondaryText;
+        this.line = this.cardStroke;
+        this.panel = this.card;
     }
 
     private void refreshAfterTrackChange() {
@@ -821,13 +870,24 @@ public class MainActivity extends Activity {
     }
 
     private void buildHeader() {
+        FrameLayout header = new FrameLayout(this);
+        header.setBackground(createCardBackground());
+        header.setPadding(dp(10), 0, dp(10), 0);
         LinearLayout linearLayoutRow = row();
+        linearLayoutRow.setGravity(16);
         ImageView imageView = new ImageView(this);
         imageView.setImageResource(getResources().getIdentifier("ic_music_vector", "drawable", getPackageName()));
-        imageView.setColorFilter(this.fg);
+        imageView.setColorFilter(this.purple);
+        imageView.setContentDescription("MP3 Player");
         linearLayoutRow.addView(imageView, square(42));
-        linearLayoutRow.addView(text("MP3 Player", 20, true), new LinearLayout.LayoutParams(0, dp(60), 1.0f));
-        this.page.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(66)));
+        TextView title = text("MP3 Player", 20, true);
+        title.setTextColor(this.primaryText);
+        linearLayoutRow.addView(title, new LinearLayout.LayoutParams(0, dp(60), 1.0f));
+        linearLayoutRow.addView(createTriangleArtwork(TriangleDecorView.HEADER), new LinearLayout.LayoutParams(dp(82), dp(56)));
+        header.addView(linearLayoutRow, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(70));
+        layoutParams.setMargins(0, 0, 0, dp(8));
+        this.page.addView(header, layoutParams);
     }
 
     private void buildTabs() {
@@ -906,11 +966,15 @@ public class MainActivity extends Activity {
     private void styleTab(Button button, int i) {
         button.setTextSize(15.0f);
         button.setGravity(17);
+        button.setPadding(dp(14), 0, dp(14), 0);
         GradientDrawable gradientDrawable = new GradientDrawable();
-        gradientDrawable.setColor(i == this.tabIndex ? this.fg : 0);
-        gradientDrawable.setCornerRadius(dp(10));
+        gradientDrawable.setColor(i == this.tabIndex ? this.purple : 0);
+        gradientDrawable.setCornerRadius(dp(14));
+        if (i != this.tabIndex) {
+            gradientDrawable.setStroke(1, this.cardStroke);
+        }
         button.setBackground(gradientDrawable);
-        button.setTextColor(i == this.tabIndex ? this.bg : this.muted);
+        button.setTextColor(i == this.tabIndex ? Color.WHITE : this.secondaryText);
     }
 
     private void refreshTabs() {
@@ -1097,7 +1161,7 @@ public class MainActivity extends Activity {
         this.miniPlayer.setOrientation(0);
         this.miniPlayer.setGravity(16);
         this.miniPlayer.setPadding(dp(14), 0, dp(10), 0);
-        setSurface(this.miniPlayer, this.bg, true);
+        applyCardStyle(this.miniPlayer);
         this.miniPlayer.setVisibility(8);
         this.miniPlayer.setOnClickListener(new AnonymousClass7());
         LinearLayout linearLayout = new LinearLayout(this);
@@ -1112,10 +1176,11 @@ public class MainActivity extends Activity {
         linearLayout.addView(this.miniSub);
         this.miniPlayer.addView(linearLayout, new LinearLayout.LayoutParams(0, -2, 1.0f));
         this.miniButton = icon("▶");
+        applyPrimaryButtonStyle(this.miniButton);
         this.miniButton.setOnClickListener(new AnonymousClass8());
         this.miniPlayer.addView(this.miniButton, square(52));
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(-1, dp(74), 80);
-        layoutParams.setMargins(0, 0, 0, 0);
+        layoutParams.setMargins(dp(10), 0, dp(10), dp(10));
         this.root.addView(this.miniPlayer, layoutParams);
     }
 
@@ -1643,6 +1708,7 @@ public class MainActivity extends Activity {
         button.setTextSize(17.0f);
         button.setGravity(8388627);
         button.setPadding(dp(18), 0, dp(12), 0);
+        applySecondaryButtonStyle(button);
         button.setOnClickListener(onClickListener);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(58));
         layoutParams.setMargins(0, dp(6), 0, dp(6));
@@ -1775,27 +1841,27 @@ public class MainActivity extends Activity {
     }
 
     private View songRow(Track track, boolean z, boolean z2, Runnable runnable) {
-        int iRgb;
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(0);
         linearLayout.setGravity(16);
-        linearLayout.setPadding(dp(10), dp(8), dp(10), dp(8));
-        setSurface(linearLayout, isCurrent(track) ? this.fg : this.panel, false);
-        ImageView imageViewCoverView = coverView();
+        linearLayout.setPadding(dp(8), dp(8), dp(10), dp(8));
+        applyCardStyle(linearLayout);
         if (isCurrent(track)) {
-            iRgb = this.bg;
-        } else {
-            int i = this.dark ? 28 : 235;
-            iRgb = Color.rgb(i, i, i);
+            View marker = new View(this);
+            marker.setBackgroundColor(this.yellow);
+            LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(dp(4), dp(58));
+            markerParams.setMargins(0, 0, dp(6), 0);
+            linearLayout.addView(marker, markerParams);
         }
-        loadCover(imageViewCoverView, track, iRgb);
+        ImageView imageViewCoverView = coverView();
+        loadCover(imageViewCoverView, track, this.purpleSoft);
         imageViewCoverView.setOnClickListener(new AnonymousClass24(this, track));
         linearLayout.addView(imageViewCoverView, square(58));
         LinearLayout linearLayout2 = new LinearLayout(this);
         linearLayout2.setOrientation(1);
         linearLayout2.setPadding(dp(12), 0, dp(8), 0);
         TextView textViewText = text(track.title, 17, true);
-        textViewText.setTextColor(isCurrent(track) ? this.bg : this.fg);
+        textViewText.setTextColor(this.primaryText);
         textViewText.setSingleLine(true);
         textViewText.setEllipsize(TextUtils.TruncateAt.END);
         linearLayout2.addView(textViewText);
@@ -1804,17 +1870,17 @@ public class MainActivity extends Activity {
         if (this.tabIndex == 1) {
             Button buttonIcon = icon(this.favorites.contains(track.uri) ? "♥︎" : "♡︎");
             buttonIcon.setTextSize(14.0f);
-            applyButtonColors(buttonIcon, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
+            applyButtonColors(buttonIcon, this.card, this.favorites.contains(track.uri) ? this.purple : this.secondaryText);
             buttonIcon.setOnClickListener(new AnonymousClass25(this, track));
             linearLayout.addView(buttonIcon, square(42));
         } else if (z) {
             Button buttonIcon2 = icon("⋯");
-            applyButtonColors(buttonIcon2, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
+            applyButtonColors(buttonIcon2, this.card, this.secondaryText);
             buttonIcon2.setOnClickListener(new AnonymousClass26(this, track));
             linearLayout.addView(buttonIcon2, square(48));
         }
         Button buttonIcon3 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
-        applyButtonColors(buttonIcon3, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
+        applyPrimaryButtonStyle(buttonIcon3);
         buttonIcon3.setOnClickListener(new AnonymousClass27(this, track, runnable));
         linearLayout.addView(buttonIcon3, square(48));
         return spaced(linearLayout);
@@ -3356,6 +3422,7 @@ public class MainActivity extends Activity {
         linearLayoutRow2.addView(button3, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         linearLayout.addView(linearLayoutRow2);
         SeekBar seekBar = new SeekBar(this);
+        applySeekBarColors(seekBar);
         seekBar.setMax(Math.max(1, PlayerService.lastDuration));
         seekBar.setProgress(Math.max(0, PlayerService.lastPosition));
         linearLayout.addView(seekBar, new LinearLayout.LayoutParams(-1, dp(42)));
@@ -3921,6 +3988,7 @@ public class MainActivity extends Activity {
         intent.putExtra(PlayerService.EXTRA_INDEX, i);
         intent.putExtra(PlayerService.EXTRA_ONE_SHOT, z);
         intent.putExtra(PlayerService.EXTRA_SHUFFLE, this.shuffleMode);
+        intent.putExtra(PlayerService.EXTRA_LOOP_MODE, this.loopMode);
         intent.putExtra(PlayerService.EXTRA_POSITION, Math.max(0, position));
         intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
         if (Build.VERSION.SDK_INT < 26) {
@@ -4109,7 +4177,7 @@ public class MainActivity extends Activity {
     }
 
     private View wave(Track track, boolean z) {
-        WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.bg : this.fg, z && this.playing);
+        WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.purple : this.purpleSoft, z && this.playing);
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));
         waveformView.setLayoutParams(new LinearLayout.LayoutParams(dp(190), dp(30)));
@@ -4296,6 +4364,69 @@ public class MainActivity extends Activity {
         button.setBackground(gradientDrawableRounded);
     }
 
+    private GradientDrawable createCardBackground() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(this.card);
+        drawable.setCornerRadius(dp(16));
+        drawable.setStroke(dp(1), this.cardStroke);
+        return drawable;
+    }
+
+    private GradientDrawable createPrimaryButtonBackground() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(this.purple);
+        drawable.setCornerRadius(dp(16));
+        return drawable;
+    }
+
+    private GradientDrawable createSecondaryButtonBackground() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(this.purpleSoft);
+        drawable.setCornerRadius(dp(16));
+        drawable.setStroke(dp(1), this.cardStroke);
+        return drawable;
+    }
+
+    private GradientDrawable createIconButtonBackground() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(this.dark ? this.card : Color.WHITE);
+        drawable.setCornerRadius(dp(999));
+        drawable.setStroke(dp(1), this.cardStroke);
+        return drawable;
+    }
+
+    private void applyCardStyle(View view) {
+        view.setBackground(createCardBackground());
+        view.setElevation(dp(1));
+    }
+
+    private void applyPrimaryButtonStyle(Button button) {
+        button.setTextColor(Color.WHITE);
+        button.setBackground(createPrimaryButtonBackground());
+    }
+
+    private void applySecondaryButtonStyle(Button button) {
+        button.setTextColor(this.purple);
+        button.setBackground(createSecondaryButtonBackground());
+    }
+
+    private void applySeekBarColors(SeekBar seekBar) {
+        if (Build.VERSION.SDK_INT >= 21) {
+            seekBar.setProgressTintList(ColorStateList.valueOf(this.purple));
+            seekBar.setThumbTintList(ColorStateList.valueOf(this.yellow));
+            seekBar.setProgressBackgroundTintList(ColorStateList.valueOf(this.purpleSoft));
+        }
+    }
+
+    private TriangleDecorView createTriangleArtwork(int mode) {
+        TriangleDecorView view = new TriangleDecorView(this);
+        view.setMode(mode);
+        view.setColors(this.purple, this.yellow);
+        view.setDecorAlpha(this.dark ? 0.78f : 0.9f);
+        view.setStrokeWidth(dp(2));
+        return view;
+    }
+
     private LinearLayout.LayoutParams square(int i) {
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(dp(i), dp(i));
         layoutParams.setMargins(dp(4), dp(4), dp(4), dp(4));
@@ -4316,9 +4447,9 @@ public class MainActivity extends Activity {
     private GradientDrawable rounded(int i, boolean z) {
         GradientDrawable gradientDrawable = new GradientDrawable();
         gradientDrawable.setColor(i);
-        gradientDrawable.setCornerRadius(dp(10));
+        gradientDrawable.setCornerRadius(dp(z ? 16 : 14));
         if (z) {
-            i = this.line;
+            i = this.cardStroke;
         }
         gradientDrawable.setStroke(z ? 1 : 0, i);
         return gradientDrawable;
@@ -4496,7 +4627,7 @@ public class MainActivity extends Activity {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
         linearLayout.setPadding(dp(12), dp(12), dp(12), dp(12));
-        setSurface(linearLayout, this.bg, true);
+        applyCardStyle(linearLayout);
         linearLayout.setOnClickListener(new AnonymousClass88());
         return linearLayout;
     }

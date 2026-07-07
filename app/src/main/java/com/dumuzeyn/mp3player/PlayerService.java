@@ -20,6 +20,7 @@ import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,7 +35,6 @@ public class PlayerService extends Service {
     public static final String ACTION_SEEK = "com.dumuzeyn.mp3player.SEEK";
     public static final String ACTION_STOP = "com.dumuzeyn.mp3player.STOP";
     public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
-    private static final String CHANNEL_ID = "playback";
     public static final String EXTRA_INDEX = "index";
     public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_ONE_SHOT = "oneShot";
@@ -51,8 +51,70 @@ public class PlayerService extends Service {
     public static final String RESUME_SAVED_AT = "savedAt";
     public static final String RESUME_SHUFFLE = "shuffle";
     public static final String RESUME_URI = "uri";
+
+    private static final String CHANNEL_ID = "playback";
+    private static final String TAG = "MP3PlayerService";
     private static final int NOTIFICATION_ID = 7;
     private static PlayerService instance;
+
+    public static int lastIndex = -1;
+    public static boolean lastPlaying = false;
+    public static int lastDuration = 0;
+    public static int lastPosition = 0;
+    public static int lastLoopMode = 0;
+    public static String lastUri = "";
+
+    private enum AdvanceReason {
+        FINISHED,
+        MANUAL_NEXT,
+        MANUAL_PREVIOUS,
+        ERROR
+    }
+
+    private final ArrayList<Track> queue = new ArrayList<>();
+    private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+                pausedByUser = true;
+                pausedByTransientFocusLoss = false;
+                pauseInternal("audio_becoming_noisy");
+            }
+        }
+    };
+    private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+        @Override
+        public void onAudioFocusChange(int focusChange) {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+                Log.i(TAG, "audio_focus_loss");
+                pausedByTransientFocusLoss = false;
+                duckedByFocusLoss = false;
+                pauseInternal("focus_loss");
+            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                Log.i(TAG, "audio_focus_loss_transient");
+                pausedByTransientFocusLoss = player != null && safeIsPlaying() && !pausedByUser;
+                duckedByFocusLoss = false;
+                pauseInternal("focus_loss_transient");
+            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+                Log.i(TAG, "audio_focus_duck");
+                if (player != null) {
+                    player.setVolume(0.35f, 0.35f);
+                    duckedByFocusLoss = true;
+                }
+            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+                Log.i(TAG, "audio_focus_gain");
+                if (player != null) {
+                    player.setVolume(1.0f, 1.0f);
+                }
+                duckedByFocusLoss = false;
+                if (pausedByTransientFocusLoss && !pausedByUser) {
+                    pausedByTransientFocusLoss = false;
+                    play();
+                }
+            }
+        }
+    };
+
     private MediaSession mediaSession;
     private MediaPlayer player;
     private AudioManager audioManager;
@@ -60,67 +122,14 @@ public class PlayerService extends Service {
     private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
     private String lastSavedQueueJson = "";
-    public static int lastIndex = -1;
-    public static boolean lastPlaying = false;
-    public static int lastDuration = 0;
-    public static int lastPosition = 0;
-    public static int lastLoopMode = 0;
-    public static String lastUri = "";
-    private final ArrayList<Track> queue = new ArrayList<>();
     private int currentIndex = -1;
     private boolean oneShot = false;
     private boolean shuffle = false;
     private int loopMode = 0;
-    private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
-        @Override
-        public void onAudioFocusChange(int focusChange) {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                PlayerService.this.pause();
-            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-                if (PlayerService.this.player != null) {
-                    PlayerService.this.player.setVolume(0.35f, 0.35f);
-                }
-            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN && PlayerService.this.player != null) {
-                PlayerService.this.player.setVolume(1.0f, 1.0f);
-            }
-        }
-    };
-    private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
-                PlayerService.this.pause();
-            }
-        }
-    };
-
-    public static void $r8$lambda$HQFQnxmrRGNGOnJVwAgcbEBDHew(PlayerService playerService, MediaPlayer mediaPlayer) {
-        playerService.lambda$playIndex$0(mediaPlayer);
-    }
-
-    static void m81$$Nest$mplayNext(PlayerService playerService) {
-        playerService.playNext();
-    }
-
-    static void m82$$Nest$mplayPrevious(PlayerService playerService) {
-        playerService.playPrevious();
-    }
-
-    static void m83$$Nest$mseekTo(PlayerService playerService, int i) {
-        playerService.seekTo(i);
-    }
-
-    static void m84$$Nest$mstopPlayback(PlayerService playerService) {
-        playerService.stopPlayback();
-    }
-
-    static void m85$$Nest$mplay(PlayerService playerService) {
-        playerService.play();
-    }
-
-    static void m86$$Nest$mpause(PlayerService playerService) {
-        playerService.pause();
-    }
+    private boolean pausedByUser = false;
+    private boolean pausedByTransientFocusLoss = false;
+    private boolean duckedByFocusLoss = false;
+    private int loopOneErrorRetries = 0;
 
     @Override
     public void onCreate() {
@@ -129,49 +138,14 @@ public class PlayerService extends Service {
         this.audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         createChannel();
         this.mediaSession = new MediaSession(this, "MP3 Player");
-        this.mediaSession.setCallback(new AnonymousClass1());
+        this.mediaSession.setCallback(new SessionCallback());
         this.mediaSession.setActive(true);
         this.queue.addAll(TrackStore.load(this));
-    }
-
-    class AnonymousClass1 extends MediaSession.Callback {
-        AnonymousClass1() {
-        }
-
-        @Override
-        public void onPlay() {
-            PlayerService.m85$$Nest$mplay(PlayerService.this);
-        }
-
-        @Override
-        public void onPause() {
-            PlayerService.m86$$Nest$mpause(PlayerService.this);
-        }
-
-        @Override
-        public void onSkipToNext() {
-            PlayerService.m81$$Nest$mplayNext(PlayerService.this);
-        }
-
-        @Override
-        public void onSkipToPrevious() {
-            PlayerService.m82$$Nest$mplayPrevious(PlayerService.this);
-        }
-
-        @Override
-        public void onSeekTo(long j) {
-            PlayerService.m83$$Nest$mseekTo(PlayerService.this, (int) j);
-        }
-
-        @Override
-        public void onStop() {
-            PlayerService.m84$$Nest$mstopPlayback(PlayerService.this);
-            PlayerService.this.stopSelf();
-        }
+        Log.i(TAG, "service_created");
     }
 
     @Override
-    public int onStartCommand(Intent intent, int i, int i2) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIFICATION_ID, buildNotification());
         if (intent == null) {
             restorePlaybackAfterProcessDeath();
@@ -181,7 +155,13 @@ public class PlayerService extends Service {
         if (ACTION_PLAY_INDEX.equals(action)) {
             this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
             this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, false);
-            playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS), intent.getIntExtra(EXTRA_POSITION, 0));
+            this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
+            lastLoopMode = this.loopMode;
+            this.pausedByUser = false;
+            this.pausedByTransientFocusLoss = false;
+            this.duckedByFocusLoss = false;
+            saveResumeState(true, true);
+            playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS), intent.getIntExtra(EXTRA_POSITION, 0), 0);
             return START_STICKY;
         }
         if (ACTION_TOGGLE.equals(action)) {
@@ -190,12 +170,14 @@ public class PlayerService extends Service {
         }
         if (ACTION_NEXT.equals(action)) {
             this.oneShot = false;
-            playNext();
+            this.pausedByUser = false;
+            advanceQueue(AdvanceReason.MANUAL_NEXT, 0);
             return START_STICKY;
         }
         if (ACTION_PREV.equals(action)) {
             this.oneShot = false;
-            playPrevious();
+            this.pausedByUser = false;
+            advanceQueue(AdvanceReason.MANUAL_PREVIOUS, 0);
             return START_STICKY;
         }
         if (ACTION_SEEK.equals(action)) {
@@ -205,11 +187,14 @@ public class PlayerService extends Service {
         if (ACTION_LOOP.equals(action)) {
             this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, 0);
             lastLoopMode = this.loopMode;
+            saveResumeState(true, true);
+            logPlaybackState("loop_changed");
             startForeground(NOTIFICATION_ID, buildNotification());
             return START_STICKY;
         }
         if (ACTION_STOP.equals(action)) {
-            stopPlayback();
+            Log.i(TAG, "explicit_stop");
+            stopPlayback(true);
             stopSelf();
             return START_STICKY;
         }
@@ -221,79 +206,135 @@ public class PlayerService extends Service {
         return null;
     }
 
-    private void playIndex(int i) {
-        playIndex(i, null, 0);
+    private void playIndex(int index) {
+        playIndex(index, null, 0, 0);
     }
 
-    private void playIndex(int i, ArrayList<String> arrayList) {
-        playIndex(i, arrayList, 0);
-    }
-
-    private void playIndex(int i, ArrayList<String> arrayList, int startPosition) {
-        if (arrayList != null) {
-            this.queue.clear();
-            ArrayList<Track> arrayListLoad = TrackStore.load(this);
-            Map<String, Track> tracksByUri = new HashMap<>();
-            Iterator<Track> allTracks = arrayListLoad.iterator();
-            while (allTracks.hasNext()) {
-                Track track = allTracks.next();
-                tracksByUri.put(track.uri, track);
-            }
-            for (String str : arrayList) {
-                Track track2 = tracksByUri.get(str);
-                if (track2 != null) {
-                    this.queue.add(track2);
-                }
-            }
-            saveResumeState(true, true);
+    private void playIndex(int index, ArrayList<String> queueUris, int startPosition, int attempts) {
+        if (queueUris != null) {
+            rebuildQueue(queueUris);
         } else if (this.queue.isEmpty()) {
             this.queue.addAll(TrackStore.load(this));
-            saveResumeState(true, true);
         }
         if (this.queue.isEmpty()) {
-            stopPlayback();
+            Log.w(TAG, "empty_queue");
+            stopPlayback(false);
             stopSelf();
             return;
         }
-        this.currentIndex = Math.max(0, Math.min(i, this.queue.size() - 1));
+        if (attempts >= this.queue.size()) {
+            Log.e(TAG, "all_queue_items_failed");
+            stopPlayback(false);
+            stopSelf();
+            return;
+        }
+        this.currentIndex = normalizeIndex(index);
+        Track track = this.queue.get(this.currentIndex);
         releasePlayer();
         this.player = new MediaPlayer();
         try {
-            this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(2).setUsage(1).build());
+            this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build());
             this.player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-            this.player.setDataSource(this, this.queue.get(this.currentIndex).asUri());
+            this.player.setDataSource(this, track.asUri());
             this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    PlayerService.this.lambda$playIndex$0(mediaPlayer);
+                    logPlaybackState("track_finished");
+                    advanceQueue(AdvanceReason.FINISHED, 0);
                 }
             });
             this.player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                 @Override
                 public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
-                    PlayerService.this.stopPlayback();
-                    PlayerService.this.stopSelf();
+                    Log.e(TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex + " uri=" + currentUri());
+                    advanceQueue(AdvanceReason.ERROR, 1);
                     return true;
                 }
             });
             this.player.prepare();
             if (startPosition > 0) {
-                this.player.seekTo(Math.max(0, Math.min(startPosition, this.player.getDuration())));
+                this.player.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
             if (!requestAudioFocus()) {
-                stopPlayback();
+                Log.w(TAG, "audio_focus_denied");
+                stopPlayback(false);
                 return;
             }
             this.player.start();
-            this.player.setVolume(1.0f, 1.0f);
+            this.player.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
+            this.loopOneErrorRetries = 0;
             updateState();
-            saveResumeState(true, false);
+            saveResumeState(true, true);
             updateNoisyReceiver();
             startForeground(NOTIFICATION_ID, buildNotification());
+            logPlaybackState("track_started");
         } catch (Exception e) {
-            stopPlayback();
-            stopSelf();
+            Log.e(TAG, "prepare_failed index=" + this.currentIndex + " uri=" + track.uri + " title=" + track.title, e);
+            advanceQueue(AdvanceReason.ERROR, attempts + 1);
         }
+    }
+
+    private void rebuildQueue(ArrayList<String> queueUris) {
+        this.queue.clear();
+        ArrayList<Track> allTracks = TrackStore.load(this);
+        Map<String, Track> tracksByUri = new HashMap<>();
+        for (Track track : allTracks) {
+            tracksByUri.put(track.uri, track);
+        }
+        for (String uri : queueUris) {
+            Track track = tracksByUri.get(uri);
+            if (track != null) {
+                this.queue.add(track);
+            }
+        }
+        Log.i(TAG, "queue_loaded size=" + this.queue.size() + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle);
+    }
+
+    private void advanceQueue(AdvanceReason reason, int attempts) {
+        if (this.queue.isEmpty()) {
+            stopPlayback(false);
+            stopSelf();
+            return;
+        }
+        int nextIndex;
+        if (reason == AdvanceReason.MANUAL_PREVIOUS) {
+            nextIndex = this.currentIndex <= 0 ? this.queue.size() - 1 : this.currentIndex - 1;
+            playIndex(nextIndex, null, 0, attempts);
+            return;
+        }
+        if (reason == AdvanceReason.FINISHED && this.loopMode == 1) {
+            playIndex(this.currentIndex, null, 0, attempts);
+            return;
+        }
+        if (reason == AdvanceReason.ERROR && this.loopMode == 1 && this.loopOneErrorRetries == 0) {
+            this.loopOneErrorRetries++;
+            playIndex(this.currentIndex, null, 0, attempts);
+            return;
+        }
+        this.loopOneErrorRetries = 0;
+        if (this.oneShot && reason == AdvanceReason.FINISHED) {
+            stopPlayback(false);
+            stopSelf();
+            return;
+        }
+        if (this.loopMode == 0 && reason == AdvanceReason.FINISHED && this.currentIndex >= this.queue.size() - 1) {
+            stopPlayback(false);
+            stopSelf();
+            return;
+        }
+        nextIndex = this.currentIndex < 0 ? 0 : (this.currentIndex + 1) % this.queue.size();
+        if (this.currentIndex == this.queue.size() - 1 && nextIndex == 0) {
+            Log.i(TAG, "wrap_last_to_first");
+        }
+        Log.i(TAG, "advance reason=" + reason + " nextIndex=" + nextIndex + " attempts=" + attempts);
+        playIndex(nextIndex, null, 0, attempts);
+    }
+
+    private int normalizeIndex(int index) {
+        if (this.queue.isEmpty()) {
+            return -1;
+        }
+        return Math.max(0, Math.min(index, this.queue.size() - 1));
     }
 
     private void restorePlaybackAfterProcessDeath() {
@@ -310,61 +351,37 @@ public class PlayerService extends Service {
         } catch (Exception e) {
             savedQueue = new JSONArray();
         }
-        ArrayList<Track> allTracks = TrackStore.load(this);
-        Map<String, Track> tracksByUri = new HashMap<>();
-        Iterator<Track> iterator = allTracks.iterator();
-        while (iterator.hasNext()) {
-            Track track = iterator.next();
-            tracksByUri.put(track.uri, track);
-        }
-        this.queue.clear();
+        ArrayList<String> uris = new ArrayList<>();
         for (int index = 0; index < savedQueue.length(); index++) {
-            Track track = tracksByUri.get(savedQueue.optString(index, ""));
-            if (track != null) {
-                this.queue.add(track);
-            }
+            uris.add(savedQueue.optString(index, ""));
         }
-        if (this.queue.isEmpty()) {
-            Track track = tracksByUri.get(prefs.getString(RESUME_URI, ""));
-            if (track != null) {
-                this.queue.add(track);
+        if (uris.isEmpty()) {
+            String uri = prefs.getString(RESUME_URI, "");
+            if (!uri.isEmpty()) {
+                uris.add(uri);
             }
-        }
-        if (this.queue.isEmpty()) {
-            return;
         }
         this.loopMode = prefs.getInt(RESUME_LOOP_MODE, 0);
         this.shuffle = prefs.getBoolean(RESUME_SHUFFLE, false);
         this.oneShot = false;
         int index = prefs.getInt(RESUME_INDEX, 0);
         int position = Math.max(0, prefs.getInt(RESUME_POSITION, 0));
-        playIndex(Math.max(0, Math.min(index, this.queue.size() - 1)), null, position);
-    }
-
-    private void lambda$playIndex$0(MediaPlayer mediaPlayer) {
-        if (this.loopMode == 1) {
-            playIndex(this.currentIndex);
-            return;
-        }
-        if (this.oneShot) {
-            stopPlayback();
-            stopSelf();
-        } else if (this.loopMode == 2 || this.currentIndex < this.queue.size() - 1) {
-            playNext();
-        } else {
-            stopPlayback();
-            stopSelf();
-        }
+        Log.i(TAG, "restore_after_process_death index=" + index + " queue=" + uris.size() + " loopMode=" + this.loopMode);
+        playIndex(index, uris, position, 0);
     }
 
     private void toggle() {
         if (this.player == null) {
+            this.pausedByUser = false;
             playIndex(this.currentIndex < 0 ? 0 : this.currentIndex);
             return;
         }
         if (safeIsPlaying()) {
-            pause();
+            this.pausedByUser = true;
+            this.pausedByTransientFocusLoss = false;
+            pauseInternal("toggle_pause");
         } else {
+            this.pausedByUser = false;
             play();
         }
     }
@@ -378,67 +395,66 @@ public class PlayerService extends Service {
             if (!requestAudioFocus()) {
                 return;
             }
-            this.player.start();
-            this.player.setVolume(1.0f, 1.0f);
-            updateState();
-            updateNoisyReceiver();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            try {
+                this.player.start();
+                this.player.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
+                updateState();
+                saveResumeState(true, false);
+                updateNoisyReceiver();
+                startForeground(NOTIFICATION_ID, buildNotification());
+                logPlaybackState("play");
+            } catch (Exception e) {
+                Log.e(TAG, "start_failed", e);
+                advanceQueue(AdvanceReason.ERROR, 1);
+            }
         }
     }
 
-    private void pause() {
+    private void pauseInternal(String reason) {
         if (this.player != null && safeIsPlaying()) {
-            this.player.pause();
+            try {
+                this.player.pause();
+            } catch (Exception e) {
+                Log.e(TAG, "pause_failed reason=" + reason, e);
+            }
             updateState();
             saveResumeState(true, false);
             updateNoisyReceiver();
             startForeground(NOTIFICATION_ID, buildNotification());
+            logPlaybackState(reason);
         }
     }
 
-    private void playNext() {
-        if (this.queue.isEmpty()) {
-            this.queue.addAll(TrackStore.load(this));
-        }
-        if (this.queue.isEmpty()) {
-            return;
-        }
-        playIndex(this.currentIndex < 0 ? 0 : (this.currentIndex + 1) % this.queue.size());
-    }
-
-    private void playPrevious() {
-        if (this.queue.isEmpty()) {
-            this.queue.addAll(TrackStore.load(this));
-        }
-        if (this.queue.isEmpty()) {
-            return;
-        }
-        playIndex((this.currentIndex <= 0 ? this.queue.size() : this.currentIndex) - 1);
-    }
-
-    private void seekTo(int i) {
+    private void seekTo(int position) {
         if (this.player == null) {
             return;
         }
         try {
-            this.player.seekTo(Math.max(0, Math.min(i, safeDuration())));
+            this.player.seekTo(Math.max(0, Math.min(position, safeDuration())));
             updateState();
             saveResumeState(true, false);
             startForeground(NOTIFICATION_ID, buildNotification());
         } catch (Exception e) {
+            Log.e(TAG, "seek_failed", e);
+            advanceQueue(AdvanceReason.ERROR, 1);
         }
     }
 
-    private void stopPlayback() {
+    private void stopPlayback(boolean explicit) {
+        releasePlayer();
         updateState();
         lastPlaying = false;
-        saveResumeState(true, false);
-        releasePlayer();
-        this.currentIndex = -1;
+        saveResumeState(true, true);
+        if (explicit) {
+            this.currentIndex = -1;
+            lastIndex = -1;
+            lastUri = "";
+        }
         lastPlaying = false;
         unregisterNoisyReceiver();
         abandonAudioFocus();
         stopForeground(true);
+        logPlaybackState(explicit ? "stop_explicit" : "stop_queue_end");
     }
 
     private void releasePlayer() {
@@ -449,7 +465,11 @@ public class PlayerService extends Service {
             this.player.stop();
         } catch (Exception e) {
         }
-        this.player.release();
+        try {
+            this.player.release();
+        } catch (Exception e) {
+            Log.e(TAG, "release_failed", e);
+        }
         this.player = null;
     }
 
@@ -459,22 +479,26 @@ public class PlayerService extends Service {
         lastDuration = safeDuration();
         lastPosition = safePosition();
         lastLoopMode = this.loopMode;
-        lastUri = (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) ? "" : this.queue.get(this.currentIndex).uri;
+        lastUri = currentUri();
         if (lastPlaying && System.currentTimeMillis() - this.lastResumePositionSavedAt >= 7000L) {
             saveResumeState(false, false);
         }
+    }
+
+    private String currentUri() {
+        return (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) ? "" : this.queue.get(this.currentIndex).uri;
     }
 
     private void saveResumeState(boolean forcePosition, boolean includeQueue) {
         if (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) {
             return;
         }
-        JSONArray jSONArray = new JSONArray();
+        JSONArray queueJsonArray = new JSONArray();
         Iterator<Track> it = this.queue.iterator();
         while (it.hasNext()) {
-            jSONArray.put(it.next().uri);
+            queueJsonArray.put(it.next().uri);
         }
-        String queueJson = jSONArray.toString();
+        String queueJson = queueJsonArray.toString();
         SharedPreferences.Editor edit = getSharedPreferences(RESUME_PREFS, 0).edit();
         edit.putString(RESUME_URI, this.queue.get(this.currentIndex).uri);
         edit.putInt(RESUME_POSITION, Math.max(0, lastPosition));
@@ -501,30 +525,24 @@ public class PlayerService extends Service {
     }
 
     private Notification buildNotification() {
-        Track track;
-        Notification.Builder builder;
-        updateState();
-        if (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
-            track = this.queue.get(this.currentIndex);
-        } else {
-            track = new Track("", "MP3 Player", "Музыка готова");
-        }
+        Track track = (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) ? this.queue.get(this.currentIndex) : new Track("", "MP3 Player", "Музыка готова");
         SharedPreferences uiPrefs = getSharedPreferences("mp3_player_ui", 0);
         String theme = uiPrefs.getString("theme", "light");
-        boolean darkLaunch = "dark".equals(theme);
-        Class<?> launchClass = darkLaunch ? DarkMainActivity.class : MainActivity.class;
-        PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), 201326592);
-        if (Build.VERSION.SDK_INT >= 26) {
-            builder = new Notification.Builder(this, CHANNEL_ID);
-        } else {
-            builder = new Notification.Builder(this);
-        }
-        int i = android.R.drawable.ic_media_play;
-        Notification.Builder builderAddAction = builder.setSmallIcon(android.R.drawable.ic_media_play).setContentTitle(track.title).setContentText(track.artist).setContentIntent(activity).setOngoing(this.player != null && safeIsPlaying()).setCategory("transport").setPriority(-1).setVisibility(1).addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2));
-        if (this.player != null && safeIsPlaying()) {
-            i = android.R.drawable.ic_media_pause;
-        }
-        builderAddAction.addAction(i, (this.player == null || !safeIsPlaying()) ? "Играть" : "Пауза", serviceIntent(ACTION_TOGGLE, 3)).addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
+        Class<?> launchClass = "dark".equals(theme) ? DarkMainActivity.class : MainActivity.class;
+        PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
+        int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
+        builder.setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle(track.title)
+                .setContentText(track.artist)
+                .setContentIntent(activity)
+                .setOngoing(this.player != null && safeIsPlaying())
+                .setCategory(Notification.CATEGORY_TRANSPORT)
+                .setPriority(Notification.PRIORITY_LOW)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2))
+                .addAction(playPauseIcon, safeIsPlaying() ? "Пауза" : "Играть", serviceIntent(ACTION_TOGGLE, 3))
+                .addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
         updateMediaSession(track);
         builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         return builder.build();
@@ -533,14 +551,14 @@ public class PlayerService extends Service {
     private void updateMediaSession(Track track) {
         long currentPosition = safePosition();
         long duration = safeDuration();
-        int i = (this.player == null || !safeIsPlaying()) ? 2 : 3;
-        MediaMetadata.Builder metadata = new MediaMetadata.Builder()
-                .putString("android.media.metadata.TITLE", track.title)
-                .putString("android.media.metadata.ARTIST", track.artist)
-                .putString("android.media.metadata.ALBUM", track.album)
-                .putLong("android.media.metadata.DURATION", duration);
-        this.mediaSession.setMetadata(metadata.build());
-        this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(822L).setState(i, currentPosition, 1.0f).build());
+        int state = safeIsPlaying() ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
+        this.mediaSession.setMetadata(new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, track.title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, track.artist)
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, track.album)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration)
+                .build());
+        this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP).setState(state, currentPosition, 1.0f).build());
     }
 
     private int safeDuration() {
@@ -576,10 +594,10 @@ public class PlayerService extends Service {
         }
     }
 
-    private PendingIntent serviceIntent(String str, int i) {
-        Intent intent = new Intent(this, (Class<?>) PlayerService.class);
-        intent.setAction(str);
-        return PendingIntent.getService(this, i, intent, 201326592);
+    private PendingIntent serviceIntent(String action, int requestCode) {
+        Intent intent = new Intent(this, PlayerService.class);
+        intent.setAction(action);
+        return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private boolean requestAudioFocus() {
@@ -590,7 +608,7 @@ public class PlayerService extends Service {
         if (Build.VERSION.SDK_INT >= 26) {
             if (this.audioFocusRequest == null) {
                 this.audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                        .setAudioAttributes(new AudioAttributes.Builder().setContentType(2).setUsage(1).build())
+                        .setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build())
                         .setOnAudioFocusChangeListener(this.audioFocusChangeListener)
                         .build();
             }
@@ -643,15 +661,20 @@ public class PlayerService extends Service {
         if (Build.VERSION.SDK_INT < 26) {
             return;
         }
-        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "Музыка", 2);
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Музыка", NotificationManager.IMPORTANCE_LOW);
         NotificationManager notificationManager = (NotificationManager) getSystemService(NotificationManager.class);
         if (notificationManager != null) {
-            notificationManager.createNotificationChannel(notificationChannel);
+            notificationManager.createNotificationChannel(channel);
         }
+    }
+
+    private void logPlaybackState(String event) {
+        Log.i(TAG, event + " index=" + this.currentIndex + " queue=" + this.queue.size() + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle + " player=" + (this.player != null) + " playing=" + safeIsPlaying());
     }
 
     @Override
     public void onDestroy() {
+        logPlaybackState("on_destroy");
         releasePlayer();
         unregisterNoisyReceiver();
         abandonAudioFocus();
@@ -664,9 +687,48 @@ public class PlayerService extends Service {
 
     @Override
     public void onTaskRemoved(Intent intent) {
+        logPlaybackState("on_task_removed");
         if (this.player != null && safeIsPlaying()) {
             startForeground(NOTIFICATION_ID, buildNotification());
         }
         super.onTaskRemoved(intent);
+    }
+
+    private class SessionCallback extends MediaSession.Callback {
+        @Override
+        public void onPlay() {
+            pausedByUser = false;
+            play();
+        }
+
+        @Override
+        public void onPause() {
+            pausedByUser = true;
+            pausedByTransientFocusLoss = false;
+            pauseInternal("media_session_pause");
+        }
+
+        @Override
+        public void onSkipToNext() {
+            oneShot = false;
+            advanceQueue(AdvanceReason.MANUAL_NEXT, 0);
+        }
+
+        @Override
+        public void onSkipToPrevious() {
+            oneShot = false;
+            advanceQueue(AdvanceReason.MANUAL_PREVIOUS, 0);
+        }
+
+        @Override
+        public void onSeekTo(long position) {
+            seekTo((int) position);
+        }
+
+        @Override
+        public void onStop() {
+            stopPlayback(true);
+            stopSelf();
+        }
     }
 }
