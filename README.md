@@ -50,10 +50,24 @@ output/MP3-Player-test.apk
 - Мини-плеер снизу экрана во время активного воспроизведения.
 - Восстановление мини-плеера после остановки песни и повторного открытия приложения. По умолчанию состояние хранится 2 часа, срок можно изменить в настройках.
 - Фоновое воспроизведение через Android foreground service.
-- Светлая и темная черно-белая тема.
+- Светлая, темная и пользовательская тема с выбором собственных цветов.
 - Переключение языка интерфейса между English и Русский через стилизованное окно приложения.
 - Безопасный импорт аудио через системный выбор файлов Android с проверкой MIME-типа, расширения и размера файла.
 - Устойчивое чтение метаданных и обложек: поврежденные или слишком тяжелые MP3 не должны закрывать приложение.
+- Большой плеер закрывается свайпом вниз из любой области экрана.
+- Обложки кешируются и не должны мигать при повторном открытии списков или большого плеера.
+- Иконка приложения использует адаптивные Android vector drawable ресурсы без PNG.
+
+## Что нового в текущей версии
+
+- Обновлен визуальный стиль: темный фон, фиолетовые активные вкладки, желто-фиолетовые акценты и более чистые кнопки действий.
+- Добавлена пользовательская тема: можно выбрать цвет фона и текста через встроенный выбор цвета.
+- Иконка приложения переведена на adaptive icon: лаунчер получает отдельный фон и foreground, поэтому значок не должен выглядеть маленьким квадратом внутри системной маски.
+- Иконка в шапке и splash-иконка сделаны vector drawable без PNG и без лишней фоновой подложки.
+- Большой плеер закрывается свайпом вниз из любой точки: верхняя панель, обложка, текст, кнопки, seek bar и пустые области.
+- При начале вертикального свайпа большой плеер отменяет касание дочернего элемента, поэтому свайп по seek bar не должен одновременно перематывать песню.
+- Обложки песен кешируются в памяти. Большая обложка может догружаться поверх уже показанной маленькой, без пустого мигания.
+- Улучшена логика повтора и перехода по очереди: повтор списка и ошибки чтения трека не должны обрывать воспроизведение.
 
 ## Структура интерфейса
 
@@ -174,8 +188,11 @@ tr(String en, String ru)
 | `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | Модель одной песни |
 | `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | Сохранение библиотеки и чтение метаданных |
 | `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | Волновая визуализация под названием песни |
-| `app/src/main/res/drawable/ic_launcher.xml` | Иконка приложения на рабочем столе Android |
-| `app/src/main/res/drawable/ic_music_vector.xml` | Иконка в шапке приложения |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml` | Adaptive launcher icon для светлой темы |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml` | Adaptive launcher icon для темной темы |
+| `app/src/main/res/drawable/ic_music_vector_user.xml` | Иконка в шапке приложения |
+| `app/src/main/res/drawable/ic_launcher_splash_user.xml` | Splash-иконка светлой темы |
+| `app/src/main/res/drawable/ic_launcher_dark_splash_user.xml` | Splash-иконка темной темы |
 | `app/src/main/res/values/strings.xml` | Название приложения |
 | `app/src/main/res/values/styles.xml` | Базовая Android-тема |
 | `build-apk.ps1` | Автоматическая сборка APK без Android Studio |
@@ -273,7 +290,7 @@ app/src/main/java/com/dumuzeyn/mp3player/*.java
 
 ## Изменение дизайна
 
-Цвета темы рассчитываются в `MainActivity.java` в методе `colors()`. Интерфейс использует два черно-белых режима. Основные цвета хранятся в переменных `bg`, `fg`, `panel`, `muted` и `line`.
+Цвета темы рассчитываются в `MainActivity.java` в методе `colors()`. Интерфейс поддерживает светлую, темную и пользовательскую тему с выбранными цветами фона и текста. Основные цвета хранятся в переменных `bg`, `fg`, `panel`, `muted` и `line`.
 
 Если нужно поменять внешний вид:
 
@@ -285,19 +302,29 @@ app/src/main/java/com/dumuzeyn/mp3player/*.java
 
 ## Изменение иконки
 
-Иконка Android launcher:
+Иконки Android launcher:
 
 ```text
-app/src/main/res/drawable/ic_launcher.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml
+app/src/main/res/mipmap-anydpi/ic_launcher_home.xml
+app/src/main/res/mipmap-anydpi/ic_launcher_dark.xml
 ```
 
 Иконка внутри приложения:
 
 ```text
-app/src/main/res/drawable/ic_music_vector.xml
+app/src/main/res/drawable/ic_music_vector_user.xml
 ```
 
-Обе иконки являются vector drawable. Это удобно: они не размываются и не требуют набора PNG под разные размеры экрана. Иконка в шапке окрашивается через `setColorFilter`, поэтому меняет цвет вместе с темой.
+Иконки загрузочного экрана:
+
+```text
+app/src/main/res/drawable/ic_launcher_splash_user.xml
+app/src/main/res/drawable/ic_launcher_dark_splash_user.xml
+```
+
+Все иконки приложения являются vector drawable. Launcher использует adaptive icon на Android 8+, поэтому значок заполняет маску лаунчера и не выглядит маленьким квадратом внутри системного круга. Иконки в шапке и на загрузочном экране не используют PNG и принудительную подкраску.
 
 ## Изменение волновой визуализации
 
@@ -384,8 +411,15 @@ Apk/
 |           |               `-- WaveformView.java
 |           `-- res/
 |               |-- drawable/
-|               |   |-- ic_launcher.xml
-|               |   `-- ic_music_vector.xml
+|               |   |-- ic_launcher_dark_splash_user.xml
+|               |   |-- ic_launcher_splash_user.xml
+|               |   `-- ic_music_vector_user.xml
+|               |-- mipmap-anydpi/
+|               |   |-- ic_launcher_dark.xml
+|               |   `-- ic_launcher_home.xml
+|               |-- mipmap-anydpi-v26/
+|               |   |-- ic_launcher_dark.xml
+|               |   `-- ic_launcher_home.xml
 |               `-- values/
 |                   |-- strings.xml
 |                   `-- styles.xml
@@ -454,10 +488,24 @@ If Android warns about installing from an unknown source, allow APK installation
 - Show a fixed mini-player at the bottom while music is active.
 - Restore the mini-player after stopping a song and reopening the app. By default the state is kept for 2 hours, and the timeout can be changed in Settings.
 - Continue playback in the background through an Android foreground service.
-- Switch between light and dark black-and-white themes.
+- Switch between light, dark, and custom themes with user-selected background and text colors.
+- Close the full player with a downward swipe from any area of the screen.
+- Keep cover art cached so lists and the full player do not blink while covers reload.
+- Use adaptive Android vector launcher icons without PNG resources.
 - Switch the interface language between English and Russian through a styled in-app panel.
 - Import audio safely through Android's system file picker with MIME type, extension, and file size checks.
 - Handle damaged or unusually heavy MP3 metadata and covers without closing the app.
+
+## Current Version Updates
+
+- The visual style was refreshed with a dark background, purple active tabs, yellow-purple accents, and cleaner action buttons.
+- Custom theme mode now lets the user choose background and text colors through the built-in color picker.
+- The app icon now uses adaptive launcher resources with separate background and foreground layers, so it fills the launcher mask correctly.
+- Header and splash icons are vector drawables without PNG resources or an extra background plate.
+- The full player closes with a downward swipe from any point: top bar, cover, text, buttons, seek bar, or empty areas.
+- When a vertical full-player swipe starts, the child control receives `ACTION_CANCEL`, so the seek bar does not fight the close gesture.
+- Cover art is cached; the full-size cover loads over an already visible thumbnail instead of clearing the image first.
+- Repeat and queue handling was improved so repeat-list mode and unreadable tracks do not unexpectedly stop playback.
 
 ## Interface Structure
 
@@ -578,8 +626,11 @@ Favorites and playlists are stored as JSON strings in `SharedPreferences`. This 
 | `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | Single-song data model |
 | `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | Library persistence and metadata reading |
 | `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | Waveform visual under a song title |
-| `app/src/main/res/drawable/ic_launcher.xml` | Android launcher icon |
-| `app/src/main/res/drawable/ic_music_vector.xml` | Header icon inside the app |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml` | Adaptive launcher icon for the light theme |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml` | Adaptive launcher icon for the dark theme |
+| `app/src/main/res/drawable/ic_music_vector_user.xml` | Header icon inside the app |
+| `app/src/main/res/drawable/ic_launcher_splash_user.xml` | Splash icon for the light theme |
+| `app/src/main/res/drawable/ic_launcher_dark_splash_user.xml` | Splash icon for the dark theme |
 | `app/src/main/res/values/strings.xml` | App name |
 | `app/src/main/res/values/styles.xml` | Base Android theme |
 | `build-apk.ps1` | Automated APK build without Android Studio |
@@ -650,7 +701,7 @@ To change it:
 
 ## Changing The Design
 
-Theme colors are calculated in `MainActivity.java` inside `colors()`. The current interface uses two black-and-white modes. Colors are stored in `bg`, `fg`, `panel`, `muted`, and `line`.
+Theme colors are calculated in `MainActivity.java` inside `colors()`. The current interface supports light, dark, and custom themes with user-selected background and text colors. Colors are stored in `bg`, `fg`, `panel`, `muted`, and `line`.
 
 Useful places for design changes:
 
@@ -662,19 +713,29 @@ Useful places for design changes:
 
 ## Changing The Icon
 
-Android launcher icon:
+Android launcher icons:
 
 ```text
-app/src/main/res/drawable/ic_launcher.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml
+app/src/main/res/mipmap-anydpi/ic_launcher_home.xml
+app/src/main/res/mipmap-anydpi/ic_launcher_dark.xml
 ```
 
 Header icon inside the app:
 
 ```text
-app/src/main/res/drawable/ic_music_vector.xml
+app/src/main/res/drawable/ic_music_vector_user.xml
 ```
 
-Both icons are vector drawables. Replacing them with other vector drawables keeps the project free from raster image dependencies. The header icon is tinted with the current theme color through `setColorFilter`, so it switches together with the light and dark theme.
+Splash icons:
+
+```text
+app/src/main/res/drawable/ic_launcher_splash_user.xml
+app/src/main/res/drawable/ic_launcher_dark_splash_user.xml
+```
+
+All app icons are vector drawables. The launcher uses adaptive icons on Android 8+ so the icon fills the launcher mask instead of being placed as a small square inside a system circle. The header and splash icons do not use PNG resources or a forced tint.
 
 ## Changing The Waveform
 
@@ -761,8 +822,15 @@ Apk/
 |           |               `-- WaveformView.java
 |           `-- res/
 |               |-- drawable/
-|               |   |-- ic_launcher.xml
-|               |   `-- ic_music_vector.xml
+|               |   |-- ic_launcher_dark_splash_user.xml
+|               |   |-- ic_launcher_splash_user.xml
+|               |   `-- ic_music_vector_user.xml
+|               |-- mipmap-anydpi/
+|               |   |-- ic_launcher_dark.xml
+|               |   `-- ic_launcher_home.xml
+|               |-- mipmap-anydpi-v26/
+|               |   |-- ic_launcher_dark.xml
+|               |   `-- ic_launcher_home.xml
 |               `-- values/
 |                   |-- strings.xml
 |                   `-- styles.xml
