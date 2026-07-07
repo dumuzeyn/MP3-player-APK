@@ -3427,6 +3427,7 @@ public class MainActivity extends Activity {
         Track track = this.tracks.get(this.currentIndex);
         FrameLayout frameLayout = new FrameLayout(this) {
             private boolean draggingDown = false;
+            private boolean closingDown = false;
             private float startX = 0.0f;
             private float startY = 0.0f;
 
@@ -3435,38 +3436,37 @@ public class MainActivity extends Activity {
                 int action = motionEvent.getActionMasked();
                 if (action == MotionEvent.ACTION_DOWN) {
                     this.draggingDown = false;
+                    this.closingDown = false;
                     this.startX = motionEvent.getX();
                     this.startY = motionEvent.getY();
                     animate().cancel();
                     setAlpha(1.0f);
                     setTranslationY(0.0f);
                 } else if (action == MotionEvent.ACTION_MOVE) {
+                    if (this.closingDown) {
+                        return true;
+                    }
                     float dx = motionEvent.getX() - this.startX;
                     float dy = motionEvent.getY() - this.startY;
-                    if (!this.draggingDown && this.startY > getHeight() * 0.28f && this.startY < getHeight() * 0.82f && dy > dp(10) && dy > Math.abs(dx) * 0.75f) {
+                    if (!this.draggingDown && dy > dp(8) && dy > Math.abs(dx) * 0.55f) {
                         this.draggingDown = true;
                         getParent().requestDisallowInterceptTouchEvent(true);
                     }
                     if (this.draggingDown) {
-                        float drag = Math.max(0.0f, dy);
-                        if (MainActivity.this.animations) {
-                            setTranslationY(drag);
-                            setAlpha(Math.max(0.55f, 1.0f - (drag / Math.max(1, getHeight()))));
+                        if (dy > dp(26)) {
+                            this.closingDown = true;
+                            MainActivity.this.closeFullPlayer(this, true);
                         }
                         return true;
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    if (this.closingDown) {
+                        return true;
+                    }
                     if (this.draggingDown) {
-                        float dy2 = motionEvent.getY() - this.startY;
                         this.draggingDown = false;
-                        if (action == MotionEvent.ACTION_UP && dy2 > dp(34)) {
-                            MainActivity.this.closeFullPlayer(this, true);
-                        } else if (MainActivity.this.animations) {
-                            animate().translationY(0.0f).alpha(1.0f).setDuration(110L).setInterpolator(new DecelerateInterpolator()).start();
-                        } else {
-                            setTranslationY(0.0f);
-                            setAlpha(1.0f);
-                        }
+                        setTranslationY(0.0f);
+                        setAlpha(1.0f);
                         return true;
                     }
                 }
