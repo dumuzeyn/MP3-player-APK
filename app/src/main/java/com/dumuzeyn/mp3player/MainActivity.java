@@ -114,6 +114,9 @@ public class MainActivity extends Activity {
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Handler playbackHandler = new Handler(Looper.getMainLooper());
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
+    private final HashMap<String, Button> songPlayButtons = new HashMap<>();
+    private final HashMap<String, View> songCurrentMarkers = new HashMap<>();
+    private Button sourcePlayButton;
     private int tabIndex = 0;
     private int currentIndex = -1;
     private boolean playing = false;
@@ -137,6 +140,7 @@ public class MainActivity extends Activity {
     private boolean pageSwipeConsuming = false;
     private String search = "";
     private boolean fullPlayerOpening = false;
+    private int songRenderGeneration = 0;
 
     private static LruCache<String, Bitmap> createCoverCache() {
         int maxMemoryKb = (int) (Runtime.getRuntime().maxMemory() / 1024L);
@@ -784,7 +788,24 @@ public class MainActivity extends Activity {
     }
 
     private void refreshAfterTrackChange() {
-        render();
+        refreshPlaybackChrome();
+    }
+
+    private void refreshPlaybackChrome() {
+        for (Map.Entry<String, Button> entry : this.songPlayButtons.entrySet()) {
+            Track track = findTrack(entry.getKey());
+            if (track != null) {
+                entry.getValue().setText((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
+            }
+        }
+        for (Map.Entry<String, View> entry : this.songCurrentMarkers.entrySet()) {
+            Track track = findTrack(entry.getKey());
+            entry.getValue().setVisibility(track != null && isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (this.sourcePlayButton != null) {
+            this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
+        }
+        updateMini();
     }
 
     private boolean isDarkColor(int color) {
@@ -1191,8 +1212,13 @@ public class MainActivity extends Activity {
 
     private void render() {
         refreshTabs();
+        this.songRenderGeneration++;
         this.list.removeAllViews();
+        this.songPlayButtons.clear();
+        this.songCurrentMarkers.clear();
+        this.sourcePlayButton = null;
         renderSectionHeader();
+        boolean songTab = this.tabIndex == 0 || this.tabIndex == 1;
         if (this.tabIndex == 0) {
             renderSongs(filter(this.tracks));
         } else if (this.tabIndex == 1) {
@@ -1204,7 +1230,9 @@ public class MainActivity extends Activity {
         } else {
             renderGroups(this.tabs[this.tabIndex]);
         }
-        addMiniSpacerIfNeeded();
+        if (!songTab) {
+            addMiniSpacerIfNeeded();
+        }
         updateMini();
     }
 
@@ -1242,6 +1270,7 @@ public class MainActivity extends Activity {
             linearLayoutRow.addView(buttonSearchButton, square(52));
             Button buttonIcon = icon(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
             buttonIcon.setOnClickListener(new AnonymousClass9());
+            this.sourcePlayButton = buttonIcon;
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
             buttonShuffleButton.setOnClickListener(new AnonymousClass10());
@@ -1819,10 +1848,30 @@ public class MainActivity extends Activity {
             TextView textViewText = text(tr(str, str2), 18, true);
             textViewText.setPadding(dp(12), dp(24), dp(12), dp(24));
             this.list.addView(textViewText);
+            addMiniSpacerIfNeeded();
             return;
         }
-        for (int i = 0; i < arrayList.size(); i++) {
-            this.list.addView(songRow(arrayList.get(i), true, true));
+        appendSongRows(arrayList, 0, this.songRenderGeneration);
+    }
+
+    private void appendSongRows(final ArrayList<Track> tracksToRender, int start, final int generation) {
+        if (generation != this.songRenderGeneration || this.tabIndex > 1) {
+            return;
+        }
+        int end = Math.min(tracksToRender.size(), start + 24);
+        for (int i = start; i < end; i++) {
+            this.list.addView(songRow(tracksToRender.get(i), true, true));
+        }
+        if (end < tracksToRender.size()) {
+            final int nextStart = end;
+            this.uiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    MainActivity.this.appendSongRows(tracksToRender, nextStart, generation);
+                }
+            });
+        } else {
+            addMiniSpacerIfNeeded();
         }
     }
 
@@ -1836,13 +1885,13 @@ public class MainActivity extends Activity {
         linearLayout.setGravity(16);
         linearLayout.setPadding(dp(8), dp(8), dp(10), dp(8));
         applyCardStyle(linearLayout);
-        if (isCurrent(track)) {
-            View marker = new View(this);
-            marker.setBackgroundColor(this.yellow);
-            LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(dp(4), dp(58));
-            markerParams.setMargins(0, 0, dp(6), 0);
-            linearLayout.addView(marker, markerParams);
-        }
+        View marker = new View(this);
+        marker.setBackgroundColor(this.yellow);
+        marker.setVisibility(isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
+        this.songCurrentMarkers.put(track.uri, marker);
+        LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(dp(4), dp(58));
+        markerParams.setMargins(0, 0, dp(6), 0);
+        linearLayout.addView(marker, markerParams);
         ImageView imageViewCoverView = coverView();
         loadCover(imageViewCoverView, track, this.purpleSoft);
         imageViewCoverView.setOnClickListener(new AnonymousClass24(this, track));
@@ -1880,6 +1929,7 @@ public class MainActivity extends Activity {
         Button buttonIcon3 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
         applyPrimaryButtonStyle(buttonIcon3);
         buttonIcon3.setOnClickListener(new AnonymousClass27(this, track, runnable));
+        this.songPlayButtons.put(track.uri, buttonIcon3);
         linearLayout.addView(buttonIcon3, square(48));
         return spaced(linearLayout);
     }
