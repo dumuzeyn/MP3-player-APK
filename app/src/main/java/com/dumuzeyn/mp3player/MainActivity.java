@@ -1844,7 +1844,15 @@ public class MainActivity extends Activity {
         textViewText.setSingleLine(true);
         textViewText.setEllipsize(TextUtils.TruncateAt.END);
         linearLayout2.addView(textViewText);
-        linearLayout2.addView(wave(track, isCurrent(track)));
+        LinearLayout metaRow = new LinearLayout(this);
+        metaRow.setOrientation(0);
+        metaRow.setGravity(16);
+        metaRow.addView(wave(track, isCurrent(track)), new LinearLayout.LayoutParams(0, dp(30), 1.0f));
+        TextView durationText = text(formatMs(track.durationMs), 12, false);
+        durationText.setGravity(17);
+        durationText.setTextColor(this.secondaryText);
+        metaRow.addView(durationText, new LinearLayout.LayoutParams(dp(48), dp(30)));
+        linearLayout2.addView(metaRow);
         linearLayout.addView(linearLayout2, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
         if (this.tabIndex == 1) {
             Button buttonIcon = icon(this.favorites.contains(track.uri) ? "♥︎" : "♡︎");
@@ -4269,7 +4277,7 @@ public class MainActivity extends Activity {
         intent.addCategory("android.intent.category.OPENABLE");
         intent.setType("audio/*");
         intent.putExtra("android.intent.extra.ALLOW_MULTIPLE", true);
-        intent.addFlags(65);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         startActivityForResult(Intent.createChooser(intent, tr3("Choose music", "Выберите музыку", "+ ♪")), PICK_AUDIO);
     }
 
@@ -4288,10 +4296,10 @@ public class MainActivity extends Activity {
         if (i == PICK_AUDIO) {
             if (intent.getClipData() != null) {
                 for (int i3 = 0; i3 < intent.getClipData().getItemCount(); i3++) {
-                    addTrack(intent.getClipData().getItemAt(i3).getUri());
+                    addTrack(intent.getClipData().getItemAt(i3).getUri(), intent.getFlags(), true);
                 }
             } else if (intent.getData() != null) {
-                addTrack(intent.getData());
+                addTrack(intent.getData(), intent.getFlags(), true);
             }
         } else if (i == PICK_AUDIO_FOLDER && intent.getData() != null) {
             importFolder(intent.getData(), intent.getFlags());
@@ -4340,7 +4348,7 @@ public class MainActivity extends Activity {
                     scanDocumentTree(treeUri, childId, imported);
                 } else if (isAudioDocument(mimeType, displayName)) {
                     int before = this.tracks.size();
-                    addTrack(childUri);
+                    addTrack(childUri, 0, false);
                     if (this.tracks.size() > before) {
                         imported[0]++;
                     }
@@ -4366,12 +4374,22 @@ public class MainActivity extends Activity {
     }
 
     private void addTrack(Uri uri) {
+        addTrack(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION, true);
+    }
+
+    private void addTrack(Uri uri, int permissionFlags, boolean persistPermission) {
         if (!isSafeAudioUri(uri)) {
             return;
         }
-        try {
-            getContentResolver().takePersistableUriPermission(uri, 1);
-        } catch (Exception e) {
+        if (persistPermission) {
+            int takeFlags = permissionFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+            if (takeFlags == 0) {
+                takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+            }
+            try {
+                getContentResolver().takePersistableUriPermission(uri, takeFlags);
+            } catch (Exception e) {
+            }
         }
         String string = uri.toString();
         Iterator<Track> it = this.tracks.iterator();
@@ -4395,15 +4413,17 @@ public class MainActivity extends Activity {
         }
         try {
             String type = getContentResolver().getType(uri);
-            if (type != null && !type.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+            String name = queryDisplayName(uri);
+            boolean nameLooksAudio = false;
+            if (name != null) {
+                String lower = name.toLowerCase(Locale.ROOT);
+                nameLooksAudio = lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".aac") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac");
+            }
+            if (type != null && !type.toLowerCase(Locale.ROOT).startsWith("audio/") && !nameLooksAudio) {
                 return false;
             }
-            String name = queryDisplayName(uri);
-            if (type == null && name != null) {
-                String lower = name.toLowerCase(Locale.ROOT);
-                if (!lower.endsWith(".mp3") && !lower.endsWith(".m4a") && !lower.endsWith(".aac") && !lower.endsWith(".wav") && !lower.endsWith(".ogg") && !lower.endsWith(".flac")) {
-                    return false;
-                }
+            if (type == null && !nameLooksAudio) {
+                return false;
             }
             long size = querySize(uri);
             return size <= 0 || size <= MAX_AUDIO_BYTES;

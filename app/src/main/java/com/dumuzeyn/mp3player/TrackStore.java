@@ -2,8 +2,10 @@ package com.dumuzeyn.mp3player;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,8 +20,10 @@ public final class TrackStore {
     private static final String PREFS = "mp3_player_store";
     private static final String TRACKS = "tracks";
     private static final int MAX_TEXT_LENGTH = 160;
+    private static final String DEBUG_TAG = "MP3PlayerDebug";
 
-    private TrackStore() {}
+    private TrackStore() {
+    }
 
     public static ArrayList<Track> load(Context context) {
         ArrayList<Track> tracks = new ArrayList<>();
@@ -30,13 +34,15 @@ public final class TrackStore {
                 JSONObject item = array.getJSONObject(index);
                 tracks.add(new Track(
                         item.getString("uri"),
-                        item.optString("title", "Песня"),
-                        item.optString("artist", "Неизвестный исполнитель"),
-                        item.optString("album", "Неизвестный альбом"),
-                        item.optString("genre", "Неизвестный жанр")
+                        item.optString("title", "Song"),
+                        item.optString("artist", "Unknown artist"),
+                        item.optString("album", "Unknown album"),
+                        item.optString("genre", "Unknown genre"),
+                        item.optInt("durationMs", 0)
                 ));
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(DEBUG_TAG, "track_load_failed error=" + e.getMessage());
             tracks.clear();
         }
         sort(tracks);
@@ -53,55 +59,62 @@ public final class TrackStore {
                 item.put("artist", track.artist);
                 item.put("album", track.album);
                 item.put("genre", track.genre);
+                item.put("durationMs", track.durationMs);
                 array.put(item);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(DEBUG_TAG, "track_save_item_failed uri=" + track.uri + " error=" + e.getMessage());
+            }
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         prefs.edit().putString(TRACKS, array.toString()).apply();
     }
 
     public static Track fromUri(Context context, Uri uri) {
-        String title = null;
-        String artist = null;
-        String album = null;
-        String genre = null;
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            retriever.setDataSource(context, uri);
-            title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-            artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-            album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
-            genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE);
-        } catch (Throwable ignored) {
-        } finally {
-            try {
-                retriever.release();
-            } catch (Exception ignored) {}
+        boolean canOpen = canOpenForRead(context, uri);
+        if (!canOpen) {
+            Log.w(DEBUG_TAG, "add_track uri=" + uri + " canOpen=false");
+            return null;
         }
 
+        Metadata metadata = readMetadata(context, uri);
+        String title = metadata.title;
         if (title == null || title.trim().isEmpty()) {
             String path = uri.getLastPathSegment();
-            title = path == null ? "Песня" : path.substring(path.lastIndexOf('/') + 1);
+            title = path == null ? "Song" : path.substring(path.lastIndexOf('/') + 1);
         }
-        if (artist == null || artist.trim().isEmpty()) {
-            artist = "Неизвестный исполнитель";
-        }
-        if (album == null || album.trim().isEmpty()) {
-            album = "Неизвестный альбом";
-        }
-        if (genre == null || genre.trim().isEmpty()) {
-            genre = "Неизвестный жанр";
-        }
-        return new Track(uri.toString(), cleanText(title), cleanText(artist), cleanText(album), cleanText(genre));
+        String artist = isBlank(metadata.artist) ? "Unknown artist" : metadata.artist;
+        String album = isBlank(metadata.album) ? "Unknown album" : metadata.album;
+        String genre = isBlank(metadata.genre) ? "Unknown genre" : metadata.genre;
+
+        Track track = new Track(uri.toString(), cleanText(title), cleanText(artist), cleanText(album), cleanText(genre), metadata.durationMs);
+        Log.i(DEBUG_TAG, "add_track uri=" + uri + " title=" + track.title + " duration=" + track.durationMs + " canOpen=true");
+        return track;
     }
 
     public static Track refreshMetadata(Context context, Track oldTrack) {
         Track fresh = fromUri(context, Uri.parse(oldTrack.uri));
-        String title = fresh.title == null || fresh.title.trim().isEmpty() ? oldTrack.title : fresh.title;
-        String artist = fresh.artist == null || fresh.artist.trim().isEmpty() ? oldTrack.artist : fresh.artist;
-        String album = fresh.album == null || fresh.album.trim().isEmpty() ? oldTrack.album : fresh.album;
-        String genre = fresh.genre == null || fresh.genre.trim().isEmpty() ? oldTrack.genre : fresh.genre;
-        return new Track(oldTrack.uri, title, artist, album, genre);
+        if (fresh == null) {
+            return oldTrack;
+        }
+        String title = isBlank(fresh.title) ? oldTrack.title : fresh.title;
+        String artist = isBlank(fresh.artist) ? oldTrack.artist : fresh.artist;
+        String album = isBlank(fresh.album) ? oldTrack.album : fresh.album;
+        String genre = isBlank(fresh.genre) ? oldTrack.genre : fresh.genre;
+        int durationMs = fresh.durationMs > 0 ? fresh.durationMs : oldTrack.durationMs;
+        return new Track(oldTrack.uri, title, artist, album, genre, durationMs);
+    }
+
+    public static boolean canOpenForRead(Context context, Uri uri) {
+        AssetFileDescriptor descriptor = null;
+        try {
+            descriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
+            return descriptor != null;
+        } catch (Exception e) {
+            Log.w(DEBUG_TAG, "read_check_failed uri=" + uri + " error=" + e.getMessage());
+            return false;
+        } finally {
+            closeQuietly(descriptor);
+        }
     }
 
     public static void sort(List<Track> tracks) {
@@ -113,6 +126,54 @@ public final class TrackStore {
         });
     }
 
+    private static Metadata readMetadata(Context context, Uri uri) {
+        Metadata metadata = readMetadataDirect(context, uri);
+        if (metadata.durationMs <= 0) {
+            Metadata fallback = readMetadataWithFileDescriptor(context, uri);
+            metadata.mergeMissing(fallback);
+        }
+        if (metadata.durationMs <= 0) {
+            Log.w(DEBUG_TAG, "duration_missing uri=" + uri);
+        }
+        return metadata;
+    }
+
+    private static Metadata readMetadataDirect(Context context, Uri uri) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(context, uri);
+            return Metadata.from(retriever);
+        } catch (Throwable e) {
+            Log.w(DEBUG_TAG, "metadata_direct_failed uri=" + uri + " error=" + e.getMessage());
+            return new Metadata();
+        } finally {
+            releaseQuietly(retriever);
+        }
+    }
+
+    private static Metadata readMetadataWithFileDescriptor(Context context, Uri uri) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        AssetFileDescriptor descriptor = null;
+        try {
+            descriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
+            if (descriptor == null) {
+                return new Metadata();
+            }
+            if (descriptor.getLength() >= 0) {
+                retriever.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+            } else {
+                retriever.setDataSource(descriptor.getFileDescriptor());
+            }
+            return Metadata.from(retriever);
+        } catch (Throwable e) {
+            Log.w(DEBUG_TAG, "metadata_fd_failed uri=" + uri + " error=" + e.getMessage());
+            return new Metadata();
+        } finally {
+            releaseQuietly(retriever);
+            closeQuietly(descriptor);
+        }
+    }
+
     private static String cleanText(String value) {
         if (value == null) {
             return "";
@@ -122,5 +183,78 @@ public final class TrackStore {
             cleaned = cleaned.substring(0, MAX_TEXT_LENGTH).trim();
         }
         return cleaned;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static int parseDurationMs(String raw) {
+        if (isBlank(raw)) {
+            return 0;
+        }
+        try {
+            long value = Long.parseLong(raw.trim());
+            return value <= 0L ? 0 : (int) Math.min(Integer.MAX_VALUE, value);
+        } catch (Exception e) {
+            Log.w(DEBUG_TAG, "duration_parse_failed value=" + raw + " error=" + e.getMessage());
+            return 0;
+        }
+    }
+
+    private static void releaseQuietly(MediaMetadataRetriever retriever) {
+        try {
+            retriever.release();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void closeQuietly(AssetFileDescriptor descriptor) {
+        if (descriptor == null) {
+            return;
+        }
+        try {
+            descriptor.close();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static final class Metadata {
+        String album;
+        String artist;
+        int durationMs;
+        String genre;
+        String title;
+
+        static Metadata from(MediaMetadataRetriever retriever) {
+            Metadata metadata = new Metadata();
+            metadata.title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            metadata.artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+            metadata.album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
+            metadata.genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE);
+            metadata.durationMs = parseDurationMs(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+            return metadata;
+        }
+
+        void mergeMissing(Metadata fallback) {
+            if (fallback == null) {
+                return;
+            }
+            if (isBlank(this.title)) {
+                this.title = fallback.title;
+            }
+            if (isBlank(this.artist)) {
+                this.artist = fallback.artist;
+            }
+            if (isBlank(this.album)) {
+                this.album = fallback.album;
+            }
+            if (isBlank(this.genre)) {
+                this.genre = fallback.genre;
+            }
+            if (this.durationMs <= 0) {
+                this.durationMs = fallback.durationMs;
+            }
+        }
     }
 }

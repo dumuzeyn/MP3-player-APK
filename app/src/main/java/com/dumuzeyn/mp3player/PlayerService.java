@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -54,6 +55,7 @@ public class PlayerService extends Service {
 
     private static final String CHANNEL_ID = "playback";
     private static final String TAG = "MP3PlayerService";
+    private static final String DEBUG_TAG = "MP3PlayerDebug";
     private static final int NOTIFICATION_ID = 7;
     private static PlayerService instance;
 
@@ -131,6 +133,7 @@ public class PlayerService extends Service {
     private boolean pausedByTransientFocusLoss = false;
     private boolean duckedByFocusLoss = false;
     private int loopOneErrorRetries = 0;
+    private int consecutivePlaybackErrors = 0;
 
     @Override
     public void onCreate() {
@@ -223,23 +226,25 @@ public class PlayerService extends Service {
             stopSelf();
             return;
         }
-        if (attempts >= this.queue.size()) {
-            Log.e(TAG, "all_queue_items_failed");
+        if (attempts >= this.queue.size() || this.consecutivePlaybackErrors >= this.queue.size()) {
+            Log.e(DEBUG_TAG, "all_queue_items_failed errors=" + this.consecutivePlaybackErrors + " queue=" + this.queue.size());
             stopPlayback(false);
             stopSelf();
             return;
         }
         this.currentIndex = normalizeIndex(index);
         Track track = this.queue.get(this.currentIndex);
+        Log.i(DEBUG_TAG, "start_track uri=" + track.uri + " index=" + this.currentIndex + " attempt=" + attempts);
         releasePlayer();
         this.player = new MediaPlayer();
         try {
             this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build());
             this.player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-            this.player.setDataSource(this, track.asUri());
+            setPlayerDataSource(this.player, track);
             this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
+                    consecutivePlaybackErrors = 0;
                     logPlaybackState("track_finished");
                     advanceQueue(AdvanceReason.FINISHED, 0);
                 }
@@ -248,8 +253,14 @@ public class PlayerService extends Service {
                 @Override
                 public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
                     playerPreparing = false;
-                    Log.e(TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex);
-                    advanceQueue(AdvanceReason.ERROR, 1);
+                    consecutivePlaybackErrors++;
+                    Log.e(DEBUG_TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex + " uri=" + currentUri() + " errors=" + consecutivePlaybackErrors);
+                    if (consecutivePlaybackErrors >= queue.size()) {
+                        stopPlayback(false);
+                        stopSelf();
+                    } else {
+                        advanceQueue(AdvanceReason.ERROR, consecutivePlaybackErrors);
+                    }
                     return true;
                 }
             });
@@ -268,8 +279,42 @@ public class PlayerService extends Service {
             logPlaybackState("track_preparing");
         } catch (Exception e) {
             this.playerPreparing = false;
-            Log.e(TAG, "prepare_failed index=" + this.currentIndex + " title=" + track.title, e);
-            advanceQueue(AdvanceReason.ERROR, attempts + 1);
+            this.consecutivePlaybackErrors++;
+            Log.e(DEBUG_TAG, "prepare_failed index=" + this.currentIndex + " uri=" + track.uri + " error=" + e.getMessage(), e);
+            if (this.consecutivePlaybackErrors >= this.queue.size()) {
+                stopPlayback(false);
+                stopSelf();
+            } else {
+                advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
+            }
+        }
+    }
+
+    private void setPlayerDataSource(MediaPlayer targetPlayer, Track track) throws Exception {
+        try {
+            targetPlayer.setDataSource(this, track.asUri());
+            return;
+        } catch (Exception directError) {
+            Log.w(DEBUG_TAG, "set_data_source_direct_failed uri=" + track.uri + " error=" + directError.getMessage());
+        }
+        AssetFileDescriptor descriptor = null;
+        try {
+            descriptor = getContentResolver().openAssetFileDescriptor(track.asUri(), "r");
+            if (descriptor == null) {
+                throw new IllegalStateException("openAssetFileDescriptor returned null");
+            }
+            if (descriptor.getLength() >= 0) {
+                targetPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+            } else {
+                targetPlayer.setDataSource(descriptor.getFileDescriptor());
+            }
+        } finally {
+            if (descriptor != null) {
+                try {
+                    descriptor.close();
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
@@ -279,6 +324,7 @@ public class PlayerService extends Service {
         }
         this.playerPreparing = false;
         try {
+            this.consecutivePlaybackErrors = 0;
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
@@ -296,8 +342,9 @@ public class PlayerService extends Service {
             startForeground(NOTIFICATION_ID, buildNotification());
             logPlaybackState("track_started");
         } catch (Exception e) {
-            Log.e(TAG, "start_prepared_failed index=" + this.currentIndex, e);
-            advanceQueue(AdvanceReason.ERROR, 1);
+            this.consecutivePlaybackErrors++;
+            Log.e(DEBUG_TAG, "start_prepared_failed index=" + this.currentIndex + " uri=" + currentUri() + " error=" + e.getMessage(), e);
+            advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
         }
     }
 
