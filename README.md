@@ -394,6 +394,19 @@ output/MP3-Player.apk
 .\.android-sdk\platform-tools\adb.exe install -r output\MP3-Player.apk
 ```
 
+Проверить, что установлен именно новый APK:
+
+```powershell
+.\.android-sdk\platform-tools\adb.exe shell dumpsys package com.dumuzeyn.mp3player | findstr versionName
+```
+
+Для чистой проверки воспроизведения можно сбросить данные приложения, затем заново добавить одну MP3-песню:
+
+```powershell
+.\.android-sdk\platform-tools\adb.exe shell pm clear com.dumuzeyn.mp3player
+.\.android-sdk\platform-tools\adb.exe logcat -s MP3PlayerDebug
+```
+
 На телефоне должна быть включена отладка по USB, а компьютер должен быть разрешен в системном окне Android.
 
 ## Структура проекта
@@ -807,6 +820,19 @@ If ADB is available, install the APK with:
 
 ```powershell
 .\.android-sdk\platform-tools\adb.exe install -r output\MP3-Player.apk
+```
+
+Check that the installed APK is really the new one:
+
+```powershell
+.\.android-sdk\platform-tools\adb.exe shell dumpsys package com.dumuzeyn.mp3player | findstr versionName
+```
+
+For a clean playback test, clear app data, add one MP3 again, and watch debug logs:
+
+```powershell
+.\.android-sdk\platform-tools\adb.exe shell pm clear com.dumuzeyn.mp3player
+.\.android-sdk\platform-tools\adb.exe logcat -s MP3PlayerDebug
 ```
 
 USB developer access must be enabled on the phone, and the computer must be allowed in the Android authorization dialog.

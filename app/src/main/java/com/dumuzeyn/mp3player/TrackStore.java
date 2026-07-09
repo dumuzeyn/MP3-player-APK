@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.util.Log;
 
@@ -117,6 +118,26 @@ public final class TrackStore {
         }
     }
 
+    public static void updateDuration(Context context, String uri, int durationMs) {
+        if (durationMs <= 0 || uri == null || uri.isEmpty()) {
+            return;
+        }
+        ArrayList<Track> tracks = load(context);
+        boolean changed = false;
+        for (int i = 0; i < tracks.size(); i++) {
+            Track track = tracks.get(i);
+            if (uri.equals(track.uri) && track.durationMs != durationMs) {
+                tracks.set(i, new Track(track.uri, track.title, track.artist, track.album, track.genre, durationMs));
+                changed = true;
+                break;
+            }
+        }
+        if (changed) {
+            save(context, tracks);
+            Log.i(DEBUG_TAG, "duration_updated uri=" + uri + " durationMs=" + durationMs);
+        }
+    }
+
     public static void sort(List<Track> tracks) {
         Collections.sort(tracks, new Comparator<Track>() {
             @Override
@@ -131,6 +152,9 @@ public final class TrackStore {
         if (metadata.durationMs <= 0) {
             Metadata fallback = readMetadataWithFileDescriptor(context, uri);
             metadata.mergeMissing(fallback);
+        }
+        if (metadata.durationMs <= 0) {
+            metadata.durationMs = readDurationWithMediaPlayer(context, uri);
         }
         if (metadata.durationMs <= 0) {
             Log.w(DEBUG_TAG, "duration_missing uri=" + uri);
@@ -159,8 +183,9 @@ public final class TrackStore {
             if (descriptor == null) {
                 return new Metadata();
             }
-            if (descriptor.getLength() >= 0) {
-                retriever.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+            long declaredLength = descriptor.getDeclaredLength();
+            if (declaredLength >= 0) {
+                retriever.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), declaredLength);
             } else {
                 retriever.setDataSource(descriptor.getFileDescriptor());
             }
@@ -170,6 +195,41 @@ public final class TrackStore {
             return new Metadata();
         } finally {
             releaseQuietly(retriever);
+            closeQuietly(descriptor);
+        }
+    }
+
+    private static int readDurationWithMediaPlayer(Context context, Uri uri) {
+        MediaPlayer player = new MediaPlayer();
+        AssetFileDescriptor descriptor = null;
+        try {
+            try {
+                player.setDataSource(context, uri);
+            } catch (Exception directError) {
+                Log.w(DEBUG_TAG, "duration_player_direct_failed uri=" + uri + " error=" + directError.getMessage());
+                descriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
+                if (descriptor == null) {
+                    return 0;
+                }
+                long declaredLength = descriptor.getDeclaredLength();
+                if (declaredLength >= 0) {
+                    player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), declaredLength);
+                } else {
+                    player.setDataSource(descriptor.getFileDescriptor());
+                }
+            }
+            player.prepare();
+            int duration = Math.max(0, player.getDuration());
+            Log.i(DEBUG_TAG, "duration_player_fallback uri=" + uri + " durationMs=" + duration);
+            return duration;
+        } catch (Throwable e) {
+            Log.w(DEBUG_TAG, "duration_player_failed uri=" + uri + " error=" + e.getMessage());
+            return 0;
+        } finally {
+            try {
+                player.release();
+            } catch (Exception ignored) {
+            }
             closeQuietly(descriptor);
         }
     }

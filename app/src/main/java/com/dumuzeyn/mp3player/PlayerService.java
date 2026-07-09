@@ -234,13 +234,26 @@ public class PlayerService extends Service {
         }
         this.currentIndex = normalizeIndex(index);
         Track track = this.queue.get(this.currentIndex);
-        Log.i(DEBUG_TAG, "start_track uri=" + track.uri + " index=" + this.currentIndex + " attempt=" + attempts);
+        boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
+        Log.i(DEBUG_TAG, "start_track index=" + this.currentIndex + " title=" + track.title + " uri=" + track.uri + " canOpen=" + canOpen + " attempt=" + attempts);
+        if (!canOpen) {
+            this.consecutivePlaybackErrors++;
+            Log.e(DEBUG_TAG, "start_track_unavailable uri=" + track.uri + " errors=" + this.consecutivePlaybackErrors);
+            if (this.consecutivePlaybackErrors >= this.queue.size()) {
+                stopPlayback(false);
+                stopSelf();
+            } else {
+                advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
+            }
+            return;
+        }
         releasePlayer();
         this.player = new MediaPlayer();
         try {
             this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build());
             this.player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-            setPlayerDataSource(this.player, track);
+            String dataSourceMode = setPlayerDataSource(this.player, track);
+            Log.i(DEBUG_TAG, "data_source_ready mode=" + dataSourceMode + " uri=" + track.uri);
             this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
@@ -290,10 +303,10 @@ public class PlayerService extends Service {
         }
     }
 
-    private void setPlayerDataSource(MediaPlayer targetPlayer, Track track) throws Exception {
+    private String setPlayerDataSource(MediaPlayer targetPlayer, Track track) throws Exception {
         try {
             targetPlayer.setDataSource(this, track.asUri());
-            return;
+            return "context_uri";
         } catch (Exception directError) {
             Log.w(DEBUG_TAG, "set_data_source_direct_failed uri=" + track.uri + " error=" + directError.getMessage());
         }
@@ -303,10 +316,13 @@ public class PlayerService extends Service {
             if (descriptor == null) {
                 throw new IllegalStateException("openAssetFileDescriptor returned null");
             }
-            if (descriptor.getLength() >= 0) {
-                targetPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+            long declaredLength = descriptor.getDeclaredLength();
+            if (declaredLength >= 0) {
+                targetPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), declaredLength);
+                return "asset_fd_range";
             } else {
                 targetPlayer.setDataSource(descriptor.getFileDescriptor());
+                return "asset_fd";
             }
         } finally {
             if (descriptor != null) {
@@ -337,6 +353,7 @@ public class PlayerService extends Service {
             preparedPlayer.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
             this.loopOneErrorRetries = 0;
             updateState();
+            TrackStore.updateDuration(this, currentUri(), safeDuration());
             saveResumeState(true, true);
             updateNoisyReceiver();
             startForeground(NOTIFICATION_ID, buildNotification());

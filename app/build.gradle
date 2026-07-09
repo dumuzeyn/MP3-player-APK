@@ -33,7 +33,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }

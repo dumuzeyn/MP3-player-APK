@@ -26,6 +26,7 @@ import android.os.Looper;
 import android.text.InputFilter;
 import android.text.TextUtils;
 import android.provider.OpenableColumns;
+import android.util.Log;
 import android.util.LruCache;
 import android.view.MotionEvent;
 import android.view.View;
@@ -57,6 +58,7 @@ import org.json.JSONArray;
 public class MainActivity extends Activity {
     private static final String CUSTOM_TIMER = "customTimer";
     private static final String ANIMATIONS = "animations";
+    private static final String DEBUG_TAG = "MP3PlayerDebug";
     private static final String FAVORITES = "favorites";
     private static final String LANGUAGE = "language";
     private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
@@ -1376,6 +1378,12 @@ public class MainActivity extends Activity {
                 MainActivity.this.openResumeWindowDialog();
             }
         });
+        addSettingsButton(tr3("Check songs", "Проверить песни", "✓ ♪"), new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.this.openSongDiagnostics();
+            }
+        });
         addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new AnonymousClass20());
         addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new AnonymousClass21());
         addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new AnonymousClass19());
@@ -1848,7 +1856,7 @@ public class MainActivity extends Activity {
         metaRow.setOrientation(0);
         metaRow.setGravity(16);
         metaRow.addView(wave(track, isCurrent(track)), new LinearLayout.LayoutParams(0, dp(30), 1.0f));
-        TextView durationText = text(formatMs(track.durationMs), 12, false);
+        TextView durationText = text(formatTrackDuration(track), 12, false);
         durationText.setGravity(17);
         durationText.setTextColor(this.secondaryText);
         metaRow.addView(durationText, new LinearLayout.LayoutParams(dp(48), dp(30)));
@@ -3769,6 +3777,10 @@ public class MainActivity extends Activity {
         return (iMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Integer.valueOf(iMax % 60));
     }
 
+    private String formatTrackDuration(Track track) {
+        return track.durationMs > 0 ? formatMs(track.durationMs) : "--:--";
+    }
+
     private String formatSeconds(long j) {
         long jMax = Math.max(0L, j);
         return (jMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Long.valueOf(jMax % 60));
@@ -4379,6 +4391,7 @@ public class MainActivity extends Activity {
 
     private void addTrack(Uri uri, int permissionFlags, boolean persistPermission) {
         if (!isSafeAudioUri(uri)) {
+            Log.w(DEBUG_TAG, "add_track_rejected uri=" + uri + " reason=unsafe");
             return;
         }
         if (persistPermission) {
@@ -4389,6 +4402,7 @@ public class MainActivity extends Activity {
             try {
                 getContentResolver().takePersistableUriPermission(uri, takeFlags);
             } catch (Exception e) {
+                Log.w(DEBUG_TAG, "persist_permission_failed uri=" + uri + " error=" + e.getMessage());
             }
         }
         String string = uri.toString();
@@ -4399,11 +4413,21 @@ public class MainActivity extends Activity {
             }
         }
         try {
+            String mime = getContentResolver().getType(uri);
+            String displayName = queryDisplayName(uri);
+            long size = querySize(uri);
+            boolean canOpen = TrackStore.canOpenForRead(this, uri);
+            Log.i(DEBUG_TAG, "add_track_candidate uri=" + uri + " mime=" + mime + " displayName=" + displayName + " size=" + size + " canOpen=" + canOpen);
+            if (!canOpen) {
+                return;
+            }
             Track track = TrackStore.fromUri(this, uri);
             if (track != null) {
                 this.tracks.add(track);
+                Log.i(DEBUG_TAG, "add_track_saved uri=" + uri + " title=" + track.title + " durationMs=" + track.durationMs);
             }
         } catch (Throwable th) {
+            Log.e(DEBUG_TAG, "add_track_failed uri=" + uri + " error=" + th.getMessage(), th);
         }
     }
 
@@ -4833,6 +4857,41 @@ public class MainActivity extends Activity {
         View view = new View(this);
         view.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(88)));
         this.list.addView(view);
+    }
+
+    private void openSongDiagnostics() {
+        int available = 0;
+        int unavailable = 0;
+        int withDuration = 0;
+        int withoutDuration = 0;
+        StringBuilder broken = new StringBuilder();
+        for (Track track : this.tracks) {
+            boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
+            if (canOpen) {
+                available++;
+            } else {
+                unavailable++;
+                if (broken.length() < 500) {
+                    broken.append("\n- ").append(track.title);
+                }
+            }
+            if (track.durationMs > 0) {
+                withDuration++;
+            } else {
+                withoutDuration++;
+            }
+        }
+        String message = tr("Available: ", "Доступно: ") + available
+                + "\n" + tr("Unavailable: ", "Недоступно: ") + unavailable
+                + "\n" + tr("With duration: ", "С длительностью: ") + withDuration
+                + "\n" + tr("Without duration: ", "Без длительности: ") + withoutDuration
+                + (broken.length() > 0 ? "\n" + tr("Problem tracks:", "Проблемные треки:") + broken : "");
+        Log.i(DEBUG_TAG, "song_diagnostics available=" + available + " unavailable=" + unavailable + " withDuration=" + withDuration + " withoutDuration=" + withoutDuration);
+        showConfirmPanel(tr("Song check", "Проверка песен"), message, new Runnable() {
+            @Override
+            public void run() {
+            }
+        });
     }
 
     private void showConfirmPanel(String str, String str2, Runnable runnable) {
