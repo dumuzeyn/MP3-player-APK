@@ -574,7 +574,11 @@ public class PlayerService extends Service {
     private void updateState() {
         lastIndex = this.currentIndex;
         lastPlaying = this.player != null && safeIsPlaying();
-        lastDuration = safeDuration();
+        int currentDuration = safeDuration();
+        if (currentDuration <= 0 && this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
+            currentDuration = Math.max(0, this.queue.get(this.currentIndex).durationMs);
+        }
+        lastDuration = currentDuration;
         lastPosition = safePosition();
         lastLoopMode = this.loopMode;
         lastUri = currentUri();
@@ -660,18 +664,22 @@ public class PlayerService extends Service {
     }
 
     private int safeDuration() {
-        if (this.player == null) {
-            return 0;
+        if (this.player == null || this.playerPreparing) {
+            return currentTrackDurationFallback();
         }
         try {
-            return this.player.getDuration();
+            int duration = this.player.getDuration();
+            return duration > 0 ? duration : currentTrackDurationFallback();
         } catch (Exception e) {
-            return lastDuration;
+            return currentTrackDurationFallback();
         }
     }
 
     private int safePosition() {
         if (this.player == null) {
+            return 0;
+        }
+        if (this.playerPreparing) {
             return 0;
         }
         try {
@@ -682,7 +690,7 @@ public class PlayerService extends Service {
     }
 
     private boolean safeIsPlaying() {
-        if (this.player == null) {
+        if (this.player == null || this.playerPreparing) {
             return false;
         }
         try {
@@ -690,6 +698,13 @@ public class PlayerService extends Service {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private int currentTrackDurationFallback() {
+        if (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
+            return Math.max(0, this.queue.get(this.currentIndex).durationMs);
+        }
+        return Math.max(0, lastDuration);
     }
 
     private PendingIntent serviceIntent(String action, int requestCode) {

@@ -557,6 +557,9 @@ public class MainActivity extends Activity {
         PlayerService.lastPlaying = false;
         PlayerService.lastPosition = this.resumePosition;
         PlayerService.lastDuration = Math.max(0, sharedPreferences.getInt(PlayerService.RESUME_DURATION, 0));
+        if (PlayerService.lastDuration <= 0 && track.durationMs > 0) {
+            PlayerService.lastDuration = track.durationMs;
+        }
         PlayerService.lastUri = uri;
         PlayerService.lastLoopMode = sharedPreferences.getInt(PlayerService.RESUME_LOOP_MODE, 0);
         this.loopMode = PlayerService.lastLoopMode;
@@ -586,9 +589,9 @@ public class MainActivity extends Activity {
             boolean z = false;
             for (int i = 0; i < arrayList.size(); i++) {
                 Track track = (Track) arrayList.get(i);
-                if ("Неизвестный альбом".equals(track.album) || "Неизвестный жанр".equals(track.genre)) {
+                if (track.durationMs <= 0 || "Неизвестный альбом".equals(track.album) || "Неизвестный жанр".equals(track.genre)) {
                     Track trackRefreshMetadata = TrackStore.refreshMetadata(MainActivity.this, track);
-                    if (!trackRefreshMetadata.album.equals(track.album) || !trackRefreshMetadata.genre.equals(track.genre) || !trackRefreshMetadata.artist.equals(track.artist)) {
+                    if (trackRefreshMetadata.durationMs != track.durationMs || !trackRefreshMetadata.album.equals(track.album) || !trackRefreshMetadata.genre.equals(track.genre) || !trackRefreshMetadata.artist.equals(track.artist)) {
                         arrayList.set(i, trackRefreshMetadata);
                         z = true;
                     }
@@ -3514,17 +3517,18 @@ public class MainActivity extends Activity {
         linearLayout.addView(linearLayoutRow2);
         SeekBar seekBar = new SeekBar(this);
         applySeekBarColors(seekBar);
-        seekBar.setMax(Math.max(1, PlayerService.lastDuration));
+        int displayDuration = playbackDurationFor(track);
+        seekBar.setMax(Math.max(1, displayDuration));
         seekBar.setProgress(Math.max(0, PlayerService.lastPosition));
         linearLayout.addView(seekBar, new LinearLayout.LayoutParams(-1, dp(42)));
         LinearLayout linearLayoutRow3 = row();
         TextView textViewText3 = text(formatMs(PlayerService.lastPosition), 13, false);
-        TextView textViewText4 = text("-" + formatMs(Math.max(0, PlayerService.lastDuration - PlayerService.lastPosition)), 13, false);
+        TextView textViewText4 = text("-" + formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)), 13, false);
         textViewText4.setGravity(TAB_CYCLES);
         linearLayoutRow3.addView(textViewText3, new LinearLayout.LayoutParams(0, dp(28), 1.0f));
         linearLayoutRow3.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(28), 1.0f));
         linearLayout.addView(linearLayoutRow3);
-        seekBar.setOnSeekBarChangeListener(new AnonymousClass75(this, textViewText3, textViewText4));
+        seekBar.setOnSeekBarChangeListener(new AnonymousClass75(this, track, textViewText3, textViewText4));
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(new AnonymousClass76(this, frameLayout, track, seekBar, textViewText3, textViewText4, button, handler), 700L);
         linearLayout.addView(new View(this), new LinearLayout.LayoutParams(-1, 0, 1.0f));
@@ -3633,8 +3637,10 @@ public class MainActivity extends Activity {
         final MainActivity this$0;
         final TextView val$elapsed;
         final TextView val$remain;
+        final Track val$track;
 
-        AnonymousClass75(MainActivity mainActivity, TextView textView, TextView textView2) {
+        AnonymousClass75(MainActivity mainActivity, Track track, TextView textView, TextView textView2) {
+            this.val$track = track;
             this.val$elapsed = textView;
             this.val$remain = textView2;
             this.this$0 = mainActivity;
@@ -3644,7 +3650,7 @@ public class MainActivity extends Activity {
         public void onProgressChanged(SeekBar seekBar, int i, boolean z) {
             if (z) {
                 this.val$elapsed.setText(MainActivity.m44$$Nest$mformatMs(this.this$0, i));
-                this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, PlayerService.lastDuration - i)));
+                this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, this.this$0.playbackDurationFor(this.val$track) - i)));
             }
         }
 
@@ -3708,10 +3714,11 @@ public class MainActivity extends Activity {
                 MainActivity.m67$$Nest$mrender(this.this$0);
                 return;
             }
-            this.val$seek.setMax(Math.max(1, PlayerService.lastDuration));
+            int displayDuration = this.this$0.playbackDurationFor(this.val$track);
+            this.val$seek.setMax(Math.max(1, displayDuration));
             this.val$seek.setProgress(Math.max(0, PlayerService.lastPosition));
             this.val$elapsed.setText(MainActivity.m44$$Nest$mformatMs(this.this$0, PlayerService.lastPosition));
-            this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, PlayerService.lastDuration - PlayerService.lastPosition)));
+            this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, displayDuration - PlayerService.lastPosition)));
             this.val$timer.setText(MainActivity.m75$$Nest$mtimerButtonText(this.this$0));
             this.val$handler.postDelayed(this, 250L);
         }
@@ -3779,6 +3786,14 @@ public class MainActivity extends Activity {
 
     private String formatTrackDuration(Track track) {
         return track.durationMs > 0 ? formatMs(track.durationMs) : "--:--";
+    }
+
+    private int playbackDurationFor(Track track) {
+        int serviceDuration = Math.max(0, PlayerService.lastDuration);
+        if (serviceDuration > 0) {
+            return serviceDuration;
+        }
+        return track == null ? 0 : Math.max(0, track.durationMs);
     }
 
     private String formatSeconds(long j) {
