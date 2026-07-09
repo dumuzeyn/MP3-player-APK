@@ -7,6 +7,7 @@ def releaseKeyAlias = System.getenv("MP3_RELEASE_KEY_ALIAS")
 def releaseStorePass = System.getenv("MP3_RELEASE_STORE_PASS")
 def releaseKeyPass = System.getenv("MP3_RELEASE_KEY_PASS")
 def hasReleaseSigning = releaseKeystorePath && releaseKeyAlias && releaseStorePass && releaseKeyPass
+def ciDebugKeystore = rootProject.file(".github/ci-debug.keystore")
 
 android {
     namespace "com.dumuzeyn.mp3player"
@@ -21,6 +22,13 @@ android {
     }
 
     signingConfigs {
+        debug {
+            storeFile ciDebugKeystore
+            keyAlias "ci-debug"
+            storePassword "android"
+            keyPassword "android"
+        }
+
         release {
             if (hasReleaseSigning) {
                 storeFile file(releaseKeystorePath)
@@ -32,6 +40,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+
         release {
             minifyEnabled false
             if (hasReleaseSigning) {

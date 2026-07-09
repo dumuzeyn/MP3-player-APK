@@ -2,6 +2,7 @@
 .gradle/
 build/
 *.keystore
+!.github/ci-debug.keystore
 *.jks
 *.idsig
 commandlinetools.zip
