@@ -1,0 +1,2 @@
+-keep class com.dumuzeyn.mp3player.Track { *; }
+-keep class com.dumuzeyn.mp3player.PlayerService { *; }

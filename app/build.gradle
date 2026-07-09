@@ -2,6 +2,12 @@ plugins {
     id "com.android.application"
 }
 
+def releaseKeystorePath = System.getenv("MP3_RELEASE_KEYSTORE")
+def releaseKeyAlias = System.getenv("MP3_RELEASE_KEY_ALIAS")
+def releaseStorePass = System.getenv("MP3_RELEASE_STORE_PASS")
+def releaseKeyPass = System.getenv("MP3_RELEASE_KEY_PASS")
+def hasReleaseSigning = releaseKeystorePath && releaseKeyAlias && releaseStorePass && releaseKeyPass
+
 android {
     namespace "com.dumuzeyn.mp3player"
     compileSdk 35
@@ -10,7 +16,28 @@ android {
         applicationId "com.dumuzeyn.mp3player"
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode 20
+        versionName "2.0"
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseKeystorePath)
+                keyAlias releaseKeyAlias
+                storePassword releaseStorePass
+                keyPassword releaseKeyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
     }
 }

@@ -95,6 +95,16 @@ Invoke-Checked { & $Aapt2 compile --dir (Join-Path $Root "app\src\main\res") -o 
 
 $UnsignedApk = Join-Path $BuildDir "mp3-player-unsigned.apk"
 $FlatFiles = Get-ChildItem -LiteralPath $FlatDir -Filter *.flat -Recurse | ForEach-Object { $_.FullName }
+$GradleBuildFile = Join-Path $Root "app\build.gradle"
+$GradleBuildText = Get-Content -LiteralPath $GradleBuildFile -Raw
+if ($GradleBuildText -notmatch 'versionCode\s+(\d+)') {
+    throw "versionCode was not found in $GradleBuildFile"
+}
+$VersionCode = $Matches[1]
+if ($GradleBuildText -notmatch 'versionName\s+"([^"]+)"') {
+    throw "versionName was not found in $GradleBuildFile"
+}
+$VersionName = $Matches[1]
 $AaptLinkArgs = @(
     "link",
     "-o", $UnsignedApk,
@@ -102,8 +112,8 @@ $AaptLinkArgs = @(
     "--manifest", (Join-Path $Root "app\src\main\AndroidManifest.xml"),
     "--min-sdk-version", "23",
     "--target-sdk-version", "35",
-    "--version-code", "7",
-    "--version-name", "1.6",
+    "--version-code", $VersionCode,
+    "--version-name", $VersionName,
     "--java", $GenDir
 )
 $AssetsDir = Join-Path $Root "app\src\main\assets"

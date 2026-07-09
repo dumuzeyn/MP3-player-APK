@@ -119,6 +119,7 @@ public class PlayerService extends Service {
     private MediaPlayer player;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
+    private boolean playerPreparing = false;
     private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
     private String lastSavedQueueJson = "";
@@ -246,22 +247,48 @@ public class PlayerService extends Service {
             this.player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                 @Override
                 public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
-                    Log.e(TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex + " uri=" + currentUri());
+                    playerPreparing = false;
+                    Log.e(TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex);
                     advanceQueue(AdvanceReason.ERROR, 1);
                     return true;
                 }
             });
-            this.player.prepare();
+            this.player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mediaPlayer) {
+                    startPreparedPlayer(mediaPlayer, startPosition);
+                }
+            });
+            this.playerPreparing = true;
+            updateState();
+            saveResumeState(true, true);
+            updateNoisyReceiver();
+            startForeground(NOTIFICATION_ID, buildNotification());
+            this.player.prepareAsync();
+            logPlaybackState("track_preparing");
+        } catch (Exception e) {
+            this.playerPreparing = false;
+            Log.e(TAG, "prepare_failed index=" + this.currentIndex + " title=" + track.title, e);
+            advanceQueue(AdvanceReason.ERROR, attempts + 1);
+        }
+    }
+
+    private void startPreparedPlayer(MediaPlayer preparedPlayer, int startPosition) {
+        if (preparedPlayer != this.player) {
+            return;
+        }
+        this.playerPreparing = false;
+        try {
             if (startPosition > 0) {
-                this.player.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
+                preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
             if (!requestAudioFocus()) {
                 Log.w(TAG, "audio_focus_denied");
                 stopPlayback(false);
                 return;
             }
-            this.player.start();
-            this.player.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
+            preparedPlayer.start();
+            preparedPlayer.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
             this.loopOneErrorRetries = 0;
             updateState();
             saveResumeState(true, true);
@@ -269,8 +296,8 @@ public class PlayerService extends Service {
             startForeground(NOTIFICATION_ID, buildNotification());
             logPlaybackState("track_started");
         } catch (Exception e) {
-            Log.e(TAG, "prepare_failed index=" + this.currentIndex + " uri=" + track.uri + " title=" + track.title, e);
-            advanceQueue(AdvanceReason.ERROR, attempts + 1);
+            Log.e(TAG, "start_prepared_failed index=" + this.currentIndex, e);
+            advanceQueue(AdvanceReason.ERROR, 1);
         }
     }
 
@@ -391,6 +418,9 @@ public class PlayerService extends Service {
             playIndex(this.currentIndex < 0 ? 0 : this.currentIndex);
             return;
         }
+        if (this.playerPreparing) {
+            return;
+        }
         if (!safeIsPlaying()) {
             if (!requestAudioFocus()) {
                 return;
@@ -461,7 +491,11 @@ public class PlayerService extends Service {
         if (this.player == null) {
             return;
         }
+        this.playerPreparing = false;
         try {
+            this.player.setOnPreparedListener(null);
+            this.player.setOnCompletionListener(null);
+            this.player.setOnErrorListener(null);
             this.player.stop();
         } catch (Exception e) {
         }

@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.provider.DocumentsContract;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -52,7 +53,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 public class MainActivity extends Activity {
     private static final String CUSTOM_TIMER = "customTimer";
@@ -66,6 +66,8 @@ public class MainActivity extends Activity {
     private static final int SWIPE_START_DP = 21;
     private static final int SWIPE_COMMIT_DP = 52;
     private static final int PICK_AUDIO = 2001;
+    private static final int PICK_AUDIO_FOLDER = 2002;
+    private static final int MAX_FOLDER_IMPORT = 3000;
     private static final String PLAYLISTS = "playlists";
     private static final String PREFS = "mp3_player_ui";
     private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
@@ -529,21 +531,7 @@ public class MainActivity extends Activity {
         this.favorites.clear();
         this.favorites.addAll(this.prefs.getStringSet(FAVORITES, new HashSet()));
         this.playlists.clear();
-        try {
-            JSONArray jSONArray = new JSONArray(this.prefs.getString(PLAYLISTS, "[]"));
-            for (int i = 0; i < jSONArray.length(); i++) {
-                JSONObject jSONObject = jSONArray.getJSONObject(i);
-                Playlist playlist = new Playlist(cleanPlaylistName(jSONObject.optString("name", "Playlist")));
-                JSONArray jSONArrayOptJSONArray = jSONObject.optJSONArray("songs");
-                if (jSONArrayOptJSONArray != null) {
-                    for (int i2 = 0; i2 < jSONArrayOptJSONArray.length(); i2++) {
-                        playlist.uris.add(jSONArrayOptJSONArray.getString(i2));
-                    }
-                }
-                this.playlists.add(playlist);
-            }
-        } catch (Exception e) {
-        }
+        this.playlists.addAll(PlaylistManager.fromJson(this.prefs.getString(PLAYLISTS, "[]")));
     }
 
     private void restoreRecentPlayback() {
@@ -740,26 +728,7 @@ public class MainActivity extends Activity {
     }
 
     private void saveState() {
-        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, playlistsJson()).putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
-    }
-
-    private String playlistsJson() {
-        JSONArray jSONArray = new JSONArray();
-        for (Playlist playlist : this.playlists) {
-            try {
-                JSONObject jSONObject = new JSONObject();
-                jSONObject.put("name", playlist.name);
-                JSONArray jSONArray2 = new JSONArray();
-                Iterator<String> it = playlist.uris.iterator();
-                while (it.hasNext()) {
-                    jSONArray2.put(it.next());
-                }
-                jSONObject.put("songs", jSONArray2);
-                jSONArray.put(jSONObject);
-            } catch (Exception e) {
-            }
-        }
-        return jSONArray.toString();
+        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, PlaylistManager.toJson(this.playlists)).putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
     }
 
     private void colors() {
@@ -814,15 +783,11 @@ public class MainActivity extends Activity {
     }
 
     private boolean isDarkColor(int color) {
-        return ((Color.red(color) * 299) + (Color.green(color) * 587) + (Color.blue(color) * 114)) / 1000 < 128;
+        return ThemeManager.isDarkColor(color);
     }
 
     private int mixColor(int first, int second, float amount) {
-        float clamped = Math.max(0.0f, Math.min(1.0f, amount));
-        int red = Math.round((Color.red(first) * clamped) + (Color.red(second) * (1.0f - clamped)));
-        int green = Math.round((Color.green(first) * clamped) + (Color.green(second) * (1.0f - clamped)));
-        int blue = Math.round((Color.blue(first) * clamped) + (Color.blue(second) * (1.0f - clamped)));
-        return Color.rgb(red, green, blue);
+        return ThemeManager.mixColor(first, second, amount);
     }
 
     private void updateLauncherIcon() {
@@ -1254,6 +1219,14 @@ public class MainActivity extends Activity {
                 Button buttonIcon2 = icon("+");
                 buttonIcon2.setOnClickListener(new AnonymousClass11());
                 linearLayoutRow.addView(buttonIcon2, square(52));
+                Button buttonFolder = icon("▣");
+                buttonFolder.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        openFolderPicker();
+                    }
+                });
+                linearLayoutRow.addView(buttonFolder, square(52));
             } else {
                 Button buttonIcon3 = icon("+");
                 buttonIcon3.setOnClickListener(new AnonymousClass12());
@@ -1563,7 +1536,7 @@ public class MainActivity extends Activity {
     }
 
     private int readableOn(int color) {
-        return isDarkColor(color) ? -1 : -16777216;
+        return ThemeManager.readableOn(color);
     }
 
     class AnonymousClass17 implements View.OnClickListener {
@@ -3118,7 +3091,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void done(String str) {
-            String strTrim = MainActivity.this.cleanPlaylistName(str);
+            String strTrim = PlaylistManager.cleanName(str);
             if (strTrim.isEmpty()) {
                 strTrim = MainActivity.m79$$Nest$mtr(this.this$0, "Playlist", "Плейлист");
             }
@@ -3188,7 +3161,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void done(String str) {
-            String strTrim = MainActivity.this.cleanPlaylistName(str);
+            String strTrim = PlaylistManager.cleanName(str);
             ArrayList arrayListM14$$Nest$fgetplaylists = MainActivity.m14$$Nest$fgetplaylists(MainActivity.this);
             if (strTrim.isEmpty()) {
                 strTrim = MainActivity.m79$$Nest$mtr(MainActivity.this, "Playlist", "Плейлист");
@@ -3207,20 +3180,12 @@ public class MainActivity extends Activity {
         showInputPanel(tr3("Rename playlist", "Переименовать плейлист", "✎ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), playlist.name, false, new InputDone() {
             @Override
             public void done(String value) {
-                String name = cleanPlaylistName(value);
+                String name = PlaylistManager.cleanName(value);
                 playlist.name = name.isEmpty() ? tr("Playlist", "Плейлист") : name;
                 saveState();
                 render();
             }
         });
-    }
-
-    private String cleanPlaylistName(String value) {
-        if (value == null) {
-            return "";
-        }
-        String cleaned = value.replaceAll("[\\p{Cntrl}&&[^\n\t]]", "").replace('\n', ' ').replace('\t', ' ').trim();
-        return cleaned.length() > 80 ? cleaned.substring(0, 80).trim() : cleaned;
     }
 
     private void openSearch() {
@@ -4308,22 +4273,96 @@ public class MainActivity extends Activity {
         startActivityForResult(Intent.createChooser(intent, tr3("Choose music", "Выберите музыку", "+ ♪")), PICK_AUDIO);
     }
 
+    private void openFolderPicker() {
+        Intent intent = new Intent("android.intent.action.OPEN_DOCUMENT_TREE");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        startActivityForResult(Intent.createChooser(intent, tr3("Choose music folder", "Выберите папку с музыкой", "▣ ♪")), PICK_AUDIO_FOLDER);
+    }
+
     @Override
     protected void onActivityResult(int i, int i2, Intent intent) {
         super.onActivityResult(i, i2, intent);
-        if (i != PICK_AUDIO || i2 != -1 || intent == null) {
+        if (i2 != -1 || intent == null) {
             return;
         }
-        if (intent.getClipData() != null) {
-            for (int i3 = 0; i3 < intent.getClipData().getItemCount(); i3++) {
-                addTrack(intent.getClipData().getItemAt(i3).getUri());
+        if (i == PICK_AUDIO) {
+            if (intent.getClipData() != null) {
+                for (int i3 = 0; i3 < intent.getClipData().getItemCount(); i3++) {
+                    addTrack(intent.getClipData().getItemAt(i3).getUri());
+                }
+            } else if (intent.getData() != null) {
+                addTrack(intent.getData());
             }
-        } else if (intent.getData() != null) {
-            addTrack(intent.getData());
+        } else if (i == PICK_AUDIO_FOLDER && intent.getData() != null) {
+            importFolder(intent.getData(), intent.getFlags());
+        } else {
+            return;
         }
         TrackStore.sort(this.tracks);
         TrackStore.save(this, this.tracks);
         render();
+    }
+
+    private void importFolder(Uri treeUri, int flags) {
+        if (treeUri == null || !"content".equalsIgnoreCase(treeUri.getScheme())) {
+            return;
+        }
+        int takeFlags = flags & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+        try {
+            getContentResolver().takePersistableUriPermission(treeUri, takeFlags);
+        } catch (Exception ignored) {
+        }
+        int[] imported = new int[]{0};
+        try {
+            scanDocumentTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri), imported);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void scanDocumentTree(Uri treeUri, String documentId, int[] imported) {
+        if (imported[0] >= MAX_FOLDER_IMPORT) {
+            return;
+        }
+        Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId);
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(childrenUri, new String[]{
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME
+            }, null, null, null);
+            while (cursor != null && cursor.moveToNext() && imported[0] < MAX_FOLDER_IMPORT) {
+                String childId = cursor.getString(0);
+                String mimeType = cursor.getString(1);
+                String displayName = cursor.getString(2);
+                Uri childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, childId);
+                if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+                    scanDocumentTree(treeUri, childId, imported);
+                } else if (isAudioDocument(mimeType, displayName)) {
+                    int before = this.tracks.size();
+                    addTrack(childUri);
+                    if (this.tracks.size() > before) {
+                        imported[0]++;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    private boolean isAudioDocument(String mimeType, String displayName) {
+        if (mimeType != null && mimeType.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+            return true;
+        }
+        if (displayName == null) {
+            return false;
+        }
+        String lower = displayName.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".aac") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac");
     }
 
     private void addTrack(Uri uri) {
@@ -4848,7 +4887,7 @@ public class MainActivity extends Activity {
         return Math.round(i * getResources().getDisplayMetrics().density);
     }
 
-    private static class Playlist {
+    static class Playlist {
         String name;
         final ArrayList<String> uris = new ArrayList<>();
 

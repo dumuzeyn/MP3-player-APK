@@ -1,7 +1,7 @@
 ﻿# MP3 Player APK
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=1.6">
+  <a href="https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=2.0">
     <img src="https://img.shields.io/badge/Скачать_APK-MP3--Player.apk-black?style=for-the-badge" alt="Скачать APK">
   </a>
 </p>
@@ -28,13 +28,14 @@ output/MP3-Player-test.apk
 
 Прямая ссылка:
 
-[Скачать MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=1.6)
+[Скачать MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=2.0)
 
 Если Android предупреждает об установке из неизвестного источника, нужно разрешить установку APK для приложения, через которое открыт файл. Это стандартное поведение Android для приложений не из магазина.
 
 ## Возможности
 
 - Добавление одной или нескольких песен через системный выбор файлов Android.
+- Добавление папки с музыкой через системный выбор папки Android.
 - Отображение песен с обложками и волновой визуализацией.
 - Чтение названия, исполнителя, альбома, жанра и встроенной обложки через `MediaMetadataRetriever`.
 - Сортировка библиотеки: сначала английские названия, потом русские.
@@ -68,6 +69,9 @@ output/MP3-Player-test.apk
 - При начале вертикального свайпа большой плеер отменяет касание дочернего элемента, поэтому свайп по seek bar не должен одновременно перематывать песню.
 - Обложки песен кешируются в памяти. Большая обложка может догружаться поверх уже показанной маленькой, без пустого мигания.
 - Улучшена логика повтора и перехода по очереди: повтор списка и ошибки чтения трека не должны обрывать воспроизведение.
+- Версия приложения начинается с `2.0`, а ручная сборка APK берет `versionCode` и `versionName` из Gradle.
+- Подготовка `MediaPlayer` переведена на `prepareAsync()`, чтобы тяжелые файлы меньше задерживали переключение треков.
+- Логика плейлистов и цветов вынесена из `MainActivity` в отдельные менеджеры.
 
 ## Структура интерфейса
 
@@ -473,6 +477,7 @@ If Android warns about installing from an unknown source, allow APK installation
 ## Features
 
 - Add one or multiple songs through the Android system file picker.
+- Add a music folder through Android's system folder picker.
 - Display songs with covers and waveform visuals.
 - Read title, artist, album, genre, and embedded cover with `MediaMetadataRetriever`.
 - Sort the library with English titles first and Russian titles after that.
@@ -506,6 +511,9 @@ If Android warns about installing from an unknown source, allow APK installation
 - When a vertical full-player swipe starts, the child control receives `ACTION_CANCEL`, so the seek bar does not fight the close gesture.
 - Cover art is cached; the full-size cover loads over an already visible thumbnail instead of clearing the image first.
 - Repeat and queue handling was improved so repeat-list mode and unreadable tracks do not unexpectedly stop playback.
+- App versions now start at `2.0`, and the manual APK build reads `versionCode` and `versionName` from Gradle.
+- `MediaPlayer` preparation now uses `prepareAsync()` so heavy files are less likely to block track switching.
+- Playlist JSON handling and theme color helpers were moved out of `MainActivity` into dedicated managers.
 
 ## Interface Structure
 
