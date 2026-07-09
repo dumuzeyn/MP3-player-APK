@@ -2,6 +2,7 @@ package com.dumuzeyn.mp3player;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
@@ -16,6 +17,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -116,6 +118,7 @@ public class MainActivity extends Activity {
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
     private final HashMap<String, Button> songPlayButtons = new HashMap<>();
     private final HashMap<String, View> songCurrentMarkers = new HashMap<>();
+    private final HashMap<String, WaveformView> songWaveforms = new HashMap<>();
     private Button sourcePlayButton;
     private int tabIndex = 0;
     private int currentIndex = -1;
@@ -802,6 +805,11 @@ public class MainActivity extends Activity {
             Track track = findTrack(entry.getKey());
             entry.getValue().setVisibility(track != null && isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
         }
+        for (Map.Entry<String, WaveformView> entry : this.songWaveforms.entrySet()) {
+            Track track = findTrack(entry.getKey());
+            boolean current = track != null && isCurrent(track);
+            entry.getValue().setState(current ? this.purple : this.purpleSoft, current && this.playing);
+        }
         if (this.sourcePlayButton != null) {
             this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
         }
@@ -831,6 +839,30 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void updateTaskPreview() {
+        if (Build.VERSION.SDK_INT < 21) {
+            return;
+        }
+        try {
+            setTaskDescription(new ActivityManager.TaskDescription("MP3 Player", launcherPreviewIcon(), this.bg));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Bitmap launcherPreviewIcon() {
+        try {
+            Drawable drawable = getResources().getDrawable(this.dark ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
+            int size = Math.max(1, dp(64));
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.setBounds(0, 0, size, size);
+            drawable.draw(canvas);
+            return bitmap;
+        } catch (Exception e) {
+            return BitmapFactory.decodeResource(getResources(), getApplicationInfo().icon);
+        }
+    }
+
     private void buildUi() {
         colors();
         getWindow().setBackgroundDrawable(new ColorDrawable(this.bg));
@@ -839,6 +871,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 23) {
             getWindow().getDecorView().setSystemUiVisibility(this.dark ? 0 : 8192);
         }
+        updateTaskPreview();
         refreshTabLabels();
         this.root = new FrameLayout(this);
         this.root.setBackgroundColor(this.bg);
@@ -1216,6 +1249,7 @@ public class MainActivity extends Activity {
         this.list.removeAllViews();
         this.songPlayButtons.clear();
         this.songCurrentMarkers.clear();
+        this.songWaveforms.clear();
         this.sourcePlayButton = null;
         renderSectionHeader();
         boolean songTab = this.tabIndex == 0 || this.tabIndex == 1;
@@ -1907,7 +1941,9 @@ public class MainActivity extends Activity {
         LinearLayout metaRow = new LinearLayout(this);
         metaRow.setOrientation(0);
         metaRow.setGravity(16);
-        metaRow.addView(wave(track, isCurrent(track)), new LinearLayout.LayoutParams(0, dp(30), 1.0f));
+        WaveformView waveformView = wave(track, isCurrent(track));
+        this.songWaveforms.put(track.uri, waveformView);
+        metaRow.addView(waveformView, new LinearLayout.LayoutParams(0, dp(30), 1.0f));
         TextView durationText = text(formatTrackDuration(track), 12, false);
         durationText.setGravity(17);
         durationText.setTextColor(this.secondaryText);
@@ -4341,7 +4377,7 @@ public class MainActivity extends Activity {
         return Math.max(1, sampleSize);
     }
 
-    private View wave(Track track, boolean z) {
+    private WaveformView wave(Track track, boolean z) {
         WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.purple : this.purpleSoft, z && this.playing);
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));

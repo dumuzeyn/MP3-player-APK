@@ -11,10 +11,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
@@ -22,6 +25,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.util.LruCache;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -74,6 +78,12 @@ public class PlayerService extends Service {
     }
 
     private final ArrayList<Track> queue = new ArrayList<>();
+    private final LruCache<String, Bitmap> coverCache = new LruCache<String, Bitmap>(8 * 1024) {
+        @Override
+        protected int sizeOf(String key, Bitmap value) {
+            return Math.max(1, value.getByteCount() / 1024);
+        }
+    };
     private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -634,9 +644,11 @@ public class PlayerService extends Service {
         PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
         int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
+        Bitmap cover = coverFor(track);
         builder.setSmallIcon(getResources().getIdentifier("ic_notification_music", "drawable", getPackageName()))
                 .setContentTitle(track.title)
                 .setContentText(track.artist)
+                .setLargeIcon(cover)
                 .setContentIntent(activity)
                 .setOngoing(this.player != null && safeIsPlaying())
                 .setCategory(Notification.CATEGORY_TRANSPORT)
@@ -645,22 +657,76 @@ public class PlayerService extends Service {
                 .addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2))
                 .addAction(playPauseIcon, safeIsPlaying() ? "Пауза" : "Играть", serviceIntent(ACTION_TOGGLE, 3))
                 .addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
-        updateMediaSession(track);
+        updateMediaSession(track, cover);
         builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         return builder.build();
     }
 
-    private void updateMediaSession(Track track) {
+    private void updateMediaSession(Track track, Bitmap cover) {
         long currentPosition = safePosition();
         long duration = safeDuration();
         int state = safeIsPlaying() ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
-        this.mediaSession.setMetadata(new MediaMetadata.Builder()
+        MediaMetadata.Builder metadata = new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, track.title)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, track.artist)
                 .putString(MediaMetadata.METADATA_KEY_ALBUM, track.album)
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration)
-                .build());
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration);
+        if (cover != null) {
+            metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, cover);
+            metadata.putBitmap(MediaMetadata.METADATA_KEY_ART, cover);
+        }
+        this.mediaSession.setMetadata(metadata.build());
         this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP).setState(state, currentPosition, 1.0f).build());
+    }
+
+    private Bitmap coverFor(Track track) {
+        if (track == null || track.uri == null || track.uri.isEmpty()) {
+            return null;
+        }
+        Bitmap cached = this.coverCache.get(track.uri);
+        if (cached != null) {
+            return cached;
+        }
+        Bitmap cover = readCover(track);
+        if (cover != null) {
+            this.coverCache.put(track.uri, cover);
+        }
+        return cover;
+    }
+
+    private Bitmap readCover(Track track) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(this, track.asUri());
+            byte[] data = retriever.getEmbeddedPicture();
+            if (data == null || data.length == 0) {
+                return null;
+            }
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(data, 0, data.length, bounds);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = coverSampleSize(bounds, 512);
+            return BitmapFactory.decodeByteArray(data, 0, data.length, options);
+        } catch (Exception e) {
+            Log.w(DEBUG_TAG, "service_cover_failed uri=" + track.uri + " error=" + e.getMessage());
+            return null;
+        } finally {
+            try {
+                retriever.release();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private int coverSampleSize(BitmapFactory.Options options, int maxSize) {
+        int sampleSize = 1;
+        int width = options.outWidth;
+        int height = options.outHeight;
+        while (width / sampleSize > maxSize * 2 || height / sampleSize > maxSize * 2) {
+            sampleSize *= 2;
+        }
+        return Math.max(1, sampleSize);
     }
 
     private int safeDuration() {

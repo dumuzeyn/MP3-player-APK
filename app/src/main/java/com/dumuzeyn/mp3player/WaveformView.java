@@ -7,9 +7,9 @@ import android.view.View;
 
 public class WaveformView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final int color;
     private final int yellow = 0xFFFFD000;
     private final int seed;
+    private int color;
     private boolean active;
     private long startedAt;
 
@@ -24,6 +24,15 @@ public class WaveformView extends View {
     }
 
     public void setActive(boolean active) {
+        this.active = active;
+        invalidate();
+    }
+
+    public void setState(int color, boolean active) {
+        this.color = color;
+        if (this.active != active) {
+            this.startedAt = System.currentTimeMillis();
+        }
         this.active = active;
         invalidate();
     }
