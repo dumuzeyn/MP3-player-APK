@@ -116,9 +116,7 @@ public class MainActivity extends Activity {
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Handler playbackHandler = new Handler(Looper.getMainLooper());
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
-    private final HashMap<String, Button> songPlayButtons = new HashMap<>();
-    private final HashMap<String, View> songCurrentMarkers = new HashMap<>();
-    private final HashMap<String, WaveformView> songWaveforms = new HashMap<>();
+    private final SongRowStateRegistry songRows = new SongRowStateRegistry();
     private Button sourcePlayButton;
     private int tabIndex = 0;
     private int currentIndex = -1;
@@ -537,10 +535,12 @@ public class MainActivity extends Activity {
     private void loadState() {
         this.tracks.clear();
         this.tracks.addAll(TrackStore.load(this));
+        LibraryDatabase database = new LibraryDatabase(this);
         this.favorites.clear();
-        this.favorites.addAll(this.prefs.getStringSet(FAVORITES, new HashSet()));
+        this.favorites.addAll(database.loadFavorites());
         this.playlists.clear();
-        this.playlists.addAll(PlaylistManager.fromJson(this.prefs.getString(PLAYLISTS, "[]")));
+        this.playlists.addAll(database.loadPlaylists());
+        database.close();
     }
 
     private void restoreRecentPlayback() {
@@ -740,7 +740,14 @@ public class MainActivity extends Activity {
     }
 
     private void saveState() {
-        this.prefs.edit().putStringSet(FAVORITES, new HashSet(this.favorites)).putString(PLAYLISTS, PlaylistManager.toJson(this.playlists)).putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
+        LibraryDatabase database = new LibraryDatabase(this);
+        try {
+            database.saveFavorites(this.favorites);
+            database.savePlaylists(this.playlists);
+        } finally {
+            database.close();
+        }
     }
 
     private void colors() {
@@ -795,21 +802,32 @@ public class MainActivity extends Activity {
     }
 
     private void refreshPlaybackChrome() {
-        for (Map.Entry<String, Button> entry : this.songPlayButtons.entrySet()) {
-            Track track = findTrack(entry.getKey());
-            if (track != null) {
-                entry.getValue().setText((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
+        this.songRows.refresh(new SongRowStateRegistry.StateResolver() {
+            @Override
+            public Track findTrack(String uri) {
+                return MainActivity.this.findTrack(uri);
             }
-        }
-        for (Map.Entry<String, View> entry : this.songCurrentMarkers.entrySet()) {
-            Track track = findTrack(entry.getKey());
-            entry.getValue().setVisibility(track != null && isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        }
-        for (Map.Entry<String, WaveformView> entry : this.songWaveforms.entrySet()) {
-            Track track = findTrack(entry.getKey());
-            boolean current = track != null && isCurrent(track);
-            entry.getValue().setState(current ? this.purple : this.purpleSoft, current && this.playing);
-        }
+
+            @Override
+            public boolean isCurrent(Track track) {
+                return MainActivity.this.isCurrent(track);
+            }
+
+            @Override
+            public boolean isPlaying() {
+                return MainActivity.this.playing;
+            }
+
+            @Override
+            public int activeColor() {
+                return MainActivity.this.purple;
+            }
+
+            @Override
+            public int inactiveColor() {
+                return MainActivity.this.purpleSoft;
+            }
+        });
         if (this.sourcePlayButton != null) {
             this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
         }
@@ -1247,9 +1265,7 @@ public class MainActivity extends Activity {
         refreshTabs();
         this.songRenderGeneration++;
         this.list.removeAllViews();
-        this.songPlayButtons.clear();
-        this.songCurrentMarkers.clear();
-        this.songWaveforms.clear();
+        this.songRows.clear();
         this.sourcePlayButton = null;
         renderSectionHeader();
         boolean songTab = this.tabIndex == 0 || this.tabIndex == 1;
@@ -1922,7 +1938,7 @@ public class MainActivity extends Activity {
         View marker = new View(this);
         marker.setBackgroundColor(this.yellow);
         marker.setVisibility(isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        this.songCurrentMarkers.put(track.uri, marker);
+        this.songRows.registerCurrentMarker(track.uri, marker);
         LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(dp(4), dp(58));
         markerParams.setMargins(0, 0, dp(6), 0);
         linearLayout.addView(marker, markerParams);
@@ -1942,7 +1958,7 @@ public class MainActivity extends Activity {
         metaRow.setOrientation(0);
         metaRow.setGravity(16);
         WaveformView waveformView = wave(track, isCurrent(track));
-        this.songWaveforms.put(track.uri, waveformView);
+        this.songRows.registerWaveform(track.uri, waveformView);
         metaRow.addView(waveformView, new LinearLayout.LayoutParams(0, dp(30), 1.0f));
         TextView durationText = text(formatTrackDuration(track), 12, false);
         durationText.setGravity(17);
@@ -1965,7 +1981,7 @@ public class MainActivity extends Activity {
         Button buttonIcon3 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
         applyPrimaryButtonStyle(buttonIcon3);
         buttonIcon3.setOnClickListener(new AnonymousClass27(this, track, runnable));
-        this.songPlayButtons.put(track.uri, buttonIcon3);
+        this.songRows.registerPlayButton(track.uri, buttonIcon3);
         linearLayout.addView(buttonIcon3, square(48));
         return spaced(linearLayout);
     }
@@ -4133,8 +4149,8 @@ public class MainActivity extends Activity {
         refreshAfterTrackChange();
     }
 
-    class AnonymousClass85 implements Runnable {
-        AnonymousClass85() {
+    class PlaybackWatcher implements Runnable {
+        PlaybackWatcher() {
         }
 
         @Override
@@ -4167,7 +4183,7 @@ public class MainActivity extends Activity {
 
     private void startPlaybackWatcher() {
         this.playbackHandler.removeCallbacksAndMessages(null);
-        this.playbackHandler.postDelayed(new AnonymousClass85(), 900L);
+        this.playbackHandler.postDelayed(new PlaybackWatcher(), 900L);
     }
 
     private void startServiceAction(String str, int i) {

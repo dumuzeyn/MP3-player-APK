@@ -1,2 +1,9 @@
 -keep class com.dumuzeyn.mp3player.Track { *; }
 -keep class com.dumuzeyn.mp3player.PlayerService { *; }
+-keep class com.dumuzeyn.mp3player.MainActivity { *; }
+-keep class com.dumuzeyn.mp3player.DarkMainActivity { *; }
+-keep class com.dumuzeyn.mp3player.WaveformView { *; }
+-keep class com.dumuzeyn.mp3player.TriangleDecorView { *; }
+-keep class com.dumuzeyn.mp3player.LibraryDatabase { *; }
+-keep class com.dumuzeyn.mp3player.PlaylistManager { *; }
+-keep class com.dumuzeyn.mp3player.TrackStore { *; }

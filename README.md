@@ -1,8 +1,8 @@
 ﻿# MP3 Player APK
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=2.0">
-    <img src="https://img.shields.io/badge/Скачать_APK-MP3--Player.apk-black?style=for-the-badge" alt="Скачать APK">
+  <a href="https://github.com/dumuzeyn/MP3-player/actions">
+    <img src="https://img.shields.io/badge/APK-GitHub_Actions-black?style=for-the-badge" alt="GitHub Actions APK">
   </a>
 </p>
 
@@ -14,21 +14,9 @@ MP3 Player APK — полноценное Android-приложение для л
 
 ## Скачать
 
-Готовый APK находится здесь:
+Готовый APK больше не хранится в git как бинарный файл. Актуальную сборку нужно брать из GitHub Actions artifact `MP3-Player-release` или из GitHub Releases, когда релиз опубликован.
 
-```text
-output/MP3-Player.apk
-```
-
-Если Android сообщает о конфликте пакета при тестировании, рядом лежит отдельная тестовая сборка:
-
-```text
-output/MP3-Player-test.apk
-```
-
-Прямая ссылка:
-
-[Скачать MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk?v=2.0)
+[Открыть GitHub Actions](https://github.com/dumuzeyn/MP3-player/actions)
 
 Если Android предупреждает об установке из неизвестного источника, нужно разрешить установку APK для приложения, через которое открыт файл. Это стандартное поведение Android для приложений не из магазина.
 
@@ -71,7 +59,9 @@ output/MP3-Player-test.apk
 - Улучшена логика повтора и перехода по очереди: повтор списка и ошибки чтения трека не должны обрывать воспроизведение.
 - Версия приложения начинается с `2.0`, а ручная сборка APK берет `versionCode` и `versionName` из Gradle.
 - Подготовка `MediaPlayer` переведена на `prepareAsync()`, чтобы тяжелые файлы меньше задерживали переключение треков.
-- Логика плейлистов и цветов вынесена из `MainActivity` в отдельные менеджеры.
+- Логика плейлистов, цветов и состояния строк песен вынесена из `MainActivity` в отдельные менеджеры.
+- Библиотека песен, избранное и плейлисты перенесены из JSON в `SharedPreferences` в локальную SQLite-базу с миграцией старых данных.
+- Release-сборка включает R8 minify и shrinkResources. APK больше не коммитится в репозиторий.
 
 ## Структура интерфейса
 
@@ -167,7 +157,7 @@ tr(String en, String ru)
 
 ## Хранение данных
 
-Список выбранных песен хранится в `SharedPreferences`. За это отвечает `TrackStore.java`. Метаданные читаются через `MediaMetadataRetriever`.
+Список выбранных песен хранится в локальной SQLite-базе. За это отвечает `LibraryDatabase.java`, а `TrackStore.java` остается фасадом для загрузки, сохранения и чтения метаданных. При первом запуске новая версия переносит старые данные из `SharedPreferences`.
 
 `MainActivity.java` дополнительно сохраняет:
 
@@ -180,7 +170,7 @@ tr(String en, String ru)
 
 `PlayerService.java` сохраняет небольшой снимок последнего воспроизведения: URI песни, позицию, длительность, режим повтора и очередь. Снимок используется только локально, чтобы восстановить мини-плеер после повторного открытия приложения.
 
-Избранное и плейлисты хранятся как JSON-строки в `SharedPreferences`. База данных не используется, потому что объем данных небольшой: названия плейлистов и URI выбранных файлов.
+Избранное и плейлисты также хранятся в SQLite. `SharedPreferences` используются только для легких настроек интерфейса и снимка последнего воспроизведения.
 
 ## Важные файлы
 
@@ -191,6 +181,8 @@ tr(String en, String ru)
 | `app/src/main/java/com/dumuzeyn/mp3player/PlayerService.java` | Фоновое воспроизведение, `MediaPlayer`, уведомление, media session |
 | `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | Модель одной песни |
 | `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | Сохранение библиотеки и чтение метаданных |
+| `app/src/main/java/com/dumuzeyn/mp3player/LibraryDatabase.java` | SQLite-хранилище песен, избранного и плейлистов |
+| `app/src/main/java/com/dumuzeyn/mp3player/SongRowStateRegistry.java` | Быстрое обновление кнопок, маркеров и wave-строк без полного пересоздания списка |
 | `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | Волновая визуализация под названием песни |
 | `app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml` | Adaptive launcher icon для светлой темы |
 | `app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml` | Adaptive launcher icon для темной темы |
@@ -200,7 +192,7 @@ tr(String en, String ru)
 | `app/src/main/res/values/strings.xml` | Название приложения |
 | `app/src/main/res/values/styles.xml` | Базовая Android-тема |
 | `build-apk.ps1` | Автоматическая сборка APK без Android Studio |
-| `output/MP3-Player.apk` | Готовый APK для установки |
+| `CHANGELOG.md` | История важных изменений |
 
 ## Безопасность
 
@@ -440,8 +432,7 @@ Apk/
 |               `-- values/
 |                   |-- strings.xml
 |                   `-- styles.xml
-|-- output/
-|   `-- MP3-Player.apk
+|-- CHANGELOG.md
 |-- build-apk.ps1
 |-- LICENSE
 `-- README.md
@@ -458,8 +449,8 @@ Apk/
  </h1>
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Download_APK-MP3--Player.apk-black?style=for-the-badge" alt="Download APK">
+  <a href="https://github.com/dumuzeyn/MP3-player/actions">
+    <img src="https://img.shields.io/badge/APK-GitHub_Actions-black?style=for-the-badge" alt="GitHub Actions APK">
   </a>
 </p>
 
@@ -469,21 +460,9 @@ The app stores only references to the audio files selected by the user. Original
 
 ## Download
 
-The ready-to-install APK is stored here:
+The ready-to-install APK is no longer stored in git as a binary file. Download the current build from the GitHub Actions artifact `MP3-Player-release`, or from GitHub Releases when a release is published.
 
-```text
-output/MP3-Player.apk
-```
-
-If Android reports a package conflict during testing, a separate test build is also available:
-
-```text
-output/MP3-Player-test.apk
-```
-
-Direct link:
-
-[Download MP3-Player.apk](https://github.com/dumuzeyn/MP3-player/raw/main/output/MP3-Player.apk)
+[Open GitHub Actions](https://github.com/dumuzeyn/MP3-player/actions)
 
 If Android warns about installing from an unknown source, allow APK installation for the app that opened the file. This is normal Android behavior for apps installed outside an app store.
 
@@ -526,7 +505,9 @@ If Android warns about installing from an unknown source, allow APK installation
 - Repeat and queue handling was improved so repeat-list mode and unreadable tracks do not unexpectedly stop playback.
 - App versions now start at `2.0`, and the manual APK build reads `versionCode` and `versionName` from Gradle.
 - `MediaPlayer` preparation now uses `prepareAsync()` so heavy files are less likely to block track switching.
-- Playlist JSON handling and theme color helpers were moved out of `MainActivity` into dedicated managers.
+- Playlist JSON handling, theme color helpers, and song row playback state were moved out of `MainActivity` into dedicated helpers.
+- The music library, favorites, and playlists moved from JSON-in-SharedPreferences to a local SQLite database with legacy migration.
+- Release builds now enable R8 minify and shrinkResources. APK binaries are no longer committed to the repository.
 
 ## Interface Structure
 
@@ -622,7 +603,7 @@ If the user stops a song and closes the app, the mini-player can be restored on 
 
 ## Stored Data
 
-The selected track list is stored in `SharedPreferences`. `TrackStore.java` handles this and also reads metadata through `MediaMetadataRetriever`.
+The selected track list is stored in a local SQLite database. `LibraryDatabase.java` owns persistence, while `TrackStore.java` remains the facade for loading, saving, and metadata reading. On first launch, legacy data is migrated from `SharedPreferences`.
 
 `MainActivity.java` additionally saves:
 
@@ -635,7 +616,7 @@ The selected track list is stored in `SharedPreferences`. `TrackStore.java` hand
 
 `PlayerService.java` stores a small local playback snapshot: song URI, position, duration, repeat mode, and queue. This snapshot is only used locally to restore the mini-player after reopening the app.
 
-Favorites and playlists are stored as JSON strings in `SharedPreferences`. This avoids a database because the stored data is small: playlist names and selected file URIs.
+Favorites and playlists are also stored in SQLite. `SharedPreferences` are kept only for lightweight UI settings and the last playback resume snapshot.
 
 ## Important Files
 
@@ -646,6 +627,8 @@ Favorites and playlists are stored as JSON strings in `SharedPreferences`. This 
 | `app/src/main/java/com/dumuzeyn/mp3player/PlayerService.java` | Background playback, `MediaPlayer`, notification, media session |
 | `app/src/main/java/com/dumuzeyn/mp3player/Track.java` | Single-song data model |
 | `app/src/main/java/com/dumuzeyn/mp3player/TrackStore.java` | Library persistence and metadata reading |
+| `app/src/main/java/com/dumuzeyn/mp3player/LibraryDatabase.java` | SQLite storage for songs, favorites, and playlists |
+| `app/src/main/java/com/dumuzeyn/mp3player/SongRowStateRegistry.java` | Fast row state updates without rebuilding the whole song list |
 | `app/src/main/java/com/dumuzeyn/mp3player/WaveformView.java` | Waveform visual under a song title |
 | `app/src/main/res/mipmap-anydpi-v26/ic_launcher_home.xml` | Adaptive launcher icon for the light theme |
 | `app/src/main/res/mipmap-anydpi-v26/ic_launcher_dark.xml` | Adaptive launcher icon for the dark theme |
@@ -655,7 +638,7 @@ Favorites and playlists are stored as JSON strings in `SharedPreferences`. This 
 | `app/src/main/res/values/strings.xml` | App name |
 | `app/src/main/res/values/styles.xml` | Base Android theme |
 | `build-apk.ps1` | Automated APK build without Android Studio |
-| `output/MP3-Player.apk` | Ready-to-install APK |
+| `CHANGELOG.md` | Important project changes |
 
 ## Security
 
@@ -806,13 +789,13 @@ The script automatically:
 12. Signs the APK with `apksigner`.
 13. Verifies the signature.
 
-After a successful build, the file appears here:
+After a successful local build, the file appears here:
 
 ```text
 output/MP3-Player.apk
 ```
 
-The `.android-sdk` and `build` folders are temporary build folders and should not be committed.
+The `.android-sdk`, `build`, and `output` folders are temporary/generated folders and should not be committed. Published APKs should come from GitHub Actions artifacts or GitHub Releases.
 
 ## Installing Through USB
 
@@ -868,8 +851,7 @@ Apk/
 |               `-- values/
 |                   |-- strings.xml
 |                   `-- styles.xml
-|-- output/
-|   `-- MP3-Player.apk
+|-- CHANGELOG.md
 |-- build-apk.ps1
 |-- LICENSE
 `-- README.md

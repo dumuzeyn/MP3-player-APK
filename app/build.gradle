@@ -35,6 +35,11 @@ android {
                 keyAlias releaseKeyAlias
                 storePassword releaseStorePass
                 keyPassword releaseKeyPass
+            } else {
+                storeFile ciDebugKeystore
+                keyAlias "ci-debug"
+                storePassword "android"
+                keyPassword "android"
             }
         }
     }
@@ -45,11 +50,15 @@ android {
         }
 
         release {
-            minifyEnabled false
-            if (hasReleaseSigning) {
-                signingConfig signingConfigs.release
-            }
+            minifyEnabled true
+            shrinkResources true
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20240303"
 }

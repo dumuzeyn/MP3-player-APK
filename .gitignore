@@ -1,6 +1,7 @@
 .android-sdk/
 .gradle/
 build/
+output/
 *.keystore
 !.github/ci-debug.keystore
 *.jks

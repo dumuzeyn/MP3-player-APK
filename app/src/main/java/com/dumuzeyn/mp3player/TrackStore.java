@@ -1,7 +1,6 @@
 package com.dumuzeyn.mp3player;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -18,8 +17,6 @@ import java.util.List;
 import java.util.Locale;
 
 public final class TrackStore {
-    private static final String PREFS = "mp3_player_store";
-    private static final String TRACKS = "tracks";
     private static final int MAX_TEXT_LENGTH = 160;
     private static final String DEBUG_TAG = "MP3PlayerDebug";
 
@@ -27,10 +24,19 @@ public final class TrackStore {
     }
 
     public static ArrayList<Track> load(Context context) {
-        ArrayList<Track> tracks = new ArrayList<>();
-        String raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(TRACKS, "[]");
+        LibraryDatabase.migrateLegacyIfNeeded(context);
+        LibraryDatabase database = new LibraryDatabase(context);
         try {
-            JSONArray array = new JSONArray(raw);
+            return database.loadTracks();
+        } finally {
+            database.close();
+        }
+    }
+
+    static ArrayList<Track> loadFromJson(String raw) {
+        ArrayList<Track> tracks = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(raw == null ? "[]" : raw);
             for (int index = 0; index < array.length(); index++) {
                 JSONObject item = array.getJSONObject(index);
                 tracks.add(new Track(
@@ -51,23 +57,12 @@ public final class TrackStore {
     }
 
     public static void save(Context context, List<Track> tracks) {
-        JSONArray array = new JSONArray();
-        for (Track track : tracks) {
-            JSONObject item = new JSONObject();
-            try {
-                item.put("uri", track.uri);
-                item.put("title", track.title);
-                item.put("artist", track.artist);
-                item.put("album", track.album);
-                item.put("genre", track.genre);
-                item.put("durationMs", track.durationMs);
-                array.put(item);
-            } catch (Exception e) {
-                Log.w(DEBUG_TAG, "track_save_item_failed uri=" + track.uri + " error=" + e.getMessage());
-            }
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.saveTracks(tracks);
+        } finally {
+            database.close();
         }
-        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        prefs.edit().putString(TRACKS, array.toString()).apply();
     }
 
     public static Track fromUri(Context context, Uri uri) {
@@ -122,20 +117,13 @@ public final class TrackStore {
         if (durationMs <= 0 || uri == null || uri.isEmpty()) {
             return;
         }
-        ArrayList<Track> tracks = load(context);
-        boolean changed = false;
-        for (int i = 0; i < tracks.size(); i++) {
-            Track track = tracks.get(i);
-            if (uri.equals(track.uri) && track.durationMs != durationMs) {
-                tracks.set(i, new Track(track.uri, track.title, track.artist, track.album, track.genre, durationMs));
-                changed = true;
-                break;
-            }
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.updateDuration(uri, durationMs);
+        } finally {
+            database.close();
         }
-        if (changed) {
-            save(context, tracks);
-            Log.i(DEBUG_TAG, "duration_updated uri=" + uri + " durationMs=" + durationMs);
-        }
+        Log.i(DEBUG_TAG, "duration_updated uri=" + uri + " durationMs=" + durationMs);
     }
 
     public static void sort(List<Track> tracks) {
