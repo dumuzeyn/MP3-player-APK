@@ -16,6 +16,15 @@ import android.widget.TextView;
 
 final class FullPlayerController {
     private final MainActivityCore host;
+    private FrameLayout currentSheet;
+    private ImageView coverView;
+    private TextView titleView;
+    private TextView subtitleView;
+    private Button timerButton;
+    private Button likeButton;
+    private Button repeatButton;
+    private Button playButton;
+    private Track boundTrack;
 
     FullPlayerController(MainActivityCore host) {
         this.host = host;
@@ -28,11 +37,17 @@ final class FullPlayerController {
         if (host.currentIndex < 0) {
             return;
         }
+        if (this.currentSheet != null && this.currentSheet.getParent() != null) {
+            refreshFromState(true);
+            return;
+        }
         if (host.miniPlayer != null) {
             host.miniPlayer.setVisibility(View.GONE);
         }
         Track track = host.tracks.get(host.currentIndex);
+        this.boundTrack = track;
         FrameLayout sheet = createSheet();
+        this.currentSheet = sheet;
         sheet.setBackgroundColor(host.bg);
 
         LinearLayout content = new LinearLayout(host);
@@ -54,6 +69,14 @@ final class FullPlayerController {
             sheet.setTranslationY(host.getResources().getDisplayMetrics().heightPixels);
             sheet.animate().translationY(0.0f).setDuration(145L).setInterpolator(new DecelerateInterpolator()).start();
         }
+    }
+
+    void refresh() {
+        refreshFromState(true);
+    }
+
+    boolean isOpen() {
+        return this.currentSheet != null && this.currentSheet.getParent() != null;
     }
 
     private FrameLayout createSheet() {
@@ -145,16 +168,19 @@ final class FullPlayerController {
 
     private void addCoverAndTitle(LinearLayout content, Track track) {
         ImageView cover = host.coverView();
+        this.coverView = cover;
         host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
         LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(host.dp(280), host.dp(280));
         coverParams.gravity = 1;
         content.addView(cover, coverParams);
 
         TextView title = host.text(track.title, 24, true);
+        this.titleView = title;
         title.setGravity(17);
         content.addView(title, new LinearLayout.LayoutParams(-1, host.dp(54)));
         int queueSize = host.activeQueue().size();
         TextView subtitle = host.text(track.artist + " · " + (host.queueIndexOf(track) + 1) + " " + host.tr3("of", "из", "/") + " " + queueSize, 15, false);
+        this.subtitleView = subtitle;
         subtitle.setGravity(17);
         content.addView(subtitle, new LinearLayout.LayoutParams(-1, host.dp(34)));
     }
@@ -162,20 +188,25 @@ final class FullPlayerController {
     private void addActionRow(LinearLayout content, FrameLayout sheet, Track track) {
         LinearLayout row = host.row();
         Button timer = host.button(host.timerButtonText());
+        this.timerButton = timer;
+        styleTimerButton(timer);
         timer.setOnClickListener(view -> host.timerDialog());
         row.addView(timer, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
 
         Button like = host.button(host.tr3("♡ Like", host.favorites.contains(track.uri) ? "♥ Лайк" : "♡ Лайк", host.favorites.contains(track.uri) ? "♥" : "♡"));
+        this.likeButton = like;
         like.setOnClickListener(view -> {
             host.toggleFavorite(track);
-            reopen(sheet);
+            refreshFromState(false);
         });
         row.addView(like, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
 
         Button repeat = host.button(host.loopLabel());
+        this.repeatButton = repeat;
+        styleRepeatButton(repeat);
         repeat.setOnClickListener(view -> {
             host.cycleLoopMode();
-            reopen(sheet);
+            refreshFromState(false);
         });
         row.addView(repeat, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
         content.addView(row);
@@ -226,35 +257,74 @@ final class FullPlayerController {
         Button previous = host.icon("⏮");
         previous.setOnClickListener(view -> {
             host.previousInternal();
-            reopen(sheet);
+            refreshFromState(true);
         });
         row.addView(previous, host.square(68));
 
         Button play = host.icon(host.playing ? "Ⅱ" : "▶");
+        this.playButton = play;
         play.setOnClickListener(view -> {
             host.toggleCurrent();
-            reopen(sheet);
+            refreshFromState(false);
         });
         row.addView(play, host.square(84));
 
         Button next = host.icon("⏭");
         next.setOnClickListener(view -> {
             host.nextInternal();
-            reopen(sheet);
+            refreshFromState(true);
         });
         row.addView(next, host.square(68));
         content.addView(row, new LinearLayout.LayoutParams(-1, host.dp(112)));
     }
 
-    private void reopen(FrameLayout sheet) {
-        if (sheet.getParent() != null) {
-            host.overlayHost.removeView(sheet);
-        }
-        open();
-    }
-
     private void close(FrameLayout sheet, boolean animate) {
         host.closeFullPlayer(sheet, animate);
+        if (sheet == this.currentSheet) {
+            this.currentSheet = null;
+            this.boundTrack = null;
+        }
+    }
+
+    private void refreshFromState(boolean allowTrackChange) {
+        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+            return;
+        }
+        Track track = host.tracks.get(host.currentIndex);
+        if (allowTrackChange && (this.boundTrack == null || !this.boundTrack.uri.equals(track.uri))) {
+            this.boundTrack = track;
+            if (this.coverView != null) {
+                host.loadCover(this.coverView, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
+            }
+        }
+        if (this.titleView != null) {
+            this.titleView.setText(track.title);
+        }
+        if (this.subtitleView != null) {
+            this.subtitleView.setText(track.artist + " · " + (host.queueIndexOf(track) + 1) + " " + host.tr3("of", "из", "/") + " " + host.activeQueue().size());
+        }
+        if (this.timerButton != null) {
+            this.timerButton.setText(host.timerButtonText());
+            styleTimerButton(this.timerButton);
+        }
+        if (this.likeButton != null) {
+            this.likeButton.setText(host.tr3("♡ Like", host.favorites.contains(track.uri) ? "♥ Лайк" : "♡ Лайк", host.favorites.contains(track.uri) ? "♥" : "♡"));
+        }
+        if (this.repeatButton != null) {
+            this.repeatButton.setText(host.loopLabel());
+            styleRepeatButton(this.repeatButton);
+        }
+        if (this.playButton != null) {
+            this.playButton.setText(host.playing ? "Ⅱ" : "▶");
+        }
+    }
+
+    private void styleTimerButton(Button button) {
+        button.setTextSize(host.sleepTimerEndsAt > 0 ? 18.0f : 28.0f);
+    }
+
+    private void styleRepeatButton(Button button) {
+        button.setTextSize(28.0f);
     }
 
     private final class ProgressUpdater implements Runnable {
@@ -291,8 +361,7 @@ final class FullPlayerController {
             }
             if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(track.uri) && (resolvedTrack = host.findTrack(PlayerService.lastUri)) != null) {
                 host.currentIndex = host.tracks.indexOf(resolvedTrack);
-                host.overlayHost.removeView(sheet);
-                open();
+                refreshFromState(true);
                 host.render();
                 return;
             }
@@ -301,6 +370,10 @@ final class FullPlayerController {
             seek.setProgress(Math.max(0, PlayerService.lastPosition));
             elapsed.setText(host.formatMs(PlayerService.lastPosition));
             remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
+            if (timerButton != null) {
+                timerButton.setText(host.timerButtonText());
+                styleTimerButton(timerButton);
+            }
             handler.postDelayed(this, 250L);
         }
     }

@@ -593,13 +593,16 @@ public class PlayerService extends Service {
 
     private void stopPlayback(boolean explicit) {
         releasePlayer();
-        updateState();
-        lastPlaying = false;
-        saveResumeState(true, true);
         if (explicit) {
             this.currentIndex = -1;
             lastIndex = -1;
             lastUri = "";
+            lastPosition = 0;
+            lastDuration = 0;
+            getSharedPreferences(RESUME_PREFS, 0).edit().clear().apply();
+        } else {
+            updateState();
+            saveResumeState(true, true);
         }
         lastPlaying = false;
         unregisterNoisyReceiver();

@@ -117,13 +117,13 @@ class MainActivityCore extends Activity {
     final Handler sleepHandler = new Handler(Looper.getMainLooper());
     final SongRowStateRegistry songRows = new SongRowStateRegistry();
     final SongsRenderer songsRenderer = new SongsRenderer(this);
-    private final PlayerUiController playerUiController = new PlayerUiController(this);
+    final PlayerUiController playerUiController = new PlayerUiController(this);
     private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
     private final TabsController tabsController = new TabsController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
     final SleepTimerController sleepTimerController = new SleepTimerController(this);
     final LibraryListController libraryListController = new LibraryListController(this);
-    private final PlaylistController playlistController = new PlaylistController(this);
+    final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
     Button sourcePlayButton;
     int tabIndex = 0;
@@ -1463,17 +1463,8 @@ class MainActivityCore extends Activity {
     }
 
     void stopPlaybackAndClearQueue() {
-        this.playbackQueue.clear();
-        this.currentIndex = -1;
-        this.playing = false;
-        this.playbackHandler.removeCallbacksAndMessages(null);
-        Intent intent = new Intent(this, (Class<?>) PlayerService.class);
-        intent.setAction(PlayerService.ACTION_STOP);
-        try {
-            startService(intent);
-        } catch (Exception e) {
-        }
-        updateMini();
+        this.playbackController.clearPlaybackMemory();
+        this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
 
@@ -1551,17 +1542,13 @@ class MainActivityCore extends Activity {
             linearLayoutRow.addView(buttonShuffleButton, square(48));
             linearLayout.addView(linearLayoutRow);
             LinearLayout linearLayoutRow2 = row();
-            ImageView imageViewCoverView = coverView();
+            FrameLayoutCover imageViewCoverView = new FrameLayoutCover(this);
             int i = this.dark ? 28 : 235;
-            if (arrayListPlaylistTracks.isEmpty()) {
-                imageViewCoverView.setBackgroundColor(Color.rgb(i, i, i));
-            } else {
-                loadCover(imageViewCoverView, arrayListPlaylistTracks.get(0), Color.rgb(i, i, i));
-            }
+            imageViewCoverView.setFallback(Color.rgb(i, i, i));
             linearLayoutRow2.addView(imageViewCoverView, square(86));
-            TextView textViewText4 = text("", 16, true);
+            SmoothPlaylistTicker textViewText4 = new SmoothPlaylistTicker(this);
             textViewText4.setPadding(dp(12), 0, 0, 0);
-            linearLayoutRow2.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(96), 1.0f));
+            linearLayoutRow2.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(66), 1.0f));
             this.playlistController.bindRollingPreview(textViewText4, imageViewCoverView, arrayListPlaylistTracks, this.songRenderGeneration);
             linearLayout.addView(linearLayoutRow2);
             linearLayout.setOnClickListener(new UiAction31(this, playlist2));
@@ -1796,7 +1783,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void openPlaylist(Playlist playlist) {
+    void openPlaylist(Playlist playlist) {
         showPanel(playlist.name, playlistTracks(playlist), new UiAction35(this, playlist));
     }
 
@@ -2650,7 +2637,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void confirmDeletePlaylist(Playlist playlist) {
+    void confirmDeletePlaylist(Playlist playlist) {
         showConfirmPanel("Удалить плейлист?", "Песни останутся в приложении.", new UiAction63(this, playlist));
     }
 
@@ -2685,7 +2672,7 @@ class MainActivityCore extends Activity {
         showInputPanel(tr3("Create playlist", "Создать плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new UiAction64());
     }
 
-    private void renamePlaylistDialog(final Playlist playlist) {
+    void renamePlaylistDialog(final Playlist playlist) {
         showInputPanel(tr3("Rename playlist", "Переименовать плейлист", "✎ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), playlist.name, false, new InputDone() {
             @Override
             public void done(String value) {
@@ -3947,7 +3934,7 @@ class MainActivityCore extends Activity {
         return button;
     }
 
-    private Button shuffleButton() {
+    Button shuffleButton() {
         Button buttonIcon = icon("⇄");
         buttonIcon.setTextSize(31.0f);
         buttonIcon.setTypeface(Typeface.DEFAULT_BOLD);

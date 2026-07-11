@@ -3,10 +3,12 @@ package com.dumuzeyn.mp3player;
 import android.view.MotionEvent;
 
 final class PlayerUiController {
+    private final MainActivityCore host;
     private final MiniPlayerController miniPlayerController;
     private final FullPlayerController fullPlayerController;
 
     PlayerUiController(MainActivityCore host) {
+        this.host = host;
         this.miniPlayerController = new MiniPlayerController(host);
         this.fullPlayerController = new FullPlayerController(host);
     }
@@ -29,6 +31,17 @@ final class PlayerUiController {
 
     void updateMiniState() {
         miniPlayerController.updateState();
+    }
+
+    void syncPlaybackUi() {
+        miniPlayerController.updateState();
+        if (fullPlayerController.isOpen()) {
+            fullPlayerController.refresh();
+        }
+    }
+
+    boolean isFullPlayerOpen() {
+        return fullPlayerController.isOpen();
     }
 
     boolean isInsideMiniPlayer(MotionEvent event) {

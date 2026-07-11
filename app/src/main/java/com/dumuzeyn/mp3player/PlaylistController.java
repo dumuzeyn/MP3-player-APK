@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
-import android.graphics.Color;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 final class PlaylistController {
     private final MainActivityCore host;
@@ -52,15 +49,13 @@ final class PlaylistController {
         return result;
     }
 
-    void bindRollingPreview(final TextView target, final ImageView cover, final ArrayList<Track> sortedTracks, final int generation) {
+    void bindRollingPreview(final SmoothPlaylistTicker ticker, final FrameLayoutCover cover, final ArrayList<Track> sortedTracks, final int generation) {
         if (sortedTracks.isEmpty()) {
-            target.setText(host.tr3("No songs in this playlist yet.", "В плейлисте пока нет песен.", "∅ ♪"));
+            ticker.bindTracks(sortedTracks);
             return;
         }
-        target.setSingleLine(false);
-        target.setEllipsize(null);
-        target.setSelected(false);
-        bindPreviewFrame(target, cover, sortedTracks, 0);
+        ticker.bindTracks(sortedTracks);
+        cover.bindTrack(sortedTracks.get(0), generation);
         if (sortedTracks.size() <= 1) {
             return;
         }
@@ -69,30 +64,14 @@ final class PlaylistController {
 
             @Override
             public void run() {
-                if (generation != host.songRenderGeneration || target.getParent() == null) {
+                if (generation != host.songRenderGeneration || ticker.getParent() == null) {
                     return;
                 }
-                bindPreviewFrame(target, cover, sortedTracks, index);
+                cover.bindTrack(sortedTracks.get(index), generation);
                 index = (index + 1) % sortedTracks.size();
-                host.uiHandler.postDelayed(this, 6200L);
+                host.uiHandler.postDelayed(this, 14500L);
             }
-        }, 6200L);
-    }
-
-    private void bindPreviewFrame(TextView target, ImageView cover, ArrayList<Track> sortedTracks, int startIndex) {
-        StringBuilder text = new StringBuilder();
-        int visibleCount = Math.min(3, sortedTracks.size());
-        for (int offset = 0; offset < visibleCount; offset++) {
-            Track track = sortedTracks.get((startIndex + offset) % sortedTracks.size());
-            if (offset > 0) {
-                text.append("\n");
-            }
-            text.append(track.title);
-        }
-        target.setText(text.toString());
-        Track coverTrack = sortedTracks.get(startIndex % sortedTracks.size());
-        int fallback = host.dark ? 28 : 235;
-        host.loadCover(cover, coverTrack, Color.rgb(fallback, fallback, fallback));
+        }, 14500L);
     }
 
     boolean playlistContainsSearch(MainActivityCore.Playlist playlist, String query) {

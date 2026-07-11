@@ -22,7 +22,7 @@ final class SleepTimerController {
         LinearLayout actions = new LinearLayout(host);
         actions.setOrientation(LinearLayout.VERTICAL);
         int[] values = {5, 15, 30, host.customTimerMinutes};
-        String[] labels = {"◷ 5 min", "◷ 15 min", "◷ 30 min", "◷ " + host.customTimerMinutes + " min"};
+        String[] labels = {"5 min", "15 min", "30 min", host.customTimerMinutes + " min"};
         for (int i = 0; i < values.length; i++) {
             final int minutes = values[i];
             Button button = host.button(labels[i]);
@@ -35,7 +35,7 @@ final class SleepTimerController {
             actions.addView(button, params);
         }
 
-        Button custom = host.button(host.tr3("◷ Custom time", "◷ Свое время", "◷"));
+        Button custom = host.button(host.tr3("Custom time", "Свое время", "Custom"));
         custom.setOnClickListener(view -> {
             host.overlayHost.removeView(shade);
             openCustomDialog();
@@ -45,7 +45,7 @@ final class SleepTimerController {
         actions.addView(custom, customParams);
 
         if (host.sleepTimerEndsAt > 0) {
-            Button cancel = host.button(host.tr3("◷ Disable timer", "◷ Выключить таймер", "◷ ×"));
+            Button cancel = host.button(host.tr3("Disable timer", "Выключить таймер", "×"));
             cancel.setOnClickListener(view -> {
                 host.overlayHost.removeView(shade);
                 cancel();
@@ -80,6 +80,7 @@ final class SleepTimerController {
         long delayMs = ((long) minutes) * 60L * 1000L;
         host.sleepTimerEndsAt = System.currentTimeMillis() + delayMs;
         host.sleepHandler.removeCallbacksAndMessages(null);
+        host.playerUiController.syncPlaybackUi();
         host.sleepHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -96,14 +97,15 @@ final class SleepTimerController {
     void cancel() {
         host.sleepTimerEndsAt = 0L;
         host.sleepHandler.removeCallbacksAndMessages(null);
+        host.playerUiController.syncPlaybackUi();
     }
 
     String buttonText() {
         if (host.sleepTimerEndsAt <= 0) {
-            return host.tr3("◷ Timer", "◷ Таймер", "◷");
+            return "◷";
         }
         long remainingMs = Math.max(0L, host.sleepTimerEndsAt - System.currentTimeMillis());
-        return host.tr3("◷ Timer", "◷ Таймер", "◷") + "\n" + host.formatSeconds((remainingMs + 999L) / 1000L);
+        return host.formatSeconds((remainingMs + 999L) / 1000L);
     }
 
     private void stopPlayback() {

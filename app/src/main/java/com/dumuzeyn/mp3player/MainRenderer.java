@@ -2,9 +2,19 @@ package com.dumuzeyn.mp3player;
 
 final class MainRenderer {
     private final MainActivityCore host;
+    private final MenuRenderer songsRenderer;
+    private final MenuRenderer favoritesRenderer;
+    private final MenuRenderer playlistsRenderer;
+    private final MenuRenderer groupsRenderer;
+    private final MenuRenderer settingsRenderer;
 
     MainRenderer(MainActivityCore host) {
         this.host = host;
+        this.songsRenderer = new SongsMenuRenderer(host);
+        this.favoritesRenderer = new FavoritesMenuRenderer(host);
+        this.playlistsRenderer = new PlaylistsMenuRenderer(host);
+        this.groupsRenderer = new GroupsMenuRenderer(host);
+        this.settingsRenderer = new SettingsMenuRenderer(host);
     }
 
     void render() {
@@ -14,21 +24,27 @@ final class MainRenderer {
         host.songRows.clear();
         host.sourcePlayButton = null;
         host.renderSectionHeader();
-        boolean songTab = host.tabIndex == 0 || host.tabIndex == 1;
-        if (host.tabIndex == 0) {
-            host.renderSongs(host.libraryListController.filter(host.tracks));
-        } else if (host.tabIndex == 1) {
-            host.renderSongs(host.libraryListController.filter(host.libraryListController.favoriteTracks()));
-        } else if (host.tabIndex == 2) {
-            host.renderPlaylists();
-        } else if (host.tabIndex == 6) {
-            host.renderSettings();
-        } else {
-            host.renderGroups(host.tabs[host.tabIndex]);
-        }
-        if (!songTab) {
+        MenuRenderer renderer = rendererForTab();
+        renderer.render();
+        if (renderer.needsMiniSpacer()) {
             host.addMiniSpacerIfNeeded();
         }
         host.updateMini();
+    }
+
+    private MenuRenderer rendererForTab() {
+        if (host.tabIndex == 0) {
+            return songsRenderer;
+        }
+        if (host.tabIndex == 1) {
+            return favoritesRenderer;
+        }
+        if (host.tabIndex == 2) {
+            return playlistsRenderer;
+        }
+        if (host.tabIndex == 6) {
+            return settingsRenderer;
+        }
+        return groupsRenderer;
     }
 }

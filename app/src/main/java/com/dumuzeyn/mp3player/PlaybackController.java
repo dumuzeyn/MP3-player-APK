@@ -188,14 +188,31 @@ final class PlaybackController {
         startService(intent);
     }
 
+    void clearPlaybackMemory() {
+        host.playbackQueue.clear();
+        host.currentIndex = -1;
+        host.playing = false;
+        host.resumePosition = 0;
+        host.playbackHandler.removeCallbacksAndMessages(null);
+        PlayerService.lastIndex = -1;
+        PlayerService.lastPlaying = false;
+        PlayerService.lastDuration = 0;
+        PlayerService.lastPosition = 0;
+        PlayerService.lastUri = "";
+        host.getSharedPreferences(PlayerService.RESUME_PREFS, 0).edit().clear().apply();
+        Intent intent = new Intent(host, (Class<?>) PlayerService.class);
+        intent.setAction(PlayerService.ACTION_STOP);
+        startService(intent);
+    }
+
     String loopLabel() {
         if (host.loopMode == 1) {
-            return host.tr3("↻ Repeat song", "↻ Повтор песни", "↻ ♪");
+            return "↻♪";
         }
         if (host.loopMode == 2) {
-            return host.tr3("↻ Repeat list", "↻ Повтор списка", "↻ ▤");
+            return "↻▤";
         }
-        return host.tr3("↻ Repeat off", "↻ Повтор выкл", "↻ ○");
+        return "↻○";
     }
 
     void seekTo(int position) {
