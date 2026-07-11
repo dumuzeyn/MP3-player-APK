@@ -16,7 +16,7 @@ final class SongsRenderer {
     }
 
     void render(ArrayList<Track> tracks) {
-        host.renderSongsInternal(tracks);
+        renderSongsState(tracks);
     }
 
     void renderSongsState(ArrayList<Track> tracks) {

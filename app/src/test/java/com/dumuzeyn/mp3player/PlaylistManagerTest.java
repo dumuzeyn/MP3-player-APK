@@ -28,4 +28,11 @@ public class PlaylistManagerTest {
         assertEquals("content://one", restored.get(0).uris.get(0));
         assertEquals("content://two", restored.get(0).uris.get(1));
     }
+
+    @Test
+    public void fromJsonReturnsEmptyListForInvalidData() {
+        ArrayList<MainActivity.Playlist> restored = PlaylistManager.fromJson("{broken");
+
+        assertEquals(0, restored.size());
+    }
 }

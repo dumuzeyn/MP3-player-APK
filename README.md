@@ -49,6 +49,7 @@ MP3 Player APK - Android-приложение для локального про
 
 ## Что нового в текущей версии
 
+- Текущая версия проекта: `2.3` (`versionCode 23`).
 - `MainActivity` разгружен первыми отдельными классами: `SongsRenderer`, `PlayerUiController`, `SettingsRenderer`, `TabsController`, `PlaybackController`, `ThemeController`.
 - Убраны сгенерированные имена вида `AnonymousClass...`, `RunnableC000...`, `m19$$Nest...`; внутренние методы получили читаемые названия.
 - Release-сборка включает `minifyEnabled true` и `shrinkResources true`.
@@ -61,7 +62,7 @@ MP3 Player APK - Android-приложение для локального про
 
 `MainActivity` остается главным экраном и точкой сборки UI. В нем все еще находится много Android View-кода, но теперь часть ответственности вынесена в отдельные классы-контроллеры. Это первый шаг к нормальной архитектуре без риска сломать весь плеер одним большим рефакторингом.
 
-`SongsRenderer` отвечает за рендер списка песен. Если нужно менять карточку песни, кнопки строки, отображение длительности, waveform или поведение списка, начинать нужно отсюда и с метода `renderSongsInternal()` в `MainActivity`.
+`SongsRenderer` отвечает за рендер списка песен. Если нужно менять карточку песни, кнопки строки, отображение длительности, waveform или поведение списка, начинать нужно отсюда; `MainActivity` должен оставаться только точкой вызова.
 
 `PlayerUiController` управляет большим и мини-плеером. Он вызывает внутренние методы `openFullPlayerInternal()` и `updateMiniInternal()`. Все доработки большого плеера, мини-плеера, свайпа вниз, seek bar и состояния текущего трека должны постепенно уходить сюда.
 
@@ -93,7 +94,7 @@ MP3 Player APK - Android-приложение для локального про
 4. Для песен и плейлистов не добавляй новые JSON-строки в `SharedPreferences`; используй `LibraryDatabase`.
 5. Для настроек интерфейса можно использовать `SharedPreferences`, потому что это маленькие значения.
 6. Для Android-файлов используй `content://` URI и persistable permissions. Не сохраняй путь вида `/storage/...` как основной источник.
-7. После изменения запускай `./gradlew clean testDebugUnitTest assembleDebug assembleRelease`.
+7. После изменения запускай `./gradlew clean testDebugUnitTest assembleRelease`.
 8. Проверяй на телефоне: импорт одной песни, импорт папки, запуск песни, большой плеер, мини-плеер, смена темы.
 
 ## Сборка
@@ -180,6 +181,7 @@ If Android warns about installing from an unknown source, allow APK installation
 
 ## Current Version Highlights
 
+- Current project version: `2.3` (`versionCode 23`).
 - `MainActivity` has been split into the first dedicated classes: `SongsRenderer`, `PlayerUiController`, `SettingsRenderer`, `TabsController`, `PlaybackController`, `ThemeController`.
 - Generated-looking names such as `AnonymousClass...`, `RunnableC000...`, and `m19$$Nest...` were replaced with readable names.
 - Release builds now use `minifyEnabled true` and `shrinkResources true`.
@@ -192,7 +194,7 @@ Main package: `app/src/main/java/com/dumuzeyn/mp3player`.
 
 `MainActivity` is still the main screen and UI composition host. It still contains a lot of Android View code, but responsibilities are now being moved into small controller classes. This keeps the app working while reducing the risk of a huge one-shot refactor.
 
-`SongsRenderer` renders the song list. If you need to change song cards, row buttons, duration display, waveform display, or list behavior, start there and at `renderSongsInternal()` in `MainActivity`.
+`SongsRenderer` renders the song list. If you need to change song cards, row buttons, duration display, waveform display, or list behavior, start there; `MainActivity` should remain only the caller.
 
 `PlayerUiController` controls the full player and mini-player. It delegates to `openFullPlayerInternal()` and `updateMiniInternal()`. Full player layout, swipe-down behavior, seek bar, and current-track UI should gradually move here.
 
@@ -224,7 +226,7 @@ Main package: `app/src/main/java/com/dumuzeyn/mp3player`.
 4. For songs and playlists, do not add new JSON strings in `SharedPreferences`; use `LibraryDatabase`.
 5. For small UI settings, `SharedPreferences` is fine.
 6. For Android files, use `content://` URIs and persistable permissions. Do not rely on `/storage/...` paths as the main source.
-7. After changes, run `./gradlew clean testDebugUnitTest assembleDebug assembleRelease`.
+7. After changes, run `./gradlew clean testDebugUnitTest assembleRelease`.
 8. Test on a phone: single-song import, folder import, playback, full player, mini-player, and theme switching.
 
 ## Build

@@ -18,17 +18,48 @@ final class PlayerUiController {
     }
 
     void updateMiniState() {
-        if (host.miniPlayer == null) {
+        if (!hasMiniPlayer()) {
             return;
         }
-        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size() || host.overlayHost.getChildCount() > 0) {
-            host.miniPlayer.setVisibility(View.GONE);
+        Track track = currentTrack();
+        if (track == null || isOverlayOpen()) {
+            hideMiniPlayer();
             return;
         }
-        Track track = host.tracks.get(host.currentIndex);
+        bindMiniPlayer(track);
+        showMiniPlayer();
+    }
+
+    private boolean hasMiniPlayer() {
+        return host.miniPlayer != null;
+    }
+
+    private Track currentTrack() {
+        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+            return null;
+        }
+        return host.tracks.get(host.currentIndex);
+    }
+
+    private boolean isOverlayOpen() {
+        return host.overlayHost.getChildCount() > 0;
+    }
+
+    private void bindMiniPlayer(Track track) {
         host.miniTitle.setText(track.title);
         host.miniSub.setText(track.artist);
-        host.miniButton.setText(host.playing ? "Ⅱ" : "▶");
+        host.miniButton.setText(playPauseLabel());
+    }
+
+    private String playPauseLabel() {
+        return host.playing ? "Ⅱ" : "▶";
+    }
+
+    private void hideMiniPlayer() {
+        host.miniPlayer.setVisibility(View.GONE);
+    }
+
+    private void showMiniPlayer() {
         host.miniPlayer.setVisibility(View.VISIBLE);
     }
 }
