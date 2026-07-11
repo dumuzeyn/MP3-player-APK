@@ -1,9 +1,9 @@
 package com.dumuzeyn.mp3player;
 
 final class SettingsRenderer {
-    private final MainActivity host;
+    private final MainActivityCore host;
 
-    SettingsRenderer(MainActivity host) {
+    SettingsRenderer(MainActivityCore host) {
         this.host = host;
     }
 

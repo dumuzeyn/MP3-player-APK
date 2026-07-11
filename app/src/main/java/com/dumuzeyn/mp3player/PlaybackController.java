@@ -1,9 +1,9 @@
 package com.dumuzeyn.mp3player;
 
 final class PlaybackController {
-    private final MainActivity host;
+    private final MainActivityCore host;
 
-    PlaybackController(MainActivity host) {
+    PlaybackController(MainActivityCore host) {
         this.host = host;
     }
 

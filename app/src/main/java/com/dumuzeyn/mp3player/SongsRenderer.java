@@ -3,9 +3,9 @@ package com.dumuzeyn.mp3player;
 import java.util.ArrayList;
 
 final class SongsRenderer {
-    private final MainActivity host;
+    private final MainActivityCore host;
 
-    SongsRenderer(MainActivity host) {
+    SongsRenderer(MainActivityCore host) {
         this.host = host;
     }
 

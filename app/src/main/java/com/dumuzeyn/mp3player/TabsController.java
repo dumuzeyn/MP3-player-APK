@@ -3,9 +3,9 @@ package com.dumuzeyn.mp3player;
 import android.view.MotionEvent;
 
 final class TabsController {
-    private final MainActivity host;
+    private final MainActivityCore host;
 
-    TabsController(MainActivity host) {
+    TabsController(MainActivityCore host) {
         this.host = host;
     }
 
