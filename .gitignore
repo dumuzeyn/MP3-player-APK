@@ -13,3 +13,6 @@ commandlinetools.zip
 *.jpg
 *.jpeg
 *.webp
+!docs/
+!docs/screenshots/
+!docs/screenshots/*.png

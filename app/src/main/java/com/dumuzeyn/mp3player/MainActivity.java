@@ -117,6 +117,11 @@ public class MainActivity extends Activity {
     private final Handler playbackHandler = new Handler(Looper.getMainLooper());
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
     private final SongRowStateRegistry songRows = new SongRowStateRegistry();
+    private final SongsRenderer songsRenderer = new SongsRenderer(this);
+    private final PlayerUiController playerUiController = new PlayerUiController(this);
+    private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
+    private final TabsController tabsController = new TabsController(this);
+    private final PlaybackController playbackController = new PlaybackController(this);
     private Button sourcePlayButton;
     private int tabIndex = 0;
     private int currentIndex = -1;
@@ -172,327 +177,327 @@ public class MainActivity extends Activity {
         void picked(int color);
     }
 
-    static int m0$$Nest$fgetbg(MainActivity mainActivity) {
+    static int accessBackgroundColor(MainActivity mainActivity) {
         return mainActivity.bg;
     }
 
-    static LruCache m1$$Nest$fgetcoverCache(MainActivity mainActivity) {
+    static LruCache accessCoverCache(MainActivity mainActivity) {
         return mainActivity.coverCache;
     }
 
-    static int m2$$Nest$fgetcurrentIndex(MainActivity mainActivity) {
+    static int accessCurrentIndex(MainActivity mainActivity) {
         return mainActivity.currentIndex;
     }
 
-    static int m3$$Nest$fgetcustomTimerMinutes(MainActivity mainActivity) {
+    static int accessCustomTimerMinutes(MainActivity mainActivity) {
         return mainActivity.customTimerMinutes;
     }
 
-    static boolean m4$$Nest$fgetdark(MainActivity mainActivity) {
+    static boolean accessDarkMode(MainActivity mainActivity) {
         return mainActivity.dark;
     }
 
-    static HashSet m5$$Nest$fgetfavorites(MainActivity mainActivity) {
+    static HashSet accessFavorites(MainActivity mainActivity) {
         return mainActivity.favorites;
     }
 
-    static int m6$$Nest$fgetfg(MainActivity mainActivity) {
+    static int accessForegroundColor(MainActivity mainActivity) {
         return mainActivity.fg;
     }
 
-    static LinearLayout m7$$Nest$fgetlist(MainActivity mainActivity) {
+    static LinearLayout accessListView(MainActivity mainActivity) {
         return mainActivity.list;
     }
 
-    static int m8$$Nest$fgetloopMode(MainActivity mainActivity) {
+    static int accessLoopMode(MainActivity mainActivity) {
         return mainActivity.loopMode;
     }
 
-    static FrameLayout m9$$Nest$fgetoverlayHost(MainActivity mainActivity) {
+    static FrameLayout accessOverlayHost(MainActivity mainActivity) {
         return mainActivity.overlayHost;
     }
 
-    static int m10$$Nest$fgetpanel(MainActivity mainActivity) {
+    static int accessPanelColor(MainActivity mainActivity) {
         return mainActivity.panel;
     }
 
-    static Handler m11$$Nest$fgetplaybackHandler(MainActivity mainActivity) {
+    static Handler accessPlaybackHandler(MainActivity mainActivity) {
         return mainActivity.playbackHandler;
     }
 
-    static ArrayList m12$$Nest$fgetplaybackQueue(MainActivity mainActivity) {
+    static ArrayList accessPlaybackQueue(MainActivity mainActivity) {
         return mainActivity.playbackQueue;
     }
 
-    static boolean m13$$Nest$fgetplaying(MainActivity mainActivity) {
+    static boolean accessPlaying(MainActivity mainActivity) {
         return mainActivity.playing;
     }
 
-    static ArrayList m14$$Nest$fgetplaylists(MainActivity mainActivity) {
+    static ArrayList accessPlaylists(MainActivity mainActivity) {
         return mainActivity.playlists;
     }
 
-    static int m15$$Nest$fgettabIndex(MainActivity mainActivity) {
+    static int accessTabIndex(MainActivity mainActivity) {
         return mainActivity.tabIndex;
     }
 
-    static LinearLayout m16$$Nest$fgettabRow(MainActivity mainActivity) {
+    static LinearLayout accessTabRow(MainActivity mainActivity) {
         return mainActivity.tabRow;
     }
 
-    static String[] m17$$Nest$fgettabs(MainActivity mainActivity) {
+    static String[] accessTabs(MainActivity mainActivity) {
         return mainActivity.tabs;
     }
 
-    static HorizontalScrollView m18$$Nest$fgettabsScroll(MainActivity mainActivity) {
+    static HorizontalScrollView accessTabsScroll(MainActivity mainActivity) {
         return mainActivity.tabsScroll;
     }
 
-    static ArrayList m19$$Nest$fgettracks(MainActivity mainActivity) {
+    static ArrayList accessTracks(MainActivity mainActivity) {
         return mainActivity.tracks;
     }
 
-    static void m20$$Nest$fputcurrentIndex(MainActivity mainActivity, int i) {
+    static void setCurrentIndexValue(MainActivity mainActivity, int i) {
         mainActivity.currentIndex = i;
     }
 
-    static void m21$$Nest$fputcustomTimerMinutes(MainActivity mainActivity, int i) {
+    static void setCustomTimerMinutesValue(MainActivity mainActivity, int i) {
         mainActivity.customTimerMinutes = i;
     }
 
-    static void m22$$Nest$fputdark(MainActivity mainActivity, boolean z) {
+    static void setDarkModeValue(MainActivity mainActivity, boolean z) {
         mainActivity.dark = z;
     }
 
-    static void m23$$Nest$fputlanguage(MainActivity mainActivity, String str) {
+    static void setLanguageValue(MainActivity mainActivity, String str) {
         mainActivity.language = str;
     }
 
-    static void m24$$Nest$fputloopMode(MainActivity mainActivity, int i) {
+    static void setLoopModeValue(MainActivity mainActivity, int i) {
         mainActivity.loopMode = i;
     }
 
-    static void m25$$Nest$fputplaying(MainActivity mainActivity, boolean z) {
+    static void setPlayingValue(MainActivity mainActivity, boolean z) {
         mainActivity.playing = z;
     }
 
-    static void m26$$Nest$fputsearch(MainActivity mainActivity, String str) {
+    static void setSearchValue(MainActivity mainActivity, String str) {
         mainActivity.search = str;
     }
 
-    static void m27$$Nest$fputsleepTimerEndsAt(MainActivity mainActivity, long j) {
+    static void setSleepTimerEndsAtValue(MainActivity mainActivity, long j) {
         mainActivity.sleepTimerEndsAt = j;
     }
 
-    static void m28$$Nest$fputtabAnimating(MainActivity mainActivity, boolean z) {
+    static void setTabAnimatingValue(MainActivity mainActivity, boolean z) {
         mainActivity.tabAnimating = z;
     }
 
-    static void m29$$Nest$fputtabIndex(MainActivity mainActivity, int i) {
+    static void setTabIndexValue(MainActivity mainActivity, int i) {
         mainActivity.tabIndex = i;
     }
 
-    static void m30$$Nest$manimateTabsScrollTo(MainActivity mainActivity, int i) {
+    static void callAnimateTabsScrollTo(MainActivity mainActivity, int i) {
         mainActivity.animateTabsScrollTo(i);
     }
 
-    static void m31$$Nest$mapplyButtonColors(MainActivity mainActivity, Button button, int i, int i2) {
+    static void callApplyButtonColors(MainActivity mainActivity, Button button, int i, int i2) {
         mainActivity.applyButtonColors(button, i, i2);
     }
 
-    static void m32$$Nest$mbuildUi(MainActivity mainActivity) {
+    static void callBuildUi(MainActivity mainActivity) {
         mainActivity.buildUi();
     }
 
-    static void m33$$Nest$mcancelSleepTimer(MainActivity mainActivity) {
+    static void callCancelSleepTimer(MainActivity mainActivity) {
         mainActivity.cancelSleepTimer();
     }
 
-    static void m34$$Nest$mchoosePlaylistForTrack(MainActivity mainActivity, Track track) {
+    static void callChoosePlaylistForTrack(MainActivity mainActivity, Track track) {
         mainActivity.choosePlaylistForTrack(track);
     }
 
-    static void m35$$Nest$mconfirmDeleteAllPlaylists(MainActivity mainActivity) {
+    static void callConfirmDeleteAllPlaylists(MainActivity mainActivity) {
         mainActivity.confirmDeleteAllPlaylists();
     }
 
-    static void m36$$Nest$mconfirmDeleteAllSongs(MainActivity mainActivity) {
+    static void callConfirmDeleteAllSongs(MainActivity mainActivity) {
         mainActivity.confirmDeleteAllSongs();
     }
 
-    static void m37$$Nest$mconfirmDeletePlaylist(MainActivity mainActivity, Playlist playlist) {
+    static void callConfirmDeletePlaylist(MainActivity mainActivity, Playlist playlist) {
         mainActivity.confirmDeletePlaylist(playlist);
     }
 
-    static void m38$$Nest$mconfirmDeleteTrack(MainActivity mainActivity, Track track) {
+    static void callConfirmDeleteTrack(MainActivity mainActivity, Track track) {
         mainActivity.confirmDeleteTrack(track);
     }
 
-    static void m39$$Nest$mcreatePlaylistAndAdd(MainActivity mainActivity, Track track) {
+    static void callCreatePlaylistAndAdd(MainActivity mainActivity, Track track) {
         mainActivity.createPlaylistAndAdd(track);
     }
 
-    static void m40$$Nest$mcreatePlaylistDialog(MainActivity mainActivity) {
+    static void callCreatePlaylistDialog(MainActivity mainActivity) {
         mainActivity.createPlaylistDialog();
     }
 
-    static ArrayList m41$$Nest$mcurrentVisibleTracks(MainActivity mainActivity) {
+    static ArrayList callCurrentVisibleTracks(MainActivity mainActivity) {
         return mainActivity.currentVisibleTracks();
     }
 
-    static void m42$$Nest$mcustomTimerDialog(MainActivity mainActivity) {
+    static void callCustomTimerDialog(MainActivity mainActivity) {
         mainActivity.customTimerDialog();
     }
 
-    static Track m43$$Nest$mfindTrack(MainActivity mainActivity, String str) {
+    static Track callFindTrack(MainActivity mainActivity, String str) {
         return mainActivity.findTrack(str);
     }
 
-    static String m44$$Nest$mformatMs(MainActivity mainActivity, int i) {
+    static String callFormatMs(MainActivity mainActivity, int i) {
         return mainActivity.formatMs(i);
     }
 
-    static boolean m45$$Nest$misCurrent(MainActivity mainActivity, Track track) {
+    static boolean callIsCurrent(MainActivity mainActivity, Track track) {
         return mainActivity.isCurrent(track);
     }
 
-    static boolean m46$$Nest$misInPlaybackQueue(MainActivity mainActivity, Track track) {
+    static boolean callIsInPlaybackQueue(MainActivity mainActivity, Track track) {
         return mainActivity.isInPlaybackQueue(track);
     }
 
-    static void m47$$Nest$mnext(MainActivity mainActivity) {
+    static void callNext(MainActivity mainActivity) {
         mainActivity.next();
     }
 
-    static void m48$$Nest$mopenAddFavorites(MainActivity mainActivity) {
+    static void callOpenAddFavorites(MainActivity mainActivity) {
         mainActivity.openAddFavorites();
     }
 
-    static void m49$$Nest$mopenAddToPlaylist(MainActivity mainActivity, Playlist playlist) {
+    static void callOpenAddToPlaylist(MainActivity mainActivity, Playlist playlist) {
         mainActivity.openAddToPlaylist(playlist);
     }
 
-    static void m50$$Nest$mopenAddToQueue(MainActivity mainActivity) {
+    static void callOpenAddToQueue(MainActivity mainActivity) {
         mainActivity.openAddToQueue();
     }
 
-    static void m51$$Nest$mopenFullPlayer(MainActivity mainActivity) {
+    static void callOpenFullPlayer(MainActivity mainActivity) {
         mainActivity.openFullPlayer();
     }
 
-    static void m52$$Nest$mopenGithub(MainActivity mainActivity) {
+    static void callOpenGithub(MainActivity mainActivity) {
         mainActivity.openGithub();
     }
 
-    static void m53$$Nest$mopenGroupSongs(MainActivity mainActivity, String str, ArrayList arrayList) {
+    static void callOpenGroupSongs(MainActivity mainActivity, String str, ArrayList arrayList) {
         mainActivity.openGroupSongs(str, arrayList);
     }
 
-    static void m54$$Nest$mopenPicker(MainActivity mainActivity) {
+    static void callOpenPicker(MainActivity mainActivity) {
         mainActivity.openPicker();
     }
 
-    static void m55$$Nest$mopenPlaylist(MainActivity mainActivity, Playlist playlist) {
+    static void callOpenPlaylist(MainActivity mainActivity, Playlist playlist) {
         mainActivity.openPlaylist(playlist);
     }
 
-    static void m56$$Nest$mopenQueuePanel(MainActivity mainActivity) {
+    static void callOpenQueuePanel(MainActivity mainActivity) {
         mainActivity.openQueuePanel();
     }
 
-    static void m57$$Nest$mopenSearch(MainActivity mainActivity) {
+    static void callOpenSearch(MainActivity mainActivity) {
         mainActivity.openSearch();
     }
 
-    static void m58$$Nest$mopenSongActions(MainActivity mainActivity, Track track) {
+    static void callOpenSongActions(MainActivity mainActivity, Track track) {
         mainActivity.openSongActions(track);
     }
 
-    static void m59$$Nest$mplayList(MainActivity mainActivity, ArrayList arrayList, boolean z) {
+    static void callPlayList(MainActivity mainActivity, ArrayList arrayList, boolean z) {
         mainActivity.playList(arrayList, z);
     }
 
-    static void m60$$Nest$mplayQueueTrack(MainActivity mainActivity, Track track) {
+    static void callPlayQueueTrack(MainActivity mainActivity, Track track) {
         mainActivity.playQueueTrack(track);
     }
 
-    static void m61$$Nest$mplayTrack(MainActivity mainActivity, Track track) {
+    static void callPlayTrack(MainActivity mainActivity, Track track) {
         mainActivity.playTrack(track);
     }
 
-    static void m62$$Nest$mplayTrack(MainActivity mainActivity, Track track, boolean z) {
+    static void callPlayTrackWithRender(MainActivity mainActivity, Track track, boolean z) {
         mainActivity.playTrack(track, z);
     }
 
-    static ArrayList m63$$Nest$mplaylistTracks(MainActivity mainActivity, Playlist playlist) {
+    static ArrayList callPlaylistTracks(MainActivity mainActivity, Playlist playlist) {
         return mainActivity.playlistTracks(playlist);
     }
 
-    static void m64$$Nest$mprevious(MainActivity mainActivity) {
+    static void callPrevious(MainActivity mainActivity) {
         mainActivity.previous();
     }
 
-    static Bitmap m65$$Nest$mreadCover(MainActivity mainActivity, Track track) {
+    static Bitmap callReadCover(MainActivity mainActivity, Track track) {
         return mainActivity.readCover(track);
     }
 
-    static void m66$$Nest$mremoveFromQueue(MainActivity mainActivity, Track track) {
+    static void callRemoveFromQueue(MainActivity mainActivity, Track track) {
         mainActivity.removeFromQueue(track);
     }
 
-    static void m67$$Nest$mrender(MainActivity mainActivity) {
+    static void callRender(MainActivity mainActivity) {
         mainActivity.render();
     }
 
-    static void m68$$Nest$msaveState(MainActivity mainActivity) {
+    static void callSaveState(MainActivity mainActivity) {
         mainActivity.saveState();
     }
 
-    static void m69$$Nest$mscrollTabsToActive(MainActivity mainActivity, boolean z) {
+    static void callScrollTabsToActive(MainActivity mainActivity, boolean z) {
         mainActivity.scrollTabsToActive(z);
     }
 
-    static void m70$$Nest$msetSurface(MainActivity mainActivity, View view, int i, boolean z) {
+    static void callSetSurface(MainActivity mainActivity, View view, int i, boolean z) {
         mainActivity.setSurface(view, i, z);
     }
 
-    static void m71$$Nest$mshowPanel(MainActivity mainActivity, String str, ArrayList arrayList, PanelAction panelAction) {
+    static void callShowPanel(MainActivity mainActivity, String str, ArrayList arrayList, PanelAction panelAction) {
         mainActivity.showPanel(str, arrayList, panelAction);
     }
 
-    static void m72$$Nest$mstartSleepTimer(MainActivity mainActivity, int i) {
+    static void callStartSleepTimer(MainActivity mainActivity, int i) {
         mainActivity.startSleepTimer(i);
     }
 
-    static void m73$$Nest$mstopPlaybackAndClearQueue(MainActivity mainActivity) {
+    static void callStopPlaybackAndClearQueue(MainActivity mainActivity) {
         mainActivity.stopPlaybackAndClearQueue();
     }
 
-    static void m74$$Nest$mswitchTabAnimated(MainActivity mainActivity, int i, int i2) {
+    static void callSwitchTabAnimated(MainActivity mainActivity, int i, int i2) {
         mainActivity.switchTabAnimated(i, i2);
     }
 
-    static String m75$$Nest$mtimerButtonText(MainActivity mainActivity) {
+    static String callTimerButtonText(MainActivity mainActivity) {
         return mainActivity.timerButtonText();
     }
 
-    static void m76$$Nest$mtimerDialog(MainActivity mainActivity) {
+    static void callTimerDialog(MainActivity mainActivity) {
         mainActivity.timerDialog();
     }
 
-    static void m77$$Nest$mtoggleCurrent(MainActivity mainActivity) {
+    static void callToggleCurrent(MainActivity mainActivity) {
         mainActivity.toggleCurrent();
     }
 
-    static void m78$$Nest$mtoggleFavorite(MainActivity mainActivity, Track track) {
+    static void callToggleFavorite(MainActivity mainActivity, Track track) {
         mainActivity.toggleFavorite(track);
     }
 
-    static String m79$$Nest$mtr(MainActivity mainActivity, String str, String str2) {
+    static String callTranslate(MainActivity mainActivity, String str, String str2) {
         return mainActivity.tr(str, str2);
     }
 
-    static void m80$$Nest$mupdateMini(MainActivity mainActivity) {
+    static void callUpdateMini(MainActivity mainActivity) {
         mainActivity.updateMini();
     }
 
@@ -586,13 +591,13 @@ public class MainActivity extends Activity {
         }
     }
 
-    class AnonymousClass1 implements Runnable {
-        AnonymousClass1() {
+    class UiAction1 implements Runnable {
+        UiAction1() {
         }
 
         @Override
         public void run() {
-            ArrayList arrayList = new ArrayList(MainActivity.m19$$Nest$fgettracks(MainActivity.this));
+            ArrayList arrayList = new ArrayList(MainActivity.accessTracks(MainActivity.this));
             boolean z = false;
             for (int i = 0; i < arrayList.size(); i++) {
                 Track track = (Track) arrayList.get(i);
@@ -606,30 +611,30 @@ public class MainActivity extends Activity {
             }
             if (z) {
                 TrackStore.save(MainActivity.this, arrayList);
-                MainActivity.this.runOnUiThread(new RunnableC00001(this, arrayList));
+                MainActivity.this.runOnUiThread(new MetadataRefreshResult(this, arrayList));
             }
         }
 
-        class RunnableC00001 implements Runnable {
-            final AnonymousClass1 this$1;
+        class MetadataRefreshResult implements Runnable {
+            final UiAction1 this$1;
             final ArrayList val$freshTracks;
 
-            RunnableC00001(AnonymousClass1 anonymousClass1, ArrayList arrayList) {
+            MetadataRefreshResult(UiAction1 anonymousClass1, ArrayList arrayList) {
                 this.val$freshTracks = arrayList;
                 this.this$1 = anonymousClass1;
             }
 
             @Override
             public void run() {
-                MainActivity.m19$$Nest$fgettracks(MainActivity.this).clear();
-                MainActivity.m19$$Nest$fgettracks(MainActivity.this).addAll(this.val$freshTracks);
-                MainActivity.m67$$Nest$mrender(MainActivity.this);
+                MainActivity.accessTracks(MainActivity.this).clear();
+                MainActivity.accessTracks(MainActivity.this).addAll(this.val$freshTracks);
+                MainActivity.callRender(MainActivity.this);
             }
         }
     }
 
     private void refreshMissingMetadataAsync() {
-        new Thread(new AnonymousClass1()).start();
+        new Thread(new UiAction1()).start();
     }
 
     private boolean english() {
@@ -729,6 +734,10 @@ public class MainActivity extends Activity {
     }
 
     private boolean isInsideTabs(MotionEvent motionEvent) {
+        return this.tabsController.isInsideTabs(motionEvent);
+    }
+
+    boolean isInsideTabsInternal(MotionEvent motionEvent) {
         if (this.tabsScroll == null) {
             return false;
         }
@@ -898,7 +907,7 @@ public class MainActivity extends Activity {
         this.page.setPadding(dp(8), dp(14), dp(8), dp(8));
         this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
         buildHeader();
-        buildTabs();
+        this.tabsController.buildTabs();
         ScrollView scrollView = new ScrollView(this);
         this.list = new LinearLayout(this);
         this.list.setOrientation(1);
@@ -936,6 +945,10 @@ public class MainActivity extends Activity {
     }
 
     private void buildTabs() {
+        this.tabsController.buildTabs();
+    }
+
+    void buildTabsInternal() {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
         linearLayout.addView(lineView(), new LinearLayout.LayoutParams(-1, 1));
@@ -953,44 +966,44 @@ public class MainActivity extends Activity {
                 Button button = button(this.tabs[i2]);
                 button.setTag(Integer.valueOf(i2));
                 styleTab(button, i2);
-                button.setOnClickListener(new AnonymousClass2(this, i2));
+                button.setOnClickListener(new UiAction2(this, i2));
                 this.tabRow.addView(button, new LinearLayout.LayoutParams(dp(132), dp(48)));
             }
         }
-        horizontalScrollView.post(new AnonymousClass3());
+        horizontalScrollView.post(new UiAction3());
     }
 
-    class AnonymousClass2 implements View.OnClickListener {
+    class UiAction2 implements View.OnClickListener {
         final MainActivity this$0;
         final int val$index;
 
-        AnonymousClass2(MainActivity mainActivity, int i) {
+        UiAction2(MainActivity mainActivity, int i) {
             this.val$index = i;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m74$$Nest$mswitchTabAnimated(this.this$0, this.val$index, this.this$0.tabDirectionTo(this.val$index));
+            MainActivity.callSwitchTabAnimated(this.this$0, this.val$index, this.this$0.tabDirectionTo(this.val$index));
         }
     }
 
-    class AnonymousClass3 implements Runnable {
-        AnonymousClass3() {
+    class UiAction3 implements Runnable {
+        UiAction3() {
         }
 
         @Override
         public void run() {
-            int iMax = Math.max(1, MainActivity.m16$$Nest$fgettabRow(MainActivity.this).getWidth() / MainActivity.TAB_CYCLES);
-            MainActivity.m69$$Nest$mscrollTabsToActive(MainActivity.this, false);
-            MainActivity.m18$$Nest$fgettabsScroll(MainActivity.this).setOnScrollChangeListener(new AnonymousClass1(this, iMax));
+            int iMax = Math.max(1, MainActivity.accessTabRow(MainActivity.this).getWidth() / MainActivity.TAB_CYCLES);
+            MainActivity.callScrollTabsToActive(MainActivity.this, false);
+            MainActivity.accessTabsScroll(MainActivity.this).setOnScrollChangeListener(new UiAction1(this, iMax));
         }
 
-        class AnonymousClass1 implements View.OnScrollChangeListener {
-            final AnonymousClass3 this$1;
+        class UiAction1 implements View.OnScrollChangeListener {
+            final UiAction3 this$1;
             final int val$cycleWidth;
 
-            AnonymousClass1(AnonymousClass3 anonymousClass3, int i) {
+            UiAction1(UiAction3 anonymousClass3, int i) {
                 this.val$cycleWidth = i;
                 this.this$1 = anonymousClass3;
             }
@@ -1000,9 +1013,9 @@ public class MainActivity extends Activity {
                 int i5 = this.val$cycleWidth * 8;
                 int i6 = this.val$cycleWidth * 12;
                 if (i < i5) {
-                    MainActivity.m18$$Nest$fgettabsScroll(MainActivity.this).scrollTo(i + this.val$cycleWidth, 0);
+                    MainActivity.accessTabsScroll(MainActivity.this).scrollTo(i + this.val$cycleWidth, 0);
                 } else if (i > i6) {
-                    MainActivity.m18$$Nest$fgettabsScroll(MainActivity.this).scrollTo(i - this.val$cycleWidth, 0);
+                    MainActivity.accessTabsScroll(MainActivity.this).scrollTo(i - this.val$cycleWidth, 0);
                 }
             }
         }
@@ -1056,16 +1069,16 @@ public class MainActivity extends Activity {
             return;
         }
         scrollTabsToActive(true, i);
-        this.list.animate().translationX(i2 < 0 ? width : -width).alpha(0.0f).setDuration(48L).setInterpolator(new DecelerateInterpolator()).withEndAction(new AnonymousClass4(this, i, i2, width)).start();
+        this.list.animate().translationX(i2 < 0 ? width : -width).alpha(0.0f).setDuration(48L).setInterpolator(new DecelerateInterpolator()).withEndAction(new UiAction4(this, i, i2, width)).start();
     }
 
-    class AnonymousClass4 implements Runnable {
+    class UiAction4 implements Runnable {
         final MainActivity this$0;
         final int val$direction;
         final int val$nextIndex;
         final int val$width;
 
-        AnonymousClass4(MainActivity mainActivity, int i, int i2, int i3) {
+        UiAction4(MainActivity mainActivity, int i, int i2, int i3) {
             this.val$nextIndex = i;
             this.val$direction = i2;
             this.val$width = i3;
@@ -1074,21 +1087,21 @@ public class MainActivity extends Activity {
 
         @Override
         public void run() {
-            MainActivity.m29$$Nest$fputtabIndex(this.this$0, this.val$nextIndex);
-            MainActivity.m26$$Nest$fputsearch(this.this$0, "");
-            MainActivity.m67$$Nest$mrender(this.this$0);
-            MainActivity.m7$$Nest$fgetlist(this.this$0).setTranslationX(this.val$direction < 0 ? -this.val$width : this.val$width);
-            MainActivity.m7$$Nest$fgetlist(this.this$0).setAlpha(0.0f);
-            MainActivity.m7$$Nest$fgetlist(this.this$0).animate().translationX(0.0f).alpha(1.0f).setDuration(92L).setInterpolator(new DecelerateInterpolator()).withEndAction(new AnonymousClass1()).start();
+            MainActivity.setTabIndexValue(this.this$0, this.val$nextIndex);
+            MainActivity.setSearchValue(this.this$0, "");
+            MainActivity.callRender(this.this$0);
+            MainActivity.accessListView(this.this$0).setTranslationX(this.val$direction < 0 ? -this.val$width : this.val$width);
+            MainActivity.accessListView(this.this$0).setAlpha(0.0f);
+            MainActivity.accessListView(this.this$0).animate().translationX(0.0f).alpha(1.0f).setDuration(92L).setInterpolator(new DecelerateInterpolator()).withEndAction(new UiAction1()).start();
         }
 
-        class AnonymousClass1 implements Runnable {
-            AnonymousClass1() {
+        class UiAction1 implements Runnable {
+            UiAction1() {
             }
 
             @Override
             public void run() {
-                MainActivity.m28$$Nest$fputtabAnimating(AnonymousClass4.this.this$0, false);
+                MainActivity.setTabAnimatingValue(UiAction4.this.this$0, false);
             }
         }
     }
@@ -1097,12 +1110,12 @@ public class MainActivity extends Activity {
         scrollTabsToActive(z, this.tabIndex);
     }
 
-    class AnonymousClass5 implements Runnable {
+    class UiAction5 implements Runnable {
         final MainActivity this$0;
         final boolean val$smooth;
         final int val$targetIndex;
 
-        AnonymousClass5(MainActivity mainActivity, int i, boolean z) {
+        UiAction5(MainActivity mainActivity, int i, boolean z) {
             this.val$targetIndex = i;
             this.val$smooth = z;
             this.this$0 = mainActivity;
@@ -1110,18 +1123,18 @@ public class MainActivity extends Activity {
 
         @Override
         public void run() {
-            int iMax = Math.max(0, Math.min(this.val$targetIndex, MainActivity.m17$$Nest$fgettabs(this.this$0).length - 1));
+            int iMax = Math.max(0, Math.min(this.val$targetIndex, MainActivity.accessTabs(this.this$0).length - 1));
             int left = -1;
             if (this.val$smooth) {
-                int scrollX = MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getScrollX() + (MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getWidth() / 2);
+                int scrollX = MainActivity.accessTabsScroll(this.this$0).getScrollX() + (MainActivity.accessTabsScroll(this.this$0).getWidth() / 2);
                 int i = Integer.MAX_VALUE;
                 int preferredDirection = this.this$0.preferredTabDirection;
-                for (int i2 = 0; i2 < MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildCount(); i2++) {
-                    View childAt = MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildAt(i2);
+                for (int i2 = 0; i2 < MainActivity.accessTabRow(this.this$0).getChildCount(); i2++) {
+                    View childAt = MainActivity.accessTabRow(this.this$0).getChildAt(i2);
                     Object tag = childAt.getTag();
                     if ((tag instanceof Integer) && ((Integer) tag).intValue() == iMax) {
                         int left2 = childAt.getLeft() + (childAt.getWidth() / 2);
-                        int left3 = childAt.getLeft() - Math.max(0, (MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getWidth() - childAt.getWidth()) / 2);
+                        int left3 = childAt.getLeft() - Math.max(0, (MainActivity.accessTabsScroll(this.this$0).getWidth() - childAt.getWidth()) / 2);
                         if ((preferredDirection > 0 && left2 < scrollX) || (preferredDirection < 0 && left2 > scrollX)) {
                             continue;
                         }
@@ -1134,17 +1147,17 @@ public class MainActivity extends Activity {
                 }
             }
             if (left < 0) {
-                int length = (MainActivity.m17$$Nest$fgettabs(this.this$0).length * 10) + iMax;
-                if (length >= MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildCount()) {
+                int length = (MainActivity.accessTabs(this.this$0).length * 10) + iMax;
+                if (length >= MainActivity.accessTabRow(this.this$0).getChildCount()) {
                     return;
                 }
-                View childAt2 = MainActivity.m16$$Nest$fgettabRow(this.this$0).getChildAt(length);
-                left = childAt2.getLeft() - Math.max(0, (MainActivity.m18$$Nest$fgettabsScroll(this.this$0).getWidth() - childAt2.getWidth()) / 2);
+                View childAt2 = MainActivity.accessTabRow(this.this$0).getChildAt(length);
+                left = childAt2.getLeft() - Math.max(0, (MainActivity.accessTabsScroll(this.this$0).getWidth() - childAt2.getWidth()) / 2);
             }
             if (this.val$smooth) {
-                MainActivity.m30$$Nest$manimateTabsScrollTo(this.this$0, left);
+                MainActivity.callAnimateTabsScrollTo(this.this$0, left);
             } else {
-                MainActivity.m18$$Nest$fgettabsScroll(this.this$0).scrollTo(left, 0);
+                MainActivity.accessTabsScroll(this.this$0).scrollTo(left, 0);
             }
         }
     }
@@ -1153,10 +1166,14 @@ public class MainActivity extends Activity {
         if (this.tabsScroll == null || this.tabRow == null || this.tabs == null || this.tabs.length == 0) {
             return;
         }
-        this.tabsScroll.post(new AnonymousClass5(this, i, z));
+        this.tabsScroll.post(new UiAction5(this, i, z));
     }
 
     private int tabDirectionTo(int targetIndex) {
+        return this.tabsController.directionTo(targetIndex);
+    }
+
+    int tabDirectionToInternal(int targetIndex) {
         if (this.tabs == null || this.tabs.length == 0 || targetIndex == this.tabIndex) {
             return 1;
         }
@@ -1185,18 +1202,18 @@ public class MainActivity extends Activity {
         this.tabScrollAnimator = ValueAnimator.ofInt(scrollX, i);
         this.tabScrollAnimator.setDuration(96L);
         this.tabScrollAnimator.setInterpolator(new DecelerateInterpolator());
-        this.tabScrollAnimator.addUpdateListener(new AnonymousClass6());
+        this.tabScrollAnimator.addUpdateListener(new UiAction6());
         this.tabScrollAnimator.start();
     }
 
-    class AnonymousClass6 implements ValueAnimator.AnimatorUpdateListener {
-        AnonymousClass6() {
+    class UiAction6 implements ValueAnimator.AnimatorUpdateListener {
+        UiAction6() {
         }
 
         @Override
         public void onAnimationUpdate(ValueAnimator valueAnimator) {
-            if (MainActivity.m18$$Nest$fgettabsScroll(MainActivity.this) != null) {
-                MainActivity.m18$$Nest$fgettabsScroll(MainActivity.this).scrollTo(((Integer) valueAnimator.getAnimatedValue()).intValue(), 0);
+            if (MainActivity.accessTabsScroll(MainActivity.this) != null) {
+                MainActivity.accessTabsScroll(MainActivity.this).scrollTo(((Integer) valueAnimator.getAnimatedValue()).intValue(), 0);
             }
         }
     }
@@ -1208,7 +1225,7 @@ public class MainActivity extends Activity {
         this.miniPlayer.setPadding(dp(14), 0, dp(10), 0);
         applyCardStyle(this.miniPlayer);
         this.miniPlayer.setVisibility(8);
-        this.miniPlayer.setOnClickListener(new AnonymousClass7());
+        this.miniPlayer.setOnClickListener(new UiAction7());
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
         this.miniTitle = text(tr("Song", "Песня"), 16, true);
@@ -1222,15 +1239,15 @@ public class MainActivity extends Activity {
         this.miniPlayer.addView(linearLayout, new LinearLayout.LayoutParams(0, -2, 1.0f));
         this.miniButton = icon("▶");
         applyPrimaryButtonStyle(this.miniButton);
-        this.miniButton.setOnClickListener(new AnonymousClass8());
+        this.miniButton.setOnClickListener(new UiAction8());
         this.miniPlayer.addView(this.miniButton, square(52));
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(-1, dp(74), 80);
         layoutParams.setMargins(dp(10), 0, dp(10), dp(10));
         this.root.addView(this.miniPlayer, layoutParams);
     }
 
-    class AnonymousClass7 implements View.OnClickListener {
-        AnonymousClass7() {
+    class UiAction7 implements View.OnClickListener {
+        UiAction7() {
         }
 
         @Override
@@ -1241,23 +1258,23 @@ public class MainActivity extends Activity {
                     public void run() {
                         view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(60L).start();
                         MainActivity.this.fullPlayerOpening = true;
-                        MainActivity.m51$$Nest$mopenFullPlayer(MainActivity.this);
+                        MainActivity.callOpenFullPlayer(MainActivity.this);
                     }
                 }).start();
             } else {
                 MainActivity.this.fullPlayerOpening = true;
-                MainActivity.m51$$Nest$mopenFullPlayer(MainActivity.this);
+                MainActivity.callOpenFullPlayer(MainActivity.this);
             }
         }
     }
 
-    class AnonymousClass8 implements View.OnClickListener {
-        AnonymousClass8() {
+    class UiAction8 implements View.OnClickListener {
+        UiAction8() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m77$$Nest$mtoggleCurrent(MainActivity.this);
+            MainActivity.callToggleCurrent(MainActivity.this);
         }
     }
 
@@ -1300,7 +1317,7 @@ public class MainActivity extends Activity {
             LinearLayout linearLayoutRow = row();
             if (this.tabIndex == 0) {
                 Button buttonIcon2 = icon("+");
-                buttonIcon2.setOnClickListener(new AnonymousClass11());
+                buttonIcon2.setOnClickListener(new UiAction11());
                 linearLayoutRow.addView(buttonIcon2, square(52));
                 Button buttonFolder = icon("▣");
                 buttonFolder.setOnClickListener(new View.OnClickListener() {
@@ -1312,122 +1329,126 @@ public class MainActivity extends Activity {
                 linearLayoutRow.addView(buttonFolder, square(52));
             } else {
                 Button buttonIcon3 = icon("+");
-                buttonIcon3.setOnClickListener(new AnonymousClass12());
+                buttonIcon3.setOnClickListener(new UiAction12());
                 linearLayoutRow.addView(buttonIcon3, square(52));
             }
             Button buttonSearchButton = searchButton();
-            buttonSearchButton.setOnClickListener(new AnonymousClass13());
+            buttonSearchButton.setOnClickListener(new UiAction13());
             linearLayoutRow.addView(buttonSearchButton, square(52));
             Button buttonIcon = icon(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
-            buttonIcon.setOnClickListener(new AnonymousClass9());
+            buttonIcon.setOnClickListener(new UiAction9());
             this.sourcePlayButton = buttonIcon;
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
-            buttonShuffleButton.setOnClickListener(new AnonymousClass10());
+            buttonShuffleButton.setOnClickListener(new UiAction10());
             linearLayoutRow.addView(buttonShuffleButton, square(52));
             linearLayout.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(62)));
         } else if (this.tabIndex == 2) {
             LinearLayout linearLayoutRow2 = row();
             Button buttonIcon4 = icon("+");
-            buttonIcon4.setOnClickListener(new AnonymousClass14());
+            buttonIcon4.setOnClickListener(new UiAction14());
             linearLayoutRow2.addView(buttonIcon4, square(52));
             Button buttonSearchButton2 = searchButton();
-            buttonSearchButton2.setOnClickListener(new AnonymousClass15());
+            buttonSearchButton2.setOnClickListener(new UiAction15());
             linearLayoutRow2.addView(buttonSearchButton2, square(52));
             linearLayout.addView(linearLayoutRow2, new LinearLayout.LayoutParams(-1, dp(62)));
         }
         this.list.addView(linearLayout);
     }
 
-    class AnonymousClass9 implements View.OnClickListener {
-        AnonymousClass9() {
+    class UiAction9 implements View.OnClickListener {
+        UiAction9() {
         }
 
         @Override
         public void onClick(View view) {
-            ArrayList arrayList = MainActivity.m41$$Nest$mcurrentVisibleTracks(MainActivity.this);
+            ArrayList arrayList = MainActivity.callCurrentVisibleTracks(MainActivity.this);
             if (MainActivity.this.isPlayingSource(arrayList)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(MainActivity.this);
+                MainActivity.callToggleCurrent(MainActivity.this);
             } else {
-                MainActivity.m59$$Nest$mplayList(MainActivity.this, arrayList, false);
+                MainActivity.callPlayList(MainActivity.this, arrayList, false);
             }
         }
     }
 
-    class AnonymousClass10 implements View.OnClickListener {
-        AnonymousClass10() {
+    class UiAction10 implements View.OnClickListener {
+        UiAction10() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(MainActivity.this, MainActivity.m41$$Nest$mcurrentVisibleTracks(MainActivity.this), true);
+            MainActivity.callPlayList(MainActivity.this, MainActivity.callCurrentVisibleTracks(MainActivity.this), true);
         }
     }
 
-    class AnonymousClass11 implements View.OnClickListener {
-        AnonymousClass11() {
+    class UiAction11 implements View.OnClickListener {
+        UiAction11() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m54$$Nest$mopenPicker(MainActivity.this);
+            MainActivity.callOpenPicker(MainActivity.this);
         }
     }
 
-    class AnonymousClass12 implements View.OnClickListener {
-        AnonymousClass12() {
+    class UiAction12 implements View.OnClickListener {
+        UiAction12() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m48$$Nest$mopenAddFavorites(MainActivity.this);
+            MainActivity.callOpenAddFavorites(MainActivity.this);
         }
     }
 
-    class AnonymousClass13 implements View.OnClickListener {
-        AnonymousClass13() {
+    class UiAction13 implements View.OnClickListener {
+        UiAction13() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m57$$Nest$mopenSearch(MainActivity.this);
+            MainActivity.callOpenSearch(MainActivity.this);
         }
     }
 
-    class AnonymousClass14 implements View.OnClickListener {
-        AnonymousClass14() {
+    class UiAction14 implements View.OnClickListener {
+        UiAction14() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m40$$Nest$mcreatePlaylistDialog(MainActivity.this);
+            MainActivity.callCreatePlaylistDialog(MainActivity.this);
         }
     }
 
-    class AnonymousClass15 implements View.OnClickListener {
-        AnonymousClass15() {
+    class UiAction15 implements View.OnClickListener {
+        UiAction15() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m57$$Nest$mopenSearch(MainActivity.this);
+            MainActivity.callOpenSearch(MainActivity.this);
         }
     }
 
-    class AnonymousClass16 implements View.OnClickListener {
-        AnonymousClass16() {
+    class UiAction16 implements View.OnClickListener {
+        UiAction16() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m22$$Nest$fputdark(MainActivity.this, !MainActivity.m4$$Nest$fgetdark(MainActivity.this));
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
+            MainActivity.setDarkModeValue(MainActivity.this, !MainActivity.accessDarkMode(MainActivity.this));
+            MainActivity.callSaveState(MainActivity.this);
             MainActivity.this.updateLauncherIcon();
-            MainActivity.m32$$Nest$mbuildUi(MainActivity.this);
+            MainActivity.callBuildUi(MainActivity.this);
         }
     }
 
     private void renderSettings() {
+        this.settingsRenderer.render();
+    }
+
+    void renderSettingsInternal() {
         addSettingsButton(tr("Theme: ", "Тема: ") + themeName(), new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1466,9 +1487,9 @@ public class MainActivity extends Activity {
                 MainActivity.this.openSongDiagnostics();
             }
         });
-        addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new AnonymousClass20());
-        addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new AnonymousClass21());
-        addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new AnonymousClass19());
+        addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new UiAction20());
+        addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new UiAction21());
+        addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new UiAction19());
     }
 
     private String themeName() {
@@ -1629,57 +1650,57 @@ public class MainActivity extends Activity {
         return ThemeManager.readableOn(color);
     }
 
-    class AnonymousClass17 implements View.OnClickListener {
-        AnonymousClass17() {
+    class UiAction17 implements View.OnClickListener {
+        UiAction17() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m23$$Nest$fputlanguage(MainActivity.this, "en");
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m32$$Nest$mbuildUi(MainActivity.this);
+            MainActivity.setLanguageValue(MainActivity.this, "en");
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callBuildUi(MainActivity.this);
         }
     }
 
-    class AnonymousClass18 implements View.OnClickListener {
-        AnonymousClass18() {
+    class UiAction18 implements View.OnClickListener {
+        UiAction18() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m23$$Nest$fputlanguage(MainActivity.this, "ru");
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m32$$Nest$mbuildUi(MainActivity.this);
+            MainActivity.setLanguageValue(MainActivity.this, "ru");
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callBuildUi(MainActivity.this);
         }
     }
 
-    class AnonymousClass19 implements View.OnClickListener {
-        AnonymousClass19() {
+    class UiAction19 implements View.OnClickListener {
+        UiAction19() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m52$$Nest$mopenGithub(MainActivity.this);
+            MainActivity.callOpenGithub(MainActivity.this);
         }
     }
 
-    class AnonymousClass20 implements View.OnClickListener {
-        AnonymousClass20() {
+    class UiAction20 implements View.OnClickListener {
+        UiAction20() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m36$$Nest$mconfirmDeleteAllSongs(MainActivity.this);
+            MainActivity.callConfirmDeleteAllSongs(MainActivity.this);
         }
     }
 
-    class AnonymousClass21 implements View.OnClickListener {
-        AnonymousClass21() {
+    class UiAction21 implements View.OnClickListener {
+        UiAction21() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m35$$Nest$mconfirmDeleteAllPlaylists(MainActivity.this);
+            MainActivity.callConfirmDeleteAllPlaylists(MainActivity.this);
         }
     }
 
@@ -1796,41 +1817,41 @@ public class MainActivity extends Activity {
     }
 
     private void confirmDeleteAllSongs() {
-        showConfirmPanel(tr("Delete all songs?", "Удалить все песни?"), tr("Songs will disappear only from this app. Files on the phone will stay untouched.", "Песни исчезнут только из приложения. Файлы на телефоне останутся."), new AnonymousClass22());
+        showConfirmPanel(tr("Delete all songs?", "Удалить все песни?"), tr("Songs will disappear only from this app. Files on the phone will stay untouched.", "Песни исчезнут только из приложения. Файлы на телефоне останутся."), new UiAction22());
     }
 
-    class AnonymousClass22 implements Runnable {
-        AnonymousClass22() {
+    class UiAction22 implements Runnable {
+        UiAction22() {
         }
 
         @Override
         public void run() {
-            MainActivity.m73$$Nest$mstopPlaybackAndClearQueue(MainActivity.this);
-            MainActivity.m19$$Nest$fgettracks(MainActivity.this).clear();
-            MainActivity.m5$$Nest$fgetfavorites(MainActivity.this).clear();
-            Iterator it = MainActivity.m14$$Nest$fgetplaylists(MainActivity.this).iterator();
+            MainActivity.callStopPlaybackAndClearQueue(MainActivity.this);
+            MainActivity.accessTracks(MainActivity.this).clear();
+            MainActivity.accessFavorites(MainActivity.this).clear();
+            Iterator it = MainActivity.accessPlaylists(MainActivity.this).iterator();
             while (it.hasNext()) {
                 ((Playlist) it.next()).uris.clear();
             }
-            TrackStore.save(MainActivity.this, MainActivity.m19$$Nest$fgettracks(MainActivity.this));
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m67$$Nest$mrender(MainActivity.this);
+            TrackStore.save(MainActivity.this, MainActivity.accessTracks(MainActivity.this));
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callRender(MainActivity.this);
         }
     }
 
     private void confirmDeleteAllPlaylists() {
-        showConfirmPanel(tr("Delete all playlists?", "Удалить все плейлисты?"), tr("Songs will stay in the app.", "Песни останутся в приложении."), new AnonymousClass23());
+        showConfirmPanel(tr("Delete all playlists?", "Удалить все плейлисты?"), tr("Songs will stay in the app.", "Песни останутся в приложении."), new UiAction23());
     }
 
-    class AnonymousClass23 implements Runnable {
-        AnonymousClass23() {
+    class UiAction23 implements Runnable {
+        UiAction23() {
         }
 
         @Override
         public void run() {
-            MainActivity.m14$$Nest$fgetplaylists(MainActivity.this).clear();
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m67$$Nest$mrender(MainActivity.this);
+            MainActivity.accessPlaylists(MainActivity.this).clear();
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callRender(MainActivity.this);
         }
     }
 
@@ -1885,6 +1906,10 @@ public class MainActivity extends Activity {
     }
 
     private void renderSongs(ArrayList<Track> arrayList) {
+        this.songsRenderer.render(arrayList);
+    }
+
+    void renderSongsInternal(ArrayList<Track> arrayList) {
         String str;
         String str2;
         if (arrayList.isEmpty()) {
@@ -1944,7 +1969,7 @@ public class MainActivity extends Activity {
         linearLayout.addView(marker, markerParams);
         ImageView imageViewCoverView = coverView();
         loadCover(imageViewCoverView, track, this.purpleSoft);
-        imageViewCoverView.setOnClickListener(new AnonymousClass24(this, track));
+        imageViewCoverView.setOnClickListener(new UiAction24(this, track));
         linearLayout.addView(imageViewCoverView, square(58));
         LinearLayout linearLayout2 = new LinearLayout(this);
         linearLayout2.setOrientation(1);
@@ -1970,76 +1995,76 @@ public class MainActivity extends Activity {
             Button buttonIcon = icon(this.favorites.contains(track.uri) ? "♥︎" : "♡︎");
             buttonIcon.setTextSize(14.0f);
             applyPlainIconStyle(buttonIcon, this.favorites.contains(track.uri) ? this.purple : this.secondaryText);
-            buttonIcon.setOnClickListener(new AnonymousClass25(this, track));
+            buttonIcon.setOnClickListener(new UiAction25(this, track));
             linearLayout.addView(buttonIcon, square(42));
         } else if (z) {
             Button buttonIcon2 = icon("⋯");
             applyPlainIconStyle(buttonIcon2);
-            buttonIcon2.setOnClickListener(new AnonymousClass26(this, track));
+            buttonIcon2.setOnClickListener(new UiAction26(this, track));
             linearLayout.addView(buttonIcon2, square(48));
         }
         Button buttonIcon3 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
         applyPrimaryButtonStyle(buttonIcon3);
-        buttonIcon3.setOnClickListener(new AnonymousClass27(this, track, runnable));
+        buttonIcon3.setOnClickListener(new UiAction27(this, track, runnable));
         this.songRows.registerPlayButton(track.uri, buttonIcon3);
         linearLayout.addView(buttonIcon3, square(48));
         return spaced(linearLayout);
     }
 
-    class AnonymousClass24 implements View.OnClickListener {
+    class UiAction24 implements View.OnClickListener {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass24(MainActivity mainActivity, Track track) {
+        UiAction24(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m61$$Nest$mplayTrack(this.this$0, this.val$track);
+            MainActivity.callPlayTrack(this.this$0, this.val$track);
             this.this$0.fullPlayerOpening = true;
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass25 implements View.OnClickListener {
+    class UiAction25 implements View.OnClickListener {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass25(MainActivity mainActivity, Track track) {
+        UiAction25(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m78$$Nest$mtoggleFavorite(this.this$0, this.val$track);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.callToggleFavorite(this.this$0, this.val$track);
+            MainActivity.callRender(this.this$0);
         }
     }
 
-    class AnonymousClass26 implements View.OnClickListener {
+    class UiAction26 implements View.OnClickListener {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass26(MainActivity mainActivity, Track track) {
+        UiAction26(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m58$$Nest$mopenSongActions(this.this$0, this.val$track);
+            MainActivity.callOpenSongActions(this.this$0, this.val$track);
         }
     }
 
-    class AnonymousClass27 implements View.OnClickListener {
+    class UiAction27 implements View.OnClickListener {
         final MainActivity this$0;
         final Runnable val$afterPlay;
         final Track val$track;
 
-        AnonymousClass27(MainActivity mainActivity, Track track, Runnable runnable) {
+        UiAction27(MainActivity mainActivity, Track track, Runnable runnable) {
             this.val$track = track;
             this.val$afterPlay = runnable;
             this.this$0 = mainActivity;
@@ -2047,10 +2072,10 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            if (MainActivity.m45$$Nest$misCurrent(this.this$0, this.val$track)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            if (MainActivity.callIsCurrent(this.this$0, this.val$track)) {
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m61$$Nest$mplayTrack(this.this$0, this.val$track);
+                MainActivity.callPlayTrack(this.this$0, this.val$track);
             }
             if (this.val$afterPlay != null) {
                 this.val$afterPlay.run();
@@ -2089,7 +2114,7 @@ public class MainActivity extends Activity {
             linearLayoutRow.addView(linearLayout2, new LinearLayout.LayoutParams(0, -2, 1.0f));
             Button buttonIcon2 = icon("×");
             applyPlainIconStyle(buttonIcon2, Color.rgb(190, 45, 45));
-            buttonIcon2.setOnClickListener(new AnonymousClass30(this, playlist2));
+            buttonIcon2.setOnClickListener(new UiAction30(this, playlist2));
             linearLayoutRow.addView(buttonIcon2, square(48));
             Button rename = icon("✎");
             applyPlainIconStyle(rename);
@@ -2102,11 +2127,11 @@ public class MainActivity extends Activity {
             linearLayoutRow.addView(rename, square(48));
             Button buttonIcon = icon(isPlayingSource(arrayListPlaylistTracks) ? "Ⅱ" : "▶");
             applyPlainIconStyle(buttonIcon, this.purple);
-            buttonIcon.setOnClickListener(new AnonymousClass28(this, playlist2));
+            buttonIcon.setOnClickListener(new UiAction28(this, playlist2));
             linearLayoutRow.addView(buttonIcon, square(48));
             Button buttonShuffleButton = shuffleButton();
             applyPlainIconStyle(buttonShuffleButton);
-            buttonShuffleButton.setOnClickListener(new AnonymousClass29(this, playlist2));
+            buttonShuffleButton.setOnClickListener(new UiAction29(this, playlist2));
             linearLayoutRow.addView(buttonShuffleButton, square(48));
             linearLayout.addView(linearLayoutRow);
             LinearLayout linearLayoutRow2 = row();
@@ -2122,73 +2147,73 @@ public class MainActivity extends Activity {
             textViewText4.setPadding(dp(12), 0, 0, 0);
             linearLayoutRow2.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(96), 1.0f));
             linearLayout.addView(linearLayoutRow2);
-            linearLayout.setOnClickListener(new AnonymousClass31(this, playlist2));
+            linearLayout.setOnClickListener(new UiAction31(this, playlist2));
             this.list.addView(spaced(linearLayout));
         }
     }
 
-    class AnonymousClass28 implements View.OnClickListener {
+    class UiAction28 implements View.OnClickListener {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass28(MainActivity mainActivity, Playlist playlist) {
+        UiAction28(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            ArrayList arrayList = MainActivity.m63$$Nest$mplaylistTracks(this.this$0, this.val$playlist);
+            ArrayList arrayList = MainActivity.callPlaylistTracks(this.this$0, this.val$playlist);
             if (this.this$0.isPlayingSource(arrayList)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m59$$Nest$mplayList(this.this$0, arrayList, false);
+                MainActivity.callPlayList(this.this$0, arrayList, false);
             }
         }
     }
 
-    class AnonymousClass29 implements View.OnClickListener {
+    class UiAction29 implements View.OnClickListener {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass29(MainActivity mainActivity, Playlist playlist) {
+        UiAction29(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, MainActivity.m63$$Nest$mplaylistTracks(this.this$0, this.val$playlist), true);
+            MainActivity.callPlayList(this.this$0, MainActivity.callPlaylistTracks(this.this$0, this.val$playlist), true);
         }
     }
 
-    class AnonymousClass30 implements View.OnClickListener {
+    class UiAction30 implements View.OnClickListener {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass30(MainActivity mainActivity, Playlist playlist) {
+        UiAction30(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m37$$Nest$mconfirmDeletePlaylist(this.this$0, this.val$playlist);
+            MainActivity.callConfirmDeletePlaylist(this.this$0, this.val$playlist);
         }
     }
 
-    class AnonymousClass31 implements View.OnClickListener {
+    class UiAction31 implements View.OnClickListener {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass31(MainActivity mainActivity, Playlist playlist) {
+        UiAction31(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m55$$Nest$mopenPlaylist(this.this$0, this.val$playlist);
+            MainActivity.callOpenPlaylist(this.this$0, this.val$playlist);
         }
     }
 
@@ -2257,13 +2282,13 @@ public class MainActivity extends Activity {
             linearLayoutRow.addView(linearLayout, new LinearLayout.LayoutParams(0, dp(72), 1.0f));
             Button buttonIcon = icon(isPlayingSource(entry.getValue()) ? "Ⅱ" : "▶");
             applyPlainIconStyle(buttonIcon, this.purple);
-            buttonIcon.setOnClickListener(new AnonymousClass32(this, entry));
+            buttonIcon.setOnClickListener(new UiAction32(this, entry));
             linearLayoutRow.addView(buttonIcon, square(52));
             Button buttonShuffleButton = shuffleButton();
             applyPlainIconStyle(buttonShuffleButton);
-            buttonShuffleButton.setOnClickListener(new AnonymousClass33(this, entry));
+            buttonShuffleButton.setOnClickListener(new UiAction33(this, entry));
             linearLayoutRow.addView(buttonShuffleButton, square(52));
-            linearLayoutRow.setOnClickListener(new AnonymousClass34(this, entry));
+            linearLayoutRow.setOnClickListener(new UiAction34(this, entry));
             this.list.addView(spaced(linearLayoutRow));
         }
     }
@@ -2283,11 +2308,11 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    class AnonymousClass32 implements View.OnClickListener {
+    class UiAction32 implements View.OnClickListener {
         final MainActivity this$0;
         final Map.Entry val$entry;
 
-        AnonymousClass32(MainActivity mainActivity, Map.Entry entry) {
+        UiAction32(MainActivity mainActivity, Map.Entry entry) {
             this.val$entry = entry;
             this.this$0 = mainActivity;
         }
@@ -2296,40 +2321,40 @@ public class MainActivity extends Activity {
         public void onClick(View view) {
             ArrayList arrayList = (ArrayList) this.val$entry.getValue();
             if (this.this$0.isPlayingSource(arrayList)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m59$$Nest$mplayList(this.this$0, arrayList, false);
+                MainActivity.callPlayList(this.this$0, arrayList, false);
             }
         }
     }
 
-    class AnonymousClass33 implements View.OnClickListener {
+    class UiAction33 implements View.OnClickListener {
         final MainActivity this$0;
         final Map.Entry val$entry;
 
-        AnonymousClass33(MainActivity mainActivity, Map.Entry entry) {
+        UiAction33(MainActivity mainActivity, Map.Entry entry) {
             this.val$entry = entry;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, (ArrayList) this.val$entry.getValue(), true);
+            MainActivity.callPlayList(this.this$0, (ArrayList) this.val$entry.getValue(), true);
         }
     }
 
-    class AnonymousClass34 implements View.OnClickListener {
+    class UiAction34 implements View.OnClickListener {
         final MainActivity this$0;
         final Map.Entry val$entry;
 
-        AnonymousClass34(MainActivity mainActivity, Map.Entry entry) {
+        UiAction34(MainActivity mainActivity, Map.Entry entry) {
             this.val$entry = entry;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m53$$Nest$mopenGroupSongs(this.this$0, (String) this.val$entry.getKey(), (ArrayList) this.val$entry.getValue());
+            MainActivity.callOpenGroupSongs(this.this$0, (String) this.val$entry.getKey(), (ArrayList) this.val$entry.getValue());
         }
     }
 
@@ -2358,32 +2383,32 @@ public class MainActivity extends Activity {
         showPanel(str, arrayList, null);
     }
 
-    class AnonymousClass35 implements PanelAction {
+    class UiAction35 implements PanelAction {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass35(MainActivity mainActivity, Playlist playlist) {
+        UiAction35(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void add() {
-            MainActivity.m49$$Nest$mopenAddToPlaylist(this.this$0, this.val$playlist);
+            MainActivity.callOpenAddToPlaylist(this.this$0, this.val$playlist);
         }
 
         @Override
         public void remove(Track track) {
             this.val$playlist.uris.remove(track.uri);
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m67$$Nest$mrender(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeAllViews();
-            MainActivity.m55$$Nest$mopenPlaylist(this.this$0, this.val$playlist);
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.callRender(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeAllViews();
+            MainActivity.callOpenPlaylist(this.this$0, this.val$playlist);
         }
     }
 
     private void openPlaylist(Playlist playlist) {
-        showPanel(playlist.name, playlistTracks(playlist), new AnonymousClass35(this, playlist));
+        showPanel(playlist.name, playlistTracks(playlist), new UiAction35(this, playlist));
     }
 
     private void showPanel(String str, ArrayList<Track> arrayList, PanelAction panelAction) {
@@ -2395,18 +2420,18 @@ public class MainActivity extends Activity {
         makeMarquee(panelTitle);
         linearLayoutRow.addView(panelTitle, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button buttonIcon = icon(isPlayingSource(arrayList) ? "Ⅱ" : "▶");
-        buttonIcon.setOnClickListener(new AnonymousClass36(this, arrayList, frameLayoutShade, str, panelAction));
+        buttonIcon.setOnClickListener(new UiAction36(this, arrayList, frameLayoutShade, str, panelAction));
         linearLayoutRow.addView(buttonIcon, square(52));
         Button buttonShuffleButton = shuffleButton();
-        buttonShuffleButton.setOnClickListener(new AnonymousClass37(this, arrayList, frameLayoutShade, str, panelAction));
+        buttonShuffleButton.setOnClickListener(new UiAction37(this, arrayList, frameLayoutShade, str, panelAction));
         linearLayoutRow.addView(buttonShuffleButton, square(52));
         if (panelAction2 != null) {
             Button buttonIcon2 = icon("+");
-            buttonIcon2.setOnClickListener(new AnonymousClass38(this, panelAction2));
+            buttonIcon2.setOnClickListener(new UiAction38(this, panelAction2));
             linearLayoutRow.addView(buttonIcon2, square(52));
         }
         Button buttonIcon3 = icon("×");
-        buttonIcon3.setOnClickListener(new AnonymousClass39(this, frameLayoutShade));
+        buttonIcon3.setOnClickListener(new UiAction39(this, frameLayoutShade));
         linearLayoutRow.addView(buttonIcon3, square(52));
         linearLayoutPanelCard.addView(linearLayoutRow);
         ScrollView scrollView = new ScrollView(this);
@@ -2414,7 +2439,7 @@ public class MainActivity extends Activity {
         linearLayout.setOrientation(1);
         for (Track track : arrayList) {
             if (panelAction2 == null) {
-                linearLayout.addView(songRow(track, false, true, new AnonymousClass40(this, frameLayoutShade, str, arrayList, panelAction)));
+                linearLayout.addView(songRow(track, false, true, new UiAction40(this, frameLayoutShade, str, arrayList, panelAction)));
             } else {
                 LinearLayout linearLayout2 = new LinearLayout(this);
                 linearLayout2.setOrientation(0);
@@ -2423,7 +2448,7 @@ public class MainActivity extends Activity {
                 setSurface(linearLayout2, isCurrent(track) ? this.fg : this.panel, false);
                 ImageView imageViewCoverView = coverView();
                 loadCover(imageViewCoverView, track, isCurrent(track) ? this.bg : this.dark ? -16777216 : Color.rgb(235, 235, 235));
-                imageViewCoverView.setOnClickListener(new AnonymousClass41(this, track, frameLayoutShade));
+                imageViewCoverView.setOnClickListener(new UiAction41(this, track, frameLayoutShade));
                 linearLayout2.addView(imageViewCoverView, square(58));
                 LinearLayout linearLayout3 = new LinearLayout(this);
                 linearLayout3.setOrientation(LinearLayout.VERTICAL);
@@ -2437,11 +2462,11 @@ public class MainActivity extends Activity {
                 linearLayout2.addView(linearLayout3, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
                 Button buttonIcon4 = icon("−");
                 applyButtonColors(buttonIcon4, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
-                buttonIcon4.setOnClickListener(new AnonymousClass42(this, panelAction2, track));
+                buttonIcon4.setOnClickListener(new UiAction42(this, panelAction2, track));
                 linearLayout2.addView(buttonIcon4, square(48));
                 Button buttonIcon5 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
                 applyButtonColors(buttonIcon5, isCurrent(track) ? this.fg : this.bg, isCurrent(track) ? this.bg : this.fg);
-                buttonIcon5.setOnClickListener(new AnonymousClass43(this, track, frameLayoutShade, str, arrayList, panelAction));
+                buttonIcon5.setOnClickListener(new UiAction43(this, track, frameLayoutShade, str, arrayList, panelAction));
                 linearLayout2.addView(buttonIcon5, square(48));
                 linearLayout.addView(spaced(linearLayout2));
             }
@@ -2454,14 +2479,14 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass36 implements View.OnClickListener {
+    class UiAction36 implements View.OnClickListener {
         final MainActivity this$0;
         final PanelAction val$action;
         final FrameLayout val$shade;
         final ArrayList val$source;
         final String val$title;
 
-        AnonymousClass36(MainActivity mainActivity, ArrayList arrayList, FrameLayout frameLayout, String str, PanelAction panelAction) {
+        UiAction36(MainActivity mainActivity, ArrayList arrayList, FrameLayout frameLayout, String str, PanelAction panelAction) {
             this.val$source = arrayList;
             this.val$shade = frameLayout;
             this.val$title = str;
@@ -2472,25 +2497,25 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View view) {
             if (this.this$0.isPlayingSource(this.val$source)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m59$$Nest$mplayList(this.this$0, this.val$source, false);
+                MainActivity.callPlayList(this.this$0, this.val$source, false);
             }
             if (this.val$shade.getParent() != null) {
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             }
-            MainActivity.m71$$Nest$mshowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
+            MainActivity.callShowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
         }
     }
 
-    class AnonymousClass37 implements View.OnClickListener {
+    class UiAction37 implements View.OnClickListener {
         final MainActivity this$0;
         final PanelAction val$action;
         final FrameLayout val$shade;
         final ArrayList val$source;
         final String val$title;
 
-        AnonymousClass37(MainActivity mainActivity, ArrayList arrayList, FrameLayout frameLayout, String str, PanelAction panelAction) {
+        UiAction37(MainActivity mainActivity, ArrayList arrayList, FrameLayout frameLayout, String str, PanelAction panelAction) {
             this.val$source = arrayList;
             this.val$shade = frameLayout;
             this.val$title = str;
@@ -2500,19 +2525,19 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m59$$Nest$mplayList(this.this$0, this.val$source, true);
+            MainActivity.callPlayList(this.this$0, this.val$source, true);
             if (this.val$shade.getParent() != null) {
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             }
-            MainActivity.m71$$Nest$mshowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
+            MainActivity.callShowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
         }
     }
 
-    class AnonymousClass38 implements View.OnClickListener {
+    class UiAction38 implements View.OnClickListener {
         final MainActivity this$0;
         final PanelAction val$action;
 
-        AnonymousClass38(MainActivity mainActivity, PanelAction panelAction) {
+        UiAction38(MainActivity mainActivity, PanelAction panelAction) {
             this.val$action = panelAction;
             this.this$0 = mainActivity;
         }
@@ -2523,30 +2548,30 @@ public class MainActivity extends Activity {
         }
     }
 
-    class AnonymousClass39 implements View.OnClickListener {
+    class UiAction39 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass39(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction39(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass40 implements Runnable {
+    class UiAction40 implements Runnable {
         final MainActivity this$0;
         final PanelAction val$action;
         final FrameLayout val$shade;
         final ArrayList val$source;
         final String val$title;
 
-        AnonymousClass40(MainActivity mainActivity, FrameLayout frameLayout, String str, ArrayList arrayList, PanelAction panelAction) {
+        UiAction40(MainActivity mainActivity, FrameLayout frameLayout, String str, ArrayList arrayList, PanelAction panelAction) {
             this.val$shade = frameLayout;
             this.val$title = str;
             this.val$source = arrayList;
@@ -2557,18 +2582,18 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             if (this.val$shade.getParent() != null) {
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             }
-            MainActivity.m71$$Nest$mshowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
+            MainActivity.callShowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
         }
     }
 
-    class AnonymousClass41 implements View.OnClickListener {
+    class UiAction41 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass41(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
+        UiAction41(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
             this.val$track = track;
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
@@ -2576,19 +2601,19 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m61$$Nest$mplayTrack(this.this$0, this.val$track);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callPlayTrack(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             this.this$0.fullPlayerOpening = true;
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass42 implements View.OnClickListener {
+    class UiAction42 implements View.OnClickListener {
         final MainActivity this$0;
         final PanelAction val$action;
         final Track val$track;
 
-        AnonymousClass42(MainActivity mainActivity, PanelAction panelAction, Track track) {
+        UiAction42(MainActivity mainActivity, PanelAction panelAction, Track track) {
             this.val$action = panelAction;
             this.val$track = track;
             this.this$0 = mainActivity;
@@ -2600,7 +2625,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    class AnonymousClass43 implements View.OnClickListener {
+    class UiAction43 implements View.OnClickListener {
         final MainActivity this$0;
         final PanelAction val$action;
         final FrameLayout val$shade;
@@ -2608,7 +2633,7 @@ public class MainActivity extends Activity {
         final String val$title;
         final Track val$track;
 
-        AnonymousClass43(MainActivity mainActivity, Track track, FrameLayout frameLayout, String str, ArrayList arrayList, PanelAction panelAction) {
+        UiAction43(MainActivity mainActivity, Track track, FrameLayout frameLayout, String str, ArrayList arrayList, PanelAction panelAction) {
             this.val$track = track;
             this.val$shade = frameLayout;
             this.val$title = str;
@@ -2619,13 +2644,13 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            if (MainActivity.m45$$Nest$misCurrent(this.this$0, this.val$track)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            if (MainActivity.callIsCurrent(this.this$0, this.val$track)) {
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m61$$Nest$mplayTrack(this.this$0, this.val$track);
+                MainActivity.callPlayTrack(this.this$0, this.val$track);
             }
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m71$$Nest$mshowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callShowPanel(this.this$0, this.val$title, this.val$source, this.val$action);
         }
     }
 
@@ -2638,10 +2663,10 @@ public class MainActivity extends Activity {
         LinearLayout linearLayoutRow = row();
         linearLayoutRow.addView(text(tr3("Now playing", "Список проигрывания", "▶ ▤"), 20, true), new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button buttonIcon = icon("+");
-        buttonIcon.setOnClickListener(new AnonymousClass44());
+        buttonIcon.setOnClickListener(new UiAction44());
         linearLayoutRow.addView(buttonIcon, square(52));
         Button buttonIcon2 = icon("×");
-        buttonIcon2.setOnClickListener(new AnonymousClass45(this, frameLayoutShade));
+        buttonIcon2.setOnClickListener(new UiAction45(this, frameLayoutShade));
         linearLayoutRow.addView(buttonIcon2, square(52));
         linearLayoutPanelCard.addView(linearLayoutRow);
         ScrollView scrollView = new ScrollView(this);
@@ -2661,10 +2686,10 @@ public class MainActivity extends Activity {
             textViewText.setTextColor(isCurrent(track) ? this.bg : this.fg);
             linearLayout2.addView(textViewText, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
             Button buttonIcon3 = icon("−");
-            buttonIcon3.setOnClickListener(new AnonymousClass46(this, track, frameLayoutShade));
+            buttonIcon3.setOnClickListener(new UiAction46(this, track, frameLayoutShade));
             linearLayout2.addView(buttonIcon3, square(48));
             Button buttonIcon4 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
-            buttonIcon4.setOnClickListener(new AnonymousClass47(this, track, frameLayoutShade));
+            buttonIcon4.setOnClickListener(new UiAction47(this, track, frameLayoutShade));
             linearLayout2.addView(buttonIcon4, square(48));
             linearLayout.addView(spaced(linearLayout2));
         }
@@ -2675,38 +2700,38 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass44 implements View.OnClickListener {
-        AnonymousClass44() {
+    class UiAction44 implements View.OnClickListener {
+        UiAction44() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m50$$Nest$mopenAddToQueue(MainActivity.this);
+            MainActivity.callOpenAddToQueue(MainActivity.this);
         }
     }
 
-    class AnonymousClass45 implements View.OnClickListener {
+    class UiAction45 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass45(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction45(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass46 implements View.OnClickListener {
+    class UiAction46 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass46(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
+        UiAction46(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
             this.val$track = track;
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
@@ -2714,18 +2739,18 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m66$$Nest$mremoveFromQueue(this.this$0, this.val$track);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m56$$Nest$mopenQueuePanel(this.this$0);
+            MainActivity.callRemoveFromQueue(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callOpenQueuePanel(this.this$0);
         }
     }
 
-    class AnonymousClass47 implements View.OnClickListener {
+    class UiAction47 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass47(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
+        UiAction47(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
             this.val$track = track;
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
@@ -2733,35 +2758,35 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m60$$Nest$mplayQueueTrack(this.this$0, this.val$track);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m56$$Nest$mopenQueuePanel(this.this$0);
+            MainActivity.callPlayQueueTrack(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callOpenQueuePanel(this.this$0);
         }
     }
 
-    class AnonymousClass48 implements PickDone {
-        AnonymousClass48() {
+    class UiAction48 implements PickDone {
+        UiAction48() {
         }
 
         @Override
         public void done(Set<String> set) {
-            if (MainActivity.m12$$Nest$fgetplaybackQueue(MainActivity.this).isEmpty() && MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this) >= 0 && MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this) < MainActivity.m19$$Nest$fgettracks(MainActivity.this).size()) {
-                MainActivity.m12$$Nest$fgetplaybackQueue(MainActivity.this).add((Track) MainActivity.m19$$Nest$fgettracks(MainActivity.this).get(MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this)));
+            if (MainActivity.accessPlaybackQueue(MainActivity.this).isEmpty() && MainActivity.accessCurrentIndex(MainActivity.this) >= 0 && MainActivity.accessCurrentIndex(MainActivity.this) < MainActivity.accessTracks(MainActivity.this).size()) {
+                MainActivity.accessPlaybackQueue(MainActivity.this).add((Track) MainActivity.accessTracks(MainActivity.this).get(MainActivity.accessCurrentIndex(MainActivity.this)));
             }
             Iterator<String> it = set.iterator();
             while (it.hasNext()) {
-                Track trackM43$$Nest$mfindTrack = MainActivity.m43$$Nest$mfindTrack(MainActivity.this, it.next());
-                if (trackM43$$Nest$mfindTrack != null && !MainActivity.m46$$Nest$misInPlaybackQueue(MainActivity.this, trackM43$$Nest$mfindTrack)) {
-                    MainActivity.m12$$Nest$fgetplaybackQueue(MainActivity.this).add(trackM43$$Nest$mfindTrack);
+                Track resolvedTrack = MainActivity.callFindTrack(MainActivity.this, it.next());
+                if (resolvedTrack != null && !MainActivity.callIsInPlaybackQueue(MainActivity.this, resolvedTrack)) {
+                    MainActivity.accessPlaybackQueue(MainActivity.this).add(resolvedTrack);
                 }
             }
-            MainActivity.m9$$Nest$fgetoverlayHost(MainActivity.this).removeAllViews();
-            MainActivity.m56$$Nest$mopenQueuePanel(MainActivity.this);
+            MainActivity.accessOverlayHost(MainActivity.this).removeAllViews();
+            MainActivity.callOpenQueuePanel(MainActivity.this);
         }
     }
 
     private void openAddToQueue() {
-        showPickPanel(tr3("Add to queue", "Добавить в список", "+ ▤"), new HashSet<>(), new AnonymousClass48());
+        showPickPanel(tr3("Add to queue", "Добавить в список", "+ ▤"), new HashSet<>(), new UiAction48());
     }
 
     private void removeFromQueue(Track track) {
@@ -2806,27 +2831,27 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    class AnonymousClass49 implements PickDone {
-        AnonymousClass49() {
+    class UiAction49 implements PickDone {
+        UiAction49() {
         }
 
         @Override
         public void done(Set<String> set) {
-            MainActivity.m5$$Nest$fgetfavorites(MainActivity.this).addAll(set);
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m67$$Nest$mrender(MainActivity.this);
+            MainActivity.accessFavorites(MainActivity.this).addAll(set);
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callRender(MainActivity.this);
         }
     }
 
     private void openAddFavorites() {
-        showPickPanel(tr3("Add to favorites", "Добавить в избранное", "+ ♥"), new HashSet<>(), new AnonymousClass49());
+        showPickPanel(tr3("Add to favorites", "Добавить в избранное", "+ ♥"), new HashSet<>(), new UiAction49());
     }
 
-    class AnonymousClass50 implements PickDone {
+    class UiAction50 implements PickDone {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass50(MainActivity mainActivity, Playlist playlist) {
+        UiAction50(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
@@ -2838,15 +2863,15 @@ public class MainActivity extends Activity {
                     this.val$playlist.uris.add(str);
                 }
             }
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m67$$Nest$mrender(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeAllViews();
-            MainActivity.m55$$Nest$mopenPlaylist(this.this$0, this.val$playlist);
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.callRender(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeAllViews();
+            MainActivity.callOpenPlaylist(this.this$0, this.val$playlist);
         }
     }
 
     private void openAddToPlaylist(Playlist playlist) {
-        showPickPanel(tr3("Add to ", "Добавить в ", "+ ") + playlist.name, new HashSet<>(), new AnonymousClass50(this, playlist));
+        showPickPanel(tr3("Add to ", "Добавить в ", "+ ") + playlist.name, new HashSet<>(), new UiAction50(this, playlist));
     }
 
     private void showPickPanel(String str, HashSet<String> hashSet, PickDone pickDone) {
@@ -2855,10 +2880,10 @@ public class MainActivity extends Activity {
         LinearLayout linearLayoutRow = row();
         linearLayoutRow.addView(text(str, 20, true), new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button buttonIcon = icon("+");
-        buttonIcon.setOnClickListener(new AnonymousClass51(this, frameLayoutShade, pickDone, hashSet));
+        buttonIcon.setOnClickListener(new UiAction51(this, frameLayoutShade, pickDone, hashSet));
         linearLayoutRow.addView(buttonIcon, square(52));
         Button buttonIcon2 = icon("×");
-        buttonIcon2.setOnClickListener(new AnonymousClass52(this, frameLayoutShade));
+        buttonIcon2.setOnClickListener(new UiAction52(this, frameLayoutShade));
         linearLayoutRow.addView(buttonIcon2, square(52));
         linearLayoutPanelCard.addView(linearLayoutRow);
         ScrollView scrollView = new ScrollView(this);
@@ -2875,13 +2900,13 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass51 implements View.OnClickListener {
+    class UiAction51 implements View.OnClickListener {
         final MainActivity this$0;
         final PickDone val$done;
         final HashSet val$selected;
         final FrameLayout val$shade;
 
-        AnonymousClass51(MainActivity mainActivity, FrameLayout frameLayout, PickDone pickDone, HashSet hashSet) {
+        UiAction51(MainActivity mainActivity, FrameLayout frameLayout, PickDone pickDone, HashSet hashSet) {
             this.val$shade = frameLayout;
             this.val$done = pickDone;
             this.val$selected = hashSet;
@@ -2890,25 +2915,25 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             this.val$done.done(this.val$selected);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass52 implements View.OnClickListener {
+    class UiAction52 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass52(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction52(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
@@ -2941,8 +2966,8 @@ public class MainActivity extends Activity {
         Button buttonIcon = icon(hashSet.contains(track.uri) ? "✔" : "+");
         Button buttonIcon2 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
         buttonIcon2.setTag(track.uri);
-        buttonIcon2.setOnClickListener(new AnonymousClass54(this, track));
-        buttonIcon.setOnClickListener(new AnonymousClass53(this, hashSet, track, linearLayout, textViewText, buttonIcon, buttonIcon2));
+        buttonIcon2.setOnClickListener(new UiAction54(this, track));
+        buttonIcon.setOnClickListener(new UiAction53(this, hashSet, track, linearLayout, textViewText, buttonIcon, buttonIcon2));
         applyButtonColors(buttonIcon, hashSet.contains(track.uri) ? this.fg : this.bg, hashSet.contains(track.uri) ? this.bg : this.fg);
         linearLayout.addView(buttonIcon, square(48));
         applyButtonColors(buttonIcon2, hashSet.contains(track.uri) ? this.fg : this.bg, hashSet.contains(track.uri) ? this.bg : this.fg);
@@ -2950,7 +2975,7 @@ public class MainActivity extends Activity {
         return spaced(linearLayout);
     }
 
-    class AnonymousClass53 implements View.OnClickListener {
+    class UiAction53 implements View.OnClickListener {
         final MainActivity this$0;
         final Button val$mark;
         final Button val$play;
@@ -2959,7 +2984,7 @@ public class MainActivity extends Activity {
         final TextView val$title;
         final Track val$track;
 
-        AnonymousClass53(MainActivity mainActivity, HashSet hashSet, Track track, LinearLayout linearLayout, TextView textView, Button button, Button button2) {
+        UiAction53(MainActivity mainActivity, HashSet hashSet, Track track, LinearLayout linearLayout, TextView textView, Button button, Button button2) {
             this.val$selected = hashSet;
             this.val$track = track;
             this.val$row = linearLayout;
@@ -2980,31 +3005,31 @@ public class MainActivity extends Activity {
             MainActivity mainActivity = this.this$0;
             LinearLayout linearLayout = this.val$row;
             MainActivity mainActivity2 = this.this$0;
-            MainActivity.m70$$Nest$msetSurface(mainActivity, linearLayout, zContains ? MainActivity.m6$$Nest$fgetfg(mainActivity2) : MainActivity.m10$$Nest$fgetpanel(mainActivity2), false);
+            MainActivity.callSetSurface(mainActivity, linearLayout, zContains ? MainActivity.accessForegroundColor(mainActivity2) : MainActivity.accessPanelColor(mainActivity2), false);
             TextView textView = this.val$title;
             MainActivity mainActivity3 = this.this$0;
-            textView.setTextColor(zContains ? MainActivity.m0$$Nest$fgetbg(mainActivity3) : MainActivity.m6$$Nest$fgetfg(mainActivity3));
+            textView.setTextColor(zContains ? MainActivity.accessBackgroundColor(mainActivity3) : MainActivity.accessForegroundColor(mainActivity3));
             this.val$mark.setText(zContains ? "✔" : "+");
-            MainActivity.m31$$Nest$mapplyButtonColors(this.this$0, this.val$mark, zContains ? MainActivity.m6$$Nest$fgetfg(this.this$0) : MainActivity.m0$$Nest$fgetbg(this.this$0), zContains ? MainActivity.m0$$Nest$fgetbg(this.this$0) : MainActivity.m6$$Nest$fgetfg(this.this$0));
-            MainActivity.m31$$Nest$mapplyButtonColors(this.this$0, this.val$play, zContains ? MainActivity.m6$$Nest$fgetfg(this.this$0) : MainActivity.m0$$Nest$fgetbg(this.this$0), zContains ? MainActivity.m0$$Nest$fgetbg(this.this$0) : MainActivity.m6$$Nest$fgetfg(this.this$0));
+            MainActivity.callApplyButtonColors(this.this$0, this.val$mark, zContains ? MainActivity.accessForegroundColor(this.this$0) : MainActivity.accessBackgroundColor(this.this$0), zContains ? MainActivity.accessBackgroundColor(this.this$0) : MainActivity.accessForegroundColor(this.this$0));
+            MainActivity.callApplyButtonColors(this.this$0, this.val$play, zContains ? MainActivity.accessForegroundColor(this.this$0) : MainActivity.accessBackgroundColor(this.this$0), zContains ? MainActivity.accessBackgroundColor(this.this$0) : MainActivity.accessForegroundColor(this.this$0));
         }
     }
 
-    class AnonymousClass54 implements View.OnClickListener {
+    class UiAction54 implements View.OnClickListener {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass54(MainActivity mainActivity, Track track) {
+        UiAction54(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            if (MainActivity.m45$$Nest$misCurrent(this.this$0, this.val$track)) {
-                MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
+            if (MainActivity.callIsCurrent(this.this$0, this.val$track)) {
+                MainActivity.callToggleCurrent(this.this$0);
             } else {
-                MainActivity.m62$$Nest$mplayTrack(this.this$0, this.val$track, false);
+                MainActivity.callPlayTrackWithRender(this.this$0, this.val$track, false);
             }
             this.this$0.syncPickPlayButtons(this.val$track);
         }
@@ -3044,28 +3069,28 @@ public class MainActivity extends Activity {
             str2 = "♡ Добавить в избранное";
         }
         Button button = button(tr(str, str2));
-        button.setOnClickListener(new AnonymousClass55(this, track, frameLayoutShade));
+        button.setOnClickListener(new UiAction55(this, track, frameLayoutShade));
         linearLayoutPanelCard.addView(button, new LinearLayout.LayoutParams(-1, dp(54)));
         Button button2 = button(tr3("+ Add to playlist", "+ Добавить в плейлист", "+ ▤"));
-        button2.setOnClickListener(new AnonymousClass56(this, frameLayoutShade, track));
+        button2.setOnClickListener(new UiAction56(this, frameLayoutShade, track));
         linearLayoutPanelCard.addView(button2, new LinearLayout.LayoutParams(-1, dp(54)));
         Button button3 = button(tr3("× Remove from app", "× Удалить из приложения", "⌫ ♪"));
-        button3.setOnClickListener(new AnonymousClass57(this, frameLayoutShade, track));
+        button3.setOnClickListener(new UiAction57(this, frameLayoutShade, track));
         linearLayoutPanelCard.addView(button3, new LinearLayout.LayoutParams(-1, dp(54)));
         Button button4 = button(tr3("Close", "Закрыть", "×"));
-        button4.setOnClickListener(new AnonymousClass58(this, frameLayoutShade));
+        button4.setOnClickListener(new UiAction58(this, frameLayoutShade));
         linearLayoutPanelCard.addView(button4, new LinearLayout.LayoutParams(-1, dp(54)));
         frameLayoutShade.addView(linearLayoutPanelCard, bottomParams());
         this.overlayHost.addView(frameLayoutShade);
         updateMini();
     }
 
-    class AnonymousClass55 implements View.OnClickListener {
+    class UiAction55 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass55(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
+        UiAction55(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
             this.val$track = track;
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
@@ -3073,18 +3098,18 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m78$$Nest$mtoggleFavorite(this.this$0, this.val$track);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.callToggleFavorite(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callRender(this.this$0);
         }
     }
 
-    class AnonymousClass56 implements View.OnClickListener {
+    class UiAction56 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass56(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
+        UiAction56(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
             this.val$shade = frameLayout;
             this.val$track = track;
             this.this$0 = mainActivity;
@@ -3092,17 +3117,17 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m34$$Nest$mchoosePlaylistForTrack(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callChoosePlaylistForTrack(this.this$0, this.val$track);
         }
     }
 
-    class AnonymousClass57 implements View.OnClickListener {
+    class UiAction57 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass57(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
+        UiAction57(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
             this.val$shade = frameLayout;
             this.val$track = track;
             this.this$0 = mainActivity;
@@ -3110,24 +3135,24 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m38$$Nest$mconfirmDeleteTrack(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callConfirmDeleteTrack(this.this$0, this.val$track);
         }
     }
 
-    class AnonymousClass58 implements View.OnClickListener {
+    class UiAction58 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass58(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction58(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
@@ -3141,14 +3166,14 @@ public class MainActivity extends Activity {
         linearLayout.setOrientation(1);
         for (Playlist playlist : this.playlists) {
             Button button = button(playlist.name);
-            button.setOnClickListener(new AnonymousClass59(this, playlist, track, frameLayoutShade));
+            button.setOnClickListener(new UiAction59(this, playlist, track, frameLayoutShade));
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(52));
             layoutParams.setMargins(0, dp(4), 0, dp(4));
             linearLayout.addView(button, layoutParams);
         }
         Button button2 = button(tr3("Create new", "Создать новый", "+"));
         applyButtonColors(button2, this.fg, this.bg);
-        button2.setOnClickListener(new AnonymousClass60(this, frameLayoutShade, track));
+        button2.setOnClickListener(new UiAction60(this, frameLayoutShade, track));
         LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(-1, dp(52));
         layoutParams2.setMargins(0, dp(8), 0, 0);
         linearLayout.addView(button2, layoutParams2);
@@ -3159,13 +3184,13 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass59 implements View.OnClickListener {
+    class UiAction59 implements View.OnClickListener {
         final MainActivity this$0;
         final Playlist val$playlist;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass59(MainActivity mainActivity, Playlist playlist, Track track, FrameLayout frameLayout) {
+        UiAction59(MainActivity mainActivity, Playlist playlist, Track track, FrameLayout frameLayout) {
             this.val$playlist = playlist;
             this.val$track = track;
             this.val$shade = frameLayout;
@@ -3177,18 +3202,18 @@ public class MainActivity extends Activity {
             if (!this.val$playlist.uris.contains(this.val$track.uri)) {
                 this.val$playlist.uris.add(this.val$track.uri);
             }
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callRender(this.this$0);
         }
     }
 
-    class AnonymousClass60 implements View.OnClickListener {
+    class UiAction60 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Track val$track;
 
-        AnonymousClass60(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
+        UiAction60(MainActivity mainActivity, FrameLayout frameLayout, Track track) {
             this.val$shade = frameLayout;
             this.val$track = track;
             this.this$0 = mainActivity;
@@ -3196,16 +3221,16 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m39$$Nest$mcreatePlaylistAndAdd(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callCreatePlaylistAndAdd(this.this$0, this.val$track);
         }
     }
 
-    class AnonymousClass61 implements InputDone {
+    class UiAction61 implements InputDone {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass61(MainActivity mainActivity, Track track) {
+        UiAction61(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
@@ -3214,87 +3239,87 @@ public class MainActivity extends Activity {
         public void done(String str) {
             String strTrim = PlaylistManager.cleanName(str);
             if (strTrim.isEmpty()) {
-                strTrim = MainActivity.m79$$Nest$mtr(this.this$0, "Playlist", "Плейлист");
+                strTrim = MainActivity.callTranslate(this.this$0, "Playlist", "Плейлист");
             }
             Playlist playlist = new Playlist(strTrim);
             playlist.uris.add(this.val$track.uri);
-            MainActivity.m14$$Nest$fgetplaylists(this.this$0).add(playlist);
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.accessPlaylists(this.this$0).add(playlist);
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.callRender(this.this$0);
         }
     }
 
     private void createPlaylistAndAdd(Track track) {
-        showInputPanel(tr3("New playlist", "Новый плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new AnonymousClass61(this, track));
+        showInputPanel(tr3("New playlist", "Новый плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new UiAction61(this, track));
     }
 
     private void confirmDeleteTrack(Track track) {
-        showConfirmPanel("Удалить песню?", "Песня исчезнет из приложения, но файл останется на телефоне.", new AnonymousClass62(this, track));
+        showConfirmPanel("Удалить песню?", "Песня исчезнет из приложения, но файл останется на телефоне.", new UiAction62(this, track));
     }
 
-    class AnonymousClass62 implements Runnable {
+    class UiAction62 implements Runnable {
         final MainActivity this$0;
         final Track val$track;
 
-        AnonymousClass62(MainActivity mainActivity, Track track) {
+        UiAction62(MainActivity mainActivity, Track track) {
             this.val$track = track;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void run() {
-            MainActivity.m19$$Nest$fgettracks(this.this$0).remove(this.val$track);
-            MainActivity.m5$$Nest$fgetfavorites(this.this$0).remove(this.val$track.uri);
-            Iterator it = MainActivity.m14$$Nest$fgetplaylists(this.this$0).iterator();
+            MainActivity.accessTracks(this.this$0).remove(this.val$track);
+            MainActivity.accessFavorites(this.this$0).remove(this.val$track.uri);
+            Iterator it = MainActivity.accessPlaylists(this.this$0).iterator();
             while (it.hasNext()) {
                 ((Playlist) it.next()).uris.remove(this.val$track.uri);
             }
-            TrackStore.save(this.this$0, MainActivity.m19$$Nest$fgettracks(this.this$0));
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            TrackStore.save(this.this$0, MainActivity.accessTracks(this.this$0));
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.callRender(this.this$0);
         }
     }
 
     private void confirmDeletePlaylist(Playlist playlist) {
-        showConfirmPanel("Удалить плейлист?", "Песни останутся в приложении.", new AnonymousClass63(this, playlist));
+        showConfirmPanel("Удалить плейлист?", "Песни останутся в приложении.", new UiAction63(this, playlist));
     }
 
-    class AnonymousClass63 implements Runnable {
+    class UiAction63 implements Runnable {
         final MainActivity this$0;
         final Playlist val$playlist;
 
-        AnonymousClass63(MainActivity mainActivity, Playlist playlist) {
+        UiAction63(MainActivity mainActivity, Playlist playlist) {
             this.val$playlist = playlist;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void run() {
-            MainActivity.m14$$Nest$fgetplaylists(this.this$0).remove(this.val$playlist);
-            MainActivity.m68$$Nest$msaveState(this.this$0);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.accessPlaylists(this.this$0).remove(this.val$playlist);
+            MainActivity.callSaveState(this.this$0);
+            MainActivity.callRender(this.this$0);
         }
     }
 
-    class AnonymousClass64 implements InputDone {
-        AnonymousClass64() {
+    class UiAction64 implements InputDone {
+        UiAction64() {
         }
 
         @Override
         public void done(String str) {
             String strTrim = PlaylistManager.cleanName(str);
-            ArrayList arrayListM14$$Nest$fgetplaylists = MainActivity.m14$$Nest$fgetplaylists(MainActivity.this);
+            ArrayList playlistList = MainActivity.accessPlaylists(MainActivity.this);
             if (strTrim.isEmpty()) {
-                strTrim = MainActivity.m79$$Nest$mtr(MainActivity.this, "Playlist", "Плейлист");
+                strTrim = MainActivity.callTranslate(MainActivity.this, "Playlist", "Плейлист");
             }
-            arrayListM14$$Nest$fgetplaylists.add(new Playlist(strTrim));
-            MainActivity.m68$$Nest$msaveState(MainActivity.this);
-            MainActivity.m67$$Nest$mrender(MainActivity.this);
+            playlistList.add(new Playlist(strTrim));
+            MainActivity.callSaveState(MainActivity.this);
+            MainActivity.callRender(MainActivity.this);
         }
     }
 
     private void createPlaylistDialog() {
-        showInputPanel(tr3("Create playlist", "Создать плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new AnonymousClass64());
+        showInputPanel(tr3("Create playlist", "Создать плейлист", "+ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), "", false, new UiAction64());
     }
 
     private void renamePlaylistDialog(final Playlist playlist) {
@@ -3330,11 +3355,11 @@ public class MainActivity extends Activity {
         linearLayoutPanelCard.addView(editText, layoutParams);
         LinearLayout linearLayoutRow = row();
         Button button = button(tr3("Reset", "Сброс", "↺"));
-        button.setOnClickListener(new AnonymousClass65(this, frameLayoutShade));
+        button.setOnClickListener(new UiAction65(this, frameLayoutShade));
         linearLayoutRow.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         Button button2 = button(tr3("Find", "Найти", "⌕"));
         applyButtonColors(button2, this.fg, this.bg);
-        button2.setOnClickListener(new AnonymousClass66(this, editText, frameLayoutShade));
+        button2.setOnClickListener(new UiAction66(this, editText, frameLayoutShade));
         linearLayoutRow.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         linearLayoutPanelCard.addView(linearLayoutRow);
         frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), dp(230)));
@@ -3343,29 +3368,29 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass65 implements View.OnClickListener {
+    class UiAction65 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass65(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction65(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m26$$Nest$fputsearch(this.this$0, "");
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.setSearchValue(this.this$0, "");
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callRender(this.this$0);
         }
     }
 
-    class AnonymousClass66 implements View.OnClickListener {
+    class UiAction66 implements View.OnClickListener {
         final MainActivity this$0;
         final EditText val$input;
         final FrameLayout val$shade;
 
-        AnonymousClass66(MainActivity mainActivity, EditText editText, FrameLayout frameLayout) {
+        UiAction66(MainActivity mainActivity, EditText editText, FrameLayout frameLayout) {
             this.val$input = editText;
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
@@ -3373,9 +3398,9 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m26$$Nest$fputsearch(this.this$0, this.val$input.getText().toString());
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m67$$Nest$mrender(this.this$0);
+            MainActivity.setSearchValue(this.this$0, this.val$input.getText().toString());
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callRender(this.this$0);
         }
     }
 
@@ -3386,7 +3411,7 @@ public class MainActivity extends Activity {
         LinearLayout linearLayoutRow = row();
         linearLayoutRow.addView(text(str, 22, true), new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button buttonIcon = icon("×");
-        buttonIcon.setOnClickListener(new AnonymousClass67(this, frameLayoutShade));
+        buttonIcon.setOnClickListener(new UiAction67(this, frameLayoutShade));
         linearLayoutRow.addView(buttonIcon, square(52));
         linearLayoutPanelCard.addView(linearLayoutRow);
         EditText editText = new EditText(this);
@@ -3405,11 +3430,11 @@ public class MainActivity extends Activity {
         linearLayoutPanelCard.addView(editText, layoutParams);
         LinearLayout linearLayoutRow2 = row();
         Button button = button(tr3("Cancel", "Отмена", "×"));
-        button.setOnClickListener(new AnonymousClass68(this, frameLayoutShade));
+        button.setOnClickListener(new UiAction68(this, frameLayoutShade));
         linearLayoutRow2.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         Button button2 = button(tr3("Done", "Готово", "✓"));
         applyButtonColors(button2, this.fg, this.bg);
-        button2.setOnClickListener(new AnonymousClass69(this, editText, frameLayoutShade, inputDone));
+        button2.setOnClickListener(new UiAction69(this, editText, frameLayoutShade, inputDone));
         linearLayoutRow2.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         linearLayoutPanelCard.addView(linearLayoutRow2);
         frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), dp(230)));
@@ -3417,45 +3442,45 @@ public class MainActivity extends Activity {
         editText.requestFocus();
     }
 
-    class AnonymousClass67 implements View.OnClickListener {
+    class UiAction67 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass67(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction67(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass68 implements View.OnClickListener {
+    class UiAction68 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass68(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction68(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass69 implements View.OnClickListener {
+    class UiAction69 implements View.OnClickListener {
         final MainActivity this$0;
         final InputDone val$done;
         final EditText val$input;
         final FrameLayout val$shade;
 
-        AnonymousClass69(MainActivity mainActivity, EditText editText, FrameLayout frameLayout, InputDone inputDone) {
+        UiAction69(MainActivity mainActivity, EditText editText, FrameLayout frameLayout, InputDone inputDone) {
             this.val$input = editText;
             this.val$shade = frameLayout;
             this.val$done = inputDone;
@@ -3465,9 +3490,9 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View view) {
             String string = this.val$input.getText().toString();
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             this.val$done.done(string);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
@@ -3477,18 +3502,18 @@ public class MainActivity extends Activity {
             return;
         }
         if (animate && this.animations) {
-            frameLayout.animate().translationY(getResources().getDisplayMetrics().heightPixels).alpha(0.0f).setDuration(135L).setInterpolator(new DecelerateInterpolator()).withEndAction(new AnonymousClassFullPlayerClose(this, frameLayout)).start();
+            frameLayout.animate().translationY(getResources().getDisplayMetrics().heightPixels).alpha(0.0f).setDuration(135L).setInterpolator(new DecelerateInterpolator()).withEndAction(new FullPlayerCloseAction(this, frameLayout)).start();
             return;
         }
         this.overlayHost.removeView(frameLayout);
         updateMini();
     }
 
-    class AnonymousClassFullPlayerClose implements Runnable {
+    class FullPlayerCloseAction implements Runnable {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClassFullPlayerClose(MainActivity mainActivity, FrameLayout frameLayout) {
+        FullPlayerCloseAction(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
@@ -3496,13 +3521,17 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             if (this.val$sheet.getParent() != null) {
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
             }
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
     private void openFullPlayer() {
+        this.playerUiController.openFullPlayer();
+    }
+
+    void openFullPlayerInternal() {
         if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
             this.currentIndex = 0;
         }
@@ -3588,11 +3617,11 @@ public class MainActivity extends Activity {
         Button buttonIcon = icon("←");
         buttonIcon.setTextSize(34.0f);
         buttonIcon.setTypeface(Typeface.DEFAULT_BOLD);
-        buttonIcon.setOnClickListener(new AnonymousClass70(this, frameLayout));
+        buttonIcon.setOnClickListener(new UiAction70(this, frameLayout));
         linearLayoutRow.addView(buttonIcon, square(58));
         linearLayoutRow.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1.0f));
         Button buttonIcon2 = icon("☰");
-        buttonIcon2.setOnClickListener(new AnonymousClass71());
+        buttonIcon2.setOnClickListener(new UiAction71());
         linearLayoutRow.addView(buttonIcon2, square(58));
         linearLayout.addView(linearLayoutRow, new LinearLayout.LayoutParams(-1, dp(72)));
         ImageView imageViewCoverView = coverView();
@@ -3608,13 +3637,13 @@ public class MainActivity extends Activity {
         linearLayout.addView(textViewText2, new LinearLayout.LayoutParams(-1, dp(34)));
         LinearLayout linearLayoutRow2 = row();
         Button button = button(timerButtonText());
-        button.setOnClickListener(new AnonymousClass72());
+        button.setOnClickListener(new UiAction72());
         linearLayoutRow2.addView(button, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button button2 = button(tr3("Like", this.favorites.contains(track.uri) ? "♥︎ Лайк" : "♡︎ Лайк", this.favorites.contains(track.uri) ? "♥" : "♡"));
-        button2.setOnClickListener(new AnonymousClass73(this, track, frameLayout));
+        button2.setOnClickListener(new UiAction73(this, track, frameLayout));
         linearLayoutRow2.addView(button2, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         Button button3 = button(loopLabel());
-        button3.setOnClickListener(new AnonymousClass74(this, frameLayout));
+        button3.setOnClickListener(new UiAction74(this, frameLayout));
         linearLayoutRow2.addView(button3, new LinearLayout.LayoutParams(0, dp(58), 1.0f));
         linearLayout.addView(linearLayoutRow2);
         SeekBar seekBar = new SeekBar(this);
@@ -3630,20 +3659,20 @@ public class MainActivity extends Activity {
         linearLayoutRow3.addView(textViewText3, new LinearLayout.LayoutParams(0, dp(28), 1.0f));
         linearLayoutRow3.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(28), 1.0f));
         linearLayout.addView(linearLayoutRow3);
-        seekBar.setOnSeekBarChangeListener(new AnonymousClass75(this, track, textViewText3, textViewText4));
+        seekBar.setOnSeekBarChangeListener(new UiAction75(this, track, textViewText3, textViewText4));
         Handler handler = new Handler(Looper.getMainLooper());
-        handler.postDelayed(new AnonymousClass76(this, frameLayout, track, seekBar, textViewText3, textViewText4, button, handler), 700L);
+        handler.postDelayed(new UiAction76(this, frameLayout, track, seekBar, textViewText3, textViewText4, button, handler), 700L);
         linearLayout.addView(new View(this), new LinearLayout.LayoutParams(-1, 0, 1.0f));
         LinearLayout linearLayoutRow4 = row();
         linearLayoutRow4.setGravity(17);
         Button buttonIcon3 = icon("⏮");
-        buttonIcon3.setOnClickListener(new AnonymousClass77(this, frameLayout));
+        buttonIcon3.setOnClickListener(new UiAction77(this, frameLayout));
         linearLayoutRow4.addView(buttonIcon3, square(68));
         Button buttonIcon4 = icon(this.playing ? "Ⅱ" : "▶");
-        buttonIcon4.setOnClickListener(new AnonymousClass78(this, frameLayout));
+        buttonIcon4.setOnClickListener(new UiAction78(this, frameLayout));
         linearLayoutRow4.addView(buttonIcon4, square(84));
         Button buttonIcon5 = icon("⏭");
-        buttonIcon5.setOnClickListener(new AnonymousClass79(this, frameLayout));
+        buttonIcon5.setOnClickListener(new UiAction79(this, frameLayout));
         linearLayoutRow4.addView(buttonIcon5, square(68));
         linearLayout.addView(linearLayoutRow4, new LinearLayout.LayoutParams(-1, dp(112)));
         boolean animateOpen = this.animations && this.fullPlayerOpening;
@@ -3655,48 +3684,48 @@ public class MainActivity extends Activity {
         }
     }
 
-    class AnonymousClass70 implements View.OnClickListener {
+    class UiAction70 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClass70(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction70(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass71 implements View.OnClickListener {
-        AnonymousClass71() {
+    class UiAction71 implements View.OnClickListener {
+        UiAction71() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m56$$Nest$mopenQueuePanel(MainActivity.this);
+            MainActivity.callOpenQueuePanel(MainActivity.this);
         }
     }
 
-    class AnonymousClass72 implements View.OnClickListener {
-        AnonymousClass72() {
+    class UiAction72 implements View.OnClickListener {
+        UiAction72() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m76$$Nest$mtimerDialog(MainActivity.this);
+            MainActivity.callTimerDialog(MainActivity.this);
         }
     }
 
-    class AnonymousClass73 implements View.OnClickListener {
+    class UiAction73 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
         final Track val$track;
 
-        AnonymousClass73(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
+        UiAction73(MainActivity mainActivity, Track track, FrameLayout frameLayout) {
             this.val$track = track;
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
@@ -3704,44 +3733,44 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m78$$Nest$mtoggleFavorite(this.this$0, this.val$track);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callToggleFavorite(this.this$0, this.val$track);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass74 implements View.OnClickListener {
+    class UiAction74 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClass74(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction74(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m24$$Nest$fputloopMode(this.this$0, (MainActivity.m8$$Nest$fgetloopMode(this.this$0) + 1) % 3);
+            MainActivity.setLoopModeValue(this.this$0, (MainActivity.accessLoopMode(this.this$0) + 1) % 3);
             Intent intent = new Intent(this.this$0, (Class<?>) PlayerService.class);
             intent.setAction(PlayerService.ACTION_LOOP);
-            intent.putExtra(PlayerService.EXTRA_LOOP_MODE, MainActivity.m8$$Nest$fgetloopMode(this.this$0));
+            intent.putExtra(PlayerService.EXTRA_LOOP_MODE, MainActivity.accessLoopMode(this.this$0));
             if (Build.VERSION.SDK_INT >= 26) {
                 this.this$0.startForegroundService(intent);
             } else {
                 this.this$0.startService(intent);
             }
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass75 implements SeekBar.OnSeekBarChangeListener {
+    class UiAction75 implements SeekBar.OnSeekBarChangeListener {
         final MainActivity this$0;
         final TextView val$elapsed;
         final TextView val$remain;
         final Track val$track;
 
-        AnonymousClass75(MainActivity mainActivity, Track track, TextView textView, TextView textView2) {
+        UiAction75(MainActivity mainActivity, Track track, TextView textView, TextView textView2) {
             this.val$track = track;
             this.val$elapsed = textView;
             this.val$remain = textView2;
@@ -3751,8 +3780,8 @@ public class MainActivity extends Activity {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean z) {
             if (z) {
-                this.val$elapsed.setText(MainActivity.m44$$Nest$mformatMs(this.this$0, i));
-                this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, this.this$0.playbackDurationFor(this.val$track) - i)));
+                this.val$elapsed.setText(MainActivity.callFormatMs(this.this$0, i));
+                this.val$remain.setText("-" + MainActivity.callFormatMs(this.this$0, Math.max(0, this.this$0.playbackDurationFor(this.val$track) - i)));
             }
         }
 
@@ -3773,7 +3802,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    class AnonymousClass76 implements Runnable {
+    class UiAction76 implements Runnable {
         final MainActivity this$0;
         final TextView val$elapsed;
         final Handler val$handler;
@@ -3783,7 +3812,7 @@ public class MainActivity extends Activity {
         final Button val$timer;
         final Track val$track;
 
-        AnonymousClass76(MainActivity mainActivity, FrameLayout frameLayout, Track track, SeekBar seekBar, TextView textView, TextView textView2, Button button, Handler handler) {
+        UiAction76(MainActivity mainActivity, FrameLayout frameLayout, Track track, SeekBar seekBar, TextView textView, TextView textView2, Button button, Handler handler) {
             this.val$sheet = frameLayout;
             this.val$track = track;
             this.val$seek = seekBar;
@@ -3796,84 +3825,84 @@ public class MainActivity extends Activity {
 
         @Override
         public void run() {
-            Track trackM43$$Nest$mfindTrack;
+            Track resolvedTrack;
             if (this.val$sheet.getParent() == null) {
                 return;
             }
             PlayerService.refreshSnapshot();
             if (PlayerService.lastIndex < 0) {
-                MainActivity.m20$$Nest$fputcurrentIndex(this.this$0, -1);
-                MainActivity.m25$$Nest$fputplaying(this.this$0, false);
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-                MainActivity.m80$$Nest$mupdateMini(this.this$0);
-                MainActivity.m67$$Nest$mrender(this.this$0);
+                MainActivity.setCurrentIndexValue(this.this$0, -1);
+                MainActivity.setPlayingValue(this.this$0, false);
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+                MainActivity.callUpdateMini(this.this$0);
+                MainActivity.callRender(this.this$0);
                 return;
             }
-            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(this.val$track.uri) && (trackM43$$Nest$mfindTrack = MainActivity.m43$$Nest$mfindTrack(this.this$0, PlayerService.lastUri)) != null) {
-                MainActivity.m20$$Nest$fputcurrentIndex(this.this$0, MainActivity.m19$$Nest$fgettracks(this.this$0).indexOf(trackM43$$Nest$mfindTrack));
-                MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-                MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
-                MainActivity.m67$$Nest$mrender(this.this$0);
+            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(this.val$track.uri) && (resolvedTrack = MainActivity.callFindTrack(this.this$0, PlayerService.lastUri)) != null) {
+                MainActivity.setCurrentIndexValue(this.this$0, MainActivity.accessTracks(this.this$0).indexOf(resolvedTrack));
+                MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+                MainActivity.callOpenFullPlayer(this.this$0);
+                MainActivity.callRender(this.this$0);
                 return;
             }
             int displayDuration = this.this$0.playbackDurationFor(this.val$track);
             this.val$seek.setMax(Math.max(1, displayDuration));
             this.val$seek.setProgress(Math.max(0, PlayerService.lastPosition));
-            this.val$elapsed.setText(MainActivity.m44$$Nest$mformatMs(this.this$0, PlayerService.lastPosition));
-            this.val$remain.setText("-" + MainActivity.m44$$Nest$mformatMs(this.this$0, Math.max(0, displayDuration - PlayerService.lastPosition)));
-            this.val$timer.setText(MainActivity.m75$$Nest$mtimerButtonText(this.this$0));
+            this.val$elapsed.setText(MainActivity.callFormatMs(this.this$0, PlayerService.lastPosition));
+            this.val$remain.setText("-" + MainActivity.callFormatMs(this.this$0, Math.max(0, displayDuration - PlayerService.lastPosition)));
+            this.val$timer.setText(MainActivity.callTimerButtonText(this.this$0));
             this.val$handler.postDelayed(this, 250L);
         }
     }
 
-    class AnonymousClass77 implements View.OnClickListener {
+    class UiAction77 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClass77(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction77(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m64$$Nest$mprevious(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callPrevious(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass78 implements View.OnClickListener {
+    class UiAction78 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClass78(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction78(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m77$$Nest$mtoggleCurrent(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callToggleCurrent(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
-    class AnonymousClass79 implements View.OnClickListener {
+    class UiAction79 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$sheet;
 
-        AnonymousClass79(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction79(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$sheet = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m47$$Nest$mnext(this.this$0);
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$sheet);
-            MainActivity.m51$$Nest$mopenFullPlayer(this.this$0);
+            MainActivity.callNext(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$sheet);
+            MainActivity.callOpenFullPlayer(this.this$0);
         }
     }
 
@@ -3915,19 +3944,19 @@ public class MainActivity extends Activity {
         for (int i = 0; i < 4; i++) {
             int i2 = iArr[i];
             Button button = button(strArr[i]);
-            button.setOnClickListener(new AnonymousClass80(this, frameLayoutShade, i2));
+            button.setOnClickListener(new UiAction80(this, frameLayoutShade, i2));
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(50));
             layoutParams.setMargins(0, dp(4), 0, dp(4));
             linearLayout.addView(button, layoutParams);
         }
         Button button2 = button("Свое время");
-        button2.setOnClickListener(new AnonymousClass81(this, frameLayoutShade));
+        button2.setOnClickListener(new UiAction81(this, frameLayoutShade));
         LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(-1, dp(50));
         layoutParams2.setMargins(0, dp(4), 0, dp(4));
         linearLayout.addView(button2, layoutParams2);
         if (this.sleepTimerEndsAt > 0) {
             Button button3 = button("Выключить таймер");
-            button3.setOnClickListener(new AnonymousClass82(this, frameLayoutShade));
+            button3.setOnClickListener(new UiAction82(this, frameLayoutShade));
             LinearLayout.LayoutParams layoutParams3 = new LinearLayout.LayoutParams(-1, dp(50));
             layoutParams3.setMargins(0, dp(4), 0, 0);
             linearLayout.addView(button3, layoutParams3);
@@ -3938,12 +3967,12 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass80 implements View.OnClickListener {
+    class UiAction80 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final int val$value;
 
-        AnonymousClass80(MainActivity mainActivity, FrameLayout frameLayout, int i) {
+        UiAction80(MainActivity mainActivity, FrameLayout frameLayout, int i) {
             this.val$shade = frameLayout;
             this.val$value = i;
             this.this$0 = mainActivity;
@@ -3951,71 +3980,71 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m72$$Nest$mstartSleepTimer(this.this$0, this.val$value);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callStartSleepTimer(this.this$0, this.val$value);
         }
     }
 
-    class AnonymousClass81 implements View.OnClickListener {
+    class UiAction81 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass81(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction81(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m42$$Nest$mcustomTimerDialog(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callCustomTimerDialog(this.this$0);
         }
     }
 
-    class AnonymousClass82 implements View.OnClickListener {
+    class UiAction82 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass82(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction82(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m33$$Nest$mcancelSleepTimer(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callCancelSleepTimer(this.this$0);
         }
     }
 
-    class AnonymousClass83 implements InputDone {
-        AnonymousClass83() {
+    class UiAction83 implements InputDone {
+        UiAction83() {
         }
 
         @Override
         public void done(String str) {
             try {
-                MainActivity.m21$$Nest$fputcustomTimerMinutes(MainActivity.this, Math.max(1, Integer.parseInt(str.trim())));
-                MainActivity.m68$$Nest$msaveState(MainActivity.this);
-                MainActivity.m72$$Nest$mstartSleepTimer(MainActivity.this, MainActivity.m3$$Nest$fgetcustomTimerMinutes(MainActivity.this));
+                MainActivity.setCustomTimerMinutesValue(MainActivity.this, Math.max(1, Integer.parseInt(str.trim())));
+                MainActivity.callSaveState(MainActivity.this);
+                MainActivity.callStartSleepTimer(MainActivity.this, MainActivity.accessCustomTimerMinutes(MainActivity.this));
             } catch (Exception e) {
             }
         }
     }
 
     private void customTimerDialog() {
-        showInputPanel(tr3("Custom time", "Свое время", "◷"), tr3("Minutes", "Минуты", "′"), String.valueOf(this.customTimerMinutes), true, new AnonymousClass83());
+        showInputPanel(tr3("Custom time", "Свое время", "◷"), tr3("Minutes", "Минуты", "′"), String.valueOf(this.customTimerMinutes), true, new UiAction83());
     }
 
     private void startSleepTimer(int i) {
         long j = ((long) i) * 60 * 1000;
         this.sleepTimerEndsAt = System.currentTimeMillis() + j;
         this.sleepHandler.removeCallbacksAndMessages(null);
-        this.sleepHandler.postDelayed(new AnonymousClass84(), j);
+        this.sleepHandler.postDelayed(new UiAction84(), j);
     }
 
-    class AnonymousClass84 implements Runnable {
-        AnonymousClass84() {
+    class UiAction84 implements Runnable {
+        UiAction84() {
         }
 
         @Override
@@ -4027,11 +4056,11 @@ public class MainActivity extends Activity {
             } else {
                 MainActivity.this.startService(intent);
             }
-            MainActivity.m25$$Nest$fputplaying(MainActivity.this, false);
-            MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, -1);
-            MainActivity.m27$$Nest$fputsleepTimerEndsAt(MainActivity.this, 0L);
-            MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
-            MainActivity.m67$$Nest$mrender(MainActivity.this);
+            MainActivity.setPlayingValue(MainActivity.this, false);
+            MainActivity.setCurrentIndexValue(MainActivity.this, -1);
+            MainActivity.setSleepTimerEndsAtValue(MainActivity.this, 0L);
+            MainActivity.callUpdateMini(MainActivity.this);
+            MainActivity.callRender(MainActivity.this);
         }
     }
 
@@ -4049,10 +4078,18 @@ public class MainActivity extends Activity {
     }
 
     private void playTrack(Track track) {
-        playTrack(track, true);
+        this.playbackController.playTrack(track);
+    }
+
+    void playTrackInternal(Track track) {
+        playTrackInternal(track, true);
     }
 
     private void playTrack(Track track, boolean z) {
+        this.playbackController.playTrack(track, z);
+    }
+
+    void playTrackInternal(Track track, boolean z) {
         int iIndexOf = this.tracks.indexOf(track);
         if (iIndexOf < 0) {
             return;
@@ -4095,6 +4132,10 @@ public class MainActivity extends Activity {
     }
 
     private void toggleCurrent() {
+        this.playbackController.toggleCurrent();
+    }
+
+    void toggleCurrentInternal() {
         if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
             playList(this.tracks, false);
             return;
@@ -4118,6 +4159,10 @@ public class MainActivity extends Activity {
     }
 
     private void next() {
+        this.playbackController.next();
+    }
+
+    void nextInternal() {
         ArrayList<Track> arrayListActiveQueue = activeQueue();
         if (arrayListActiveQueue.isEmpty()) {
             return;
@@ -4132,6 +4177,10 @@ public class MainActivity extends Activity {
     }
 
     private void previous() {
+        this.playbackController.previous();
+    }
+
+    void previousInternal() {
         ArrayList<Track> arrayListActiveQueue = activeQueue();
         if (arrayListActiveQueue.isEmpty()) {
             return;
@@ -4155,28 +4204,28 @@ public class MainActivity extends Activity {
 
         @Override
         public void run() {
-            Track trackM43$$Nest$mfindTrack;
+            Track resolvedTrack;
             PlayerService.refreshSnapshot();
             if (PlayerService.lastIndex < 0) {
                 if (MainActivity.this.resumeWindowMinutes <= 0) {
-                    MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, -1);
+                    MainActivity.setCurrentIndexValue(MainActivity.this, -1);
                 }
-                MainActivity.m25$$Nest$fputplaying(MainActivity.this, false);
+                MainActivity.setPlayingValue(MainActivity.this, false);
                 MainActivity.this.resumePosition = Math.max(0, PlayerService.lastPosition);
-                MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
-                MainActivity.m67$$Nest$mrender(MainActivity.this);
+                MainActivity.callUpdateMini(MainActivity.this);
+                MainActivity.callRender(MainActivity.this);
                 return;
             }
-            MainActivity.m25$$Nest$fputplaying(MainActivity.this, PlayerService.lastPlaying);
+            MainActivity.setPlayingValue(MainActivity.this, PlayerService.lastPlaying);
             MainActivity.this.resumePosition = Math.max(0, PlayerService.lastPosition);
-            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && (trackM43$$Nest$mfindTrack = MainActivity.m43$$Nest$mfindTrack(MainActivity.this, PlayerService.lastUri)) != null && !MainActivity.m45$$Nest$misCurrent(MainActivity.this, trackM43$$Nest$mfindTrack)) {
-                MainActivity.m20$$Nest$fputcurrentIndex(MainActivity.this, MainActivity.m19$$Nest$fgettracks(MainActivity.this).indexOf(trackM43$$Nest$mfindTrack));
+            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && (resolvedTrack = MainActivity.callFindTrack(MainActivity.this, PlayerService.lastUri)) != null && !MainActivity.callIsCurrent(MainActivity.this, resolvedTrack)) {
+                MainActivity.setCurrentIndexValue(MainActivity.this, MainActivity.accessTracks(MainActivity.this).indexOf(resolvedTrack));
                 MainActivity.this.refreshAfterTrackChange();
             } else {
-                MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
+                MainActivity.callUpdateMini(MainActivity.this);
             }
-            if (MainActivity.m13$$Nest$fgetplaying(MainActivity.this) || MainActivity.m2$$Nest$fgetcurrentIndex(MainActivity.this) >= 0) {
-                MainActivity.m11$$Nest$fgetplaybackHandler(MainActivity.this).postDelayed(this, 900L);
+            if (MainActivity.accessPlaying(MainActivity.this) || MainActivity.accessCurrentIndex(MainActivity.this) >= 0) {
+                MainActivity.accessPlaybackHandler(MainActivity.this).postDelayed(this, 900L);
             }
         }
     }
@@ -4246,6 +4295,10 @@ public class MainActivity extends Activity {
     }
 
     private void updateMini() {
+        this.playerUiController.updateMini();
+    }
+
+    void updateMiniInternal() {
         if (this.miniPlayer == null) {
             return;
         }
@@ -4934,18 +4987,18 @@ public class MainActivity extends Activity {
         FrameLayout frameLayout = new FrameLayout(this);
         int i = this.dark ? 0 : 255;
         frameLayout.setBackgroundColor(Color.argb(190, i, i, i));
-        frameLayout.setOnClickListener(new AnonymousClass87());
+        frameLayout.setOnClickListener(new UiAction87());
         return frameLayout;
     }
 
-    class AnonymousClass87 implements View.OnClickListener {
-        AnonymousClass87() {
+    class UiAction87 implements View.OnClickListener {
+        UiAction87() {
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(MainActivity.this).removeView(view);
-            MainActivity.m80$$Nest$mupdateMini(MainActivity.this);
+            MainActivity.accessOverlayHost(MainActivity.this).removeView(view);
+            MainActivity.callUpdateMini(MainActivity.this);
         }
     }
 
@@ -4954,12 +5007,12 @@ public class MainActivity extends Activity {
         linearLayout.setOrientation(1);
         linearLayout.setPadding(dp(12), dp(12), dp(12), dp(12));
         applyCardStyle(linearLayout);
-        linearLayout.setOnClickListener(new AnonymousClass88());
+        linearLayout.setOnClickListener(new UiAction88());
         return linearLayout;
     }
 
-    class AnonymousClass88 implements View.OnClickListener {
-        AnonymousClass88() {
+    class UiAction88 implements View.OnClickListener {
+        UiAction88() {
         }
 
         @Override
@@ -5022,11 +5075,11 @@ public class MainActivity extends Activity {
         linearLayoutPanelCard.addView(textViewText, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout linearLayoutRow = row();
         Button button = button(tr3("No", "Нет", "×"));
-        button.setOnClickListener(new AnonymousClass89(this, frameLayoutShade));
+        button.setOnClickListener(new UiAction89(this, frameLayoutShade));
         linearLayoutRow.addView(button, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         Button button2 = button(tr3("Yes", "Да", "✓"));
         applyButtonColors(button2, this.fg, this.bg);
-        button2.setOnClickListener(new AnonymousClass90(this, frameLayoutShade, runnable));
+        button2.setOnClickListener(new UiAction90(this, frameLayoutShade, runnable));
         linearLayoutRow.addView(button2, new LinearLayout.LayoutParams(0, dp(54), 1.0f));
         linearLayoutPanelCard.addView(linearLayoutRow);
         frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), -2));
@@ -5034,28 +5087,28 @@ public class MainActivity extends Activity {
         updateMini();
     }
 
-    class AnonymousClass89 implements View.OnClickListener {
+    class UiAction89 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
 
-        AnonymousClass89(MainActivity mainActivity, FrameLayout frameLayout) {
+        UiAction89(MainActivity mainActivity, FrameLayout frameLayout) {
             this.val$shade = frameLayout;
             this.this$0 = mainActivity;
         }
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
-    class AnonymousClass90 implements View.OnClickListener {
+    class UiAction90 implements View.OnClickListener {
         final MainActivity this$0;
         final FrameLayout val$shade;
         final Runnable val$yesAction;
 
-        AnonymousClass90(MainActivity mainActivity, FrameLayout frameLayout, Runnable runnable) {
+        UiAction90(MainActivity mainActivity, FrameLayout frameLayout, Runnable runnable) {
             this.val$shade = frameLayout;
             this.val$yesAction = runnable;
             this.this$0 = mainActivity;
@@ -5063,9 +5116,9 @@ public class MainActivity extends Activity {
 
         @Override
         public void onClick(View view) {
-            MainActivity.m9$$Nest$fgetoverlayHost(this.this$0).removeView(this.val$shade);
+            MainActivity.accessOverlayHost(this.this$0).removeView(this.val$shade);
             this.val$yesAction.run();
-            MainActivity.m80$$Nest$mupdateMini(this.this$0);
+            MainActivity.callUpdateMini(this.this$0);
         }
     }
 
