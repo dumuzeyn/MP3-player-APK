@@ -44,14 +44,11 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -181,10 +178,6 @@ class MainActivityCore extends Activity {
         return mainActivity.bg;
     }
 
-    static LruCache accessCoverCache(MainActivityCore mainActivity) {
-        return mainActivity.coverCache;
-    }
-
     static int accessCurrentIndex(MainActivityCore mainActivity) {
         return mainActivity.currentIndex;
     }
@@ -221,24 +214,12 @@ class MainActivityCore extends Activity {
         return mainActivity.panel;
     }
 
-    static Handler accessPlaybackHandler(MainActivityCore mainActivity) {
-        return mainActivity.playbackHandler;
-    }
-
     static ArrayList accessPlaybackQueue(MainActivityCore mainActivity) {
         return mainActivity.playbackQueue;
     }
 
-    static boolean accessPlaying(MainActivityCore mainActivity) {
-        return mainActivity.playing;
-    }
-
     static ArrayList accessPlaylists(MainActivityCore mainActivity) {
         return mainActivity.playlists;
-    }
-
-    static int accessTabIndex(MainActivityCore mainActivity) {
-        return mainActivity.tabIndex;
     }
 
     static LinearLayout accessTabRow(MainActivityCore mainActivity) {
@@ -317,14 +298,6 @@ class MainActivityCore extends Activity {
         mainActivity.choosePlaylistForTrack(track);
     }
 
-    static void callConfirmDeleteAllPlaylists(MainActivityCore mainActivity) {
-        mainActivity.confirmDeleteAllPlaylists();
-    }
-
-    static void callConfirmDeleteAllSongs(MainActivityCore mainActivity) {
-        mainActivity.confirmDeleteAllSongs();
-    }
-
     static void callConfirmDeletePlaylist(MainActivityCore mainActivity, Playlist playlist) {
         mainActivity.confirmDeletePlaylist(playlist);
     }
@@ -385,10 +358,6 @@ class MainActivityCore extends Activity {
         mainActivity.openFullPlayer();
     }
 
-    static void callOpenGithub(MainActivityCore mainActivity) {
-        mainActivity.openGithub();
-    }
-
     static void callOpenGroupSongs(MainActivityCore mainActivity, String str, ArrayList arrayList) {
         mainActivity.openGroupSongs(str, arrayList);
     }
@@ -407,10 +376,6 @@ class MainActivityCore extends Activity {
 
     static void callOpenSearch(MainActivityCore mainActivity) {
         mainActivity.openSearch();
-    }
-
-    static void callOpenSongActions(MainActivityCore mainActivity, Track track) {
-        mainActivity.openSongActions(track);
     }
 
     static void callPlayList(MainActivityCore mainActivity, ArrayList arrayList, boolean z) {
@@ -435,10 +400,6 @@ class MainActivityCore extends Activity {
 
     static void callPrevious(MainActivityCore mainActivity) {
         mainActivity.previous();
-    }
-
-    static Bitmap callReadCover(MainActivityCore mainActivity, Track track) {
-        return mainActivity.readCover(track);
     }
 
     static void callRemoveFromQueue(MainActivityCore mainActivity, Track track) {
@@ -2815,7 +2776,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void openSongActions(Track track) {
+    void openSongActions(Track track) {
         String str;
         String str2;
         FrameLayout frameLayoutShade = shade();
@@ -3287,7 +3248,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void openFullPlayer() {
+    void openFullPlayer() {
         this.playerUiController.openFullPlayer();
     }
 
@@ -3837,7 +3798,7 @@ class MainActivityCore extends Activity {
         return tr3("Timer", "Таймер", "◷") + "\n" + formatSeconds((jMax + 999) / 1000);
     }
 
-    private void playTrack(Track track) {
+    void playTrack(Track track) {
         this.playbackController.playTrack(track);
     }
 
@@ -3845,7 +3806,7 @@ class MainActivityCore extends Activity {
         this.playbackController.playTrack(track);
     }
 
-    private void playTrack(Track track, boolean z) {
+    void playTrack(Track track, boolean z) {
         this.playbackController.playTrack(track, z);
     }
 
@@ -3857,7 +3818,7 @@ class MainActivityCore extends Activity {
         this.playbackController.playList(arrayList, z);
     }
 
-    private void toggleCurrent() {
+    void toggleCurrent() {
         this.playbackController.toggleCurrent();
     }
 

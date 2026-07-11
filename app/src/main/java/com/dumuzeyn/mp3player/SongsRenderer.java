@@ -84,9 +84,9 @@ final class SongsRenderer {
         cover.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                MainActivityCore.callPlayTrack(host, track);
+                host.playTrack(track);
                 host.fullPlayerOpening = true;
-                MainActivityCore.callOpenFullPlayer(host);
+                host.openFullPlayer();
             }
         });
         row.addView(cover, host.square(58));
@@ -120,8 +120,8 @@ final class SongsRenderer {
             favorite.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    MainActivityCore.callToggleFavorite(host, track);
-                    MainActivityCore.callRender(host);
+                    host.toggleFavorite(track);
+                    host.render();
                 }
             });
             row.addView(favorite, host.square(42));
@@ -131,7 +131,7 @@ final class SongsRenderer {
             actions.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    MainActivityCore.callOpenSongActions(host, track);
+                    host.openSongActions(track);
                 }
             });
             row.addView(actions, host.square(48));
@@ -142,10 +142,10 @@ final class SongsRenderer {
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (MainActivityCore.callIsCurrent(host, track)) {
-                    MainActivityCore.callToggleCurrent(host);
+                if (host.isCurrent(track)) {
+                    host.toggleCurrent();
                 } else {
-                    MainActivityCore.callPlayTrack(host, track);
+                    host.playTrack(track);
                 }
                 if (afterPlay != null) {
                     afterPlay.run();

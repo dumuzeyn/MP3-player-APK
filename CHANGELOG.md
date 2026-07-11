@@ -6,6 +6,7 @@
 - Moved mini-player state rendering into `PlayerUiController`.
 - Moved settings screen rendering into `SettingsRenderer`.
 - Moved song list rendering, chunked row rendering, and song row click handling into `SongsRenderer`.
+- Removed unused generated-style wrapper methods and switched `SongsRenderer` to direct controller calls.
 
 ## 2.2 - MainActivity split and README refresh
 
