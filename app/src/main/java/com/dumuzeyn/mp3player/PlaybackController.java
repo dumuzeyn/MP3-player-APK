@@ -1,11 +1,13 @@
 package com.dumuzeyn.mp3player;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
+import org.json.JSONArray;
 
 final class PlaybackController {
     private final MainActivityCore host;
@@ -61,6 +63,9 @@ final class PlaybackController {
     }
 
     void toggleCurrent() {
+        if (host.currentIndex < 0) {
+            restoreCurrentFromPlaybackState();
+        }
         if (host.currentIndex < 0 && !host.tracks.isEmpty()) {
             playList(host.tracks, false);
             return;
@@ -73,7 +78,7 @@ final class PlaybackController {
         if (shouldPlay && host.resumePosition > 0) {
             startServiceAction(PlayerService.ACTION_PLAY_INDEX, queueIndexOf(host.tracks.get(host.currentIndex)), false, host.resumePosition);
         } else {
-            startServiceAction(PlayerService.ACTION_TOGGLE, host.currentIndex, false);
+            startServiceAction(PlayerService.ACTION_TOGGLE, queueIndexOf(host.tracks.get(host.currentIndex)), false);
             if (!shouldPlay) {
                 host.resumePosition = Math.max(host.resumePosition, PlayerService.lastPosition);
             }
@@ -81,6 +86,61 @@ final class PlaybackController {
         startPlaybackWatcher();
         host.updateMini();
         host.refreshAfterTrackChange();
+    }
+
+    private boolean restoreCurrentFromPlaybackState() {
+        PlayerService.refreshSnapshot();
+        Track current = host.findTrack(PlayerService.lastUri);
+        int position = Math.max(0, PlayerService.lastPosition);
+        int loopMode = PlayerService.lastLoopMode;
+        boolean wasPlaying = PlayerService.lastPlaying;
+        if (current == null) {
+            SharedPreferences prefs = host.getSharedPreferences(PlayerService.RESUME_PREFS, 0);
+            current = restoreFromSavedResume(prefs);
+            position = Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
+            loopMode = prefs.getInt(PlayerService.RESUME_LOOP_MODE, host.loopMode);
+            wasPlaying = prefs.getBoolean(PlayerService.RESUME_PLAYING, false);
+        } else if (host.playbackQueue.isEmpty()) {
+            restoreQueueFromPrefs(host.getSharedPreferences(PlayerService.RESUME_PREFS, 0), current);
+        }
+        if (current == null) {
+            return false;
+        }
+        host.currentIndex = host.tracks.indexOf(current);
+        host.resumePosition = position;
+        host.loopMode = loopMode;
+        host.playing = wasPlaying;
+        if (host.playbackQueue.isEmpty()) {
+            host.playbackQueue.add(current);
+        }
+        return host.currentIndex >= 0;
+    }
+
+    private Track restoreFromSavedResume(SharedPreferences prefs) {
+        long savedAt = prefs.getLong(PlayerService.RESUME_SAVED_AT, 0L);
+        if (host.resumeWindowMinutes > 0 && savedAt > 0 && System.currentTimeMillis() - savedAt > ((long) host.resumeWindowMinutes) * 60000L) {
+            return null;
+        }
+        Track current = host.findTrack(prefs.getString(PlayerService.RESUME_URI, ""));
+        restoreQueueFromPrefs(prefs, current);
+        return current;
+    }
+
+    private void restoreQueueFromPrefs(SharedPreferences prefs, Track fallback) {
+        host.playbackQueue.clear();
+        try {
+            JSONArray queue = new JSONArray(prefs.getString(PlayerService.RESUME_QUEUE, "[]"));
+            for (int i = 0; i < queue.length(); i++) {
+                Track queueTrack = host.findTrack(queue.optString(i, ""));
+                if (queueTrack != null) {
+                    host.playbackQueue.add(queueTrack);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (host.playbackQueue.isEmpty() && fallback != null) {
+            host.playbackQueue.add(fallback);
+        }
     }
 
     void next() {
@@ -120,6 +180,31 @@ final class PlaybackController {
         host.playbackHandler.postDelayed(new PlaybackWatcher(), 900L);
     }
 
+    void cycleLoopMode() {
+        host.loopMode = (host.loopMode + 1) % 3;
+        Intent intent = new Intent(host, (Class<?>) PlayerService.class);
+        intent.setAction(PlayerService.ACTION_LOOP);
+        intent.putExtra(PlayerService.EXTRA_LOOP_MODE, host.loopMode);
+        startService(intent);
+    }
+
+    String loopLabel() {
+        if (host.loopMode == 1) {
+            return host.tr3("↻ Repeat song", "↻ Повтор песни", "↻ ♪");
+        }
+        if (host.loopMode == 2) {
+            return host.tr3("↻ Repeat list", "↻ Повтор списка", "↻ ▤");
+        }
+        return host.tr3("↻ Repeat off", "↻ Повтор выкл", "↻ ○");
+    }
+
+    void seekTo(int position) {
+        Intent intent = new Intent(host, (Class<?>) PlayerService.class);
+        intent.setAction(PlayerService.ACTION_SEEK);
+        intent.putExtra(PlayerService.EXTRA_POSITION, Math.max(0, position));
+        startService(intent);
+    }
+
     void startServiceAction(String action, int index) {
         startServiceAction(action, index, false);
     }
@@ -137,6 +222,10 @@ final class PlaybackController {
         intent.putExtra(PlayerService.EXTRA_LOOP_MODE, host.loopMode);
         intent.putExtra(PlayerService.EXTRA_POSITION, Math.max(0, position));
         intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
+        startService(intent);
+    }
+
+    private void startService(Intent intent) {
         if (Build.VERSION.SDK_INT < 26) {
             host.startService(intent);
         } else {

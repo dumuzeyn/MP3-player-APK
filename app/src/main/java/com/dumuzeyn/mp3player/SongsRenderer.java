@@ -84,6 +84,7 @@ final class SongsRenderer {
         cover.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                host.seedCoverCacheFromView(cover, track);
                 host.playTrack(track);
                 host.fullPlayerOpening = true;
                 host.openFullPlayer();
@@ -153,6 +154,46 @@ final class SongsRenderer {
             }
         });
         host.songRows.registerPlayButton(track.uri, play);
+        row.addView(play, host.square(48));
+        return host.spaced(row);
+    }
+
+    View queueRow(final Track track, final Runnable removeAction, final Runnable playAction) {
+        LinearLayout row = new LinearLayout(host);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(16);
+        row.setPadding(host.dp(10), host.dp(8), host.dp(10), host.dp(8));
+        host.setSurface(row, host.isCurrent(track) ? host.fg : host.panel, false);
+
+        ImageView cover = host.coverView();
+        host.loadCover(cover, track, host.dark ? android.graphics.Color.rgb(28, 28, 28) : android.graphics.Color.rgb(235, 235, 235));
+        row.addView(cover, host.square(58));
+
+        TextView title = host.text(track.title, 17, true);
+        title.setSingleLine(true);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setPadding(host.dp(12), 0, host.dp(8), 0);
+        title.setTextColor(host.isCurrent(track) ? host.bg : host.fg);
+        row.addView(title, new LinearLayout.LayoutParams(0, host.dp(70), 1.0f));
+
+        Button remove = host.icon("−");
+        host.applyPlainIconStyle(remove, host.isCurrent(track) ? host.bg : android.graphics.Color.rgb(190, 45, 45));
+        remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                removeAction.run();
+            }
+        });
+        row.addView(remove, host.square(48));
+
+        Button play = host.icon((host.isCurrent(track) && host.playing) ? "Ⅱ" : "▶");
+        host.applyPlainIconStyle(play, host.isCurrent(track) ? host.bg : host.purple);
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                playAction.run();
+            }
+        });
         row.addView(play, host.square(48));
         return host.spaced(row);
     }

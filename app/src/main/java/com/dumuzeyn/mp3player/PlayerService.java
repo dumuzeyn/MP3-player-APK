@@ -179,6 +179,9 @@ public class PlayerService extends Service {
             return START_STICKY;
         }
         if (ACTION_TOGGLE.equals(action)) {
+            if (this.player == null || this.currentIndex < 0 || this.queue.isEmpty()) {
+                prepareToggleQueue(intent);
+            }
             toggle();
             return START_STICKY;
         }
@@ -389,6 +392,50 @@ public class PlayerService extends Service {
             }
         }
         Log.i(TAG, "queue_loaded size=" + this.queue.size() + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle);
+    }
+
+    private void prepareToggleQueue(Intent intent) {
+        this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, this.shuffle);
+        this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
+        lastLoopMode = this.loopMode;
+        ArrayList<String> queueUris = intent.getStringArrayListExtra(EXTRA_QUEUE_URIS);
+        if (queueUris != null && !queueUris.isEmpty()) {
+            rebuildQueue(queueUris);
+        } else if (this.queue.isEmpty()) {
+            restoreQueueForToggle();
+        }
+        if (intent.hasExtra(EXTRA_INDEX)) {
+            this.currentIndex = normalizeIndex(intent.getIntExtra(EXTRA_INDEX, this.currentIndex));
+        } else if (this.currentIndex < 0) {
+            this.currentIndex = normalizeIndex(getSharedPreferences(RESUME_PREFS, 0).getInt(RESUME_INDEX, 0));
+        }
+    }
+
+    private void restoreQueueForToggle() {
+        SharedPreferences prefs = getSharedPreferences(RESUME_PREFS, 0);
+        ArrayList<String> uris = new ArrayList<>();
+        try {
+            JSONArray savedQueue = new JSONArray(prefs.getString(RESUME_QUEUE, "[]"));
+            for (int i = 0; i < savedQueue.length(); i++) {
+                String uri = savedQueue.optString(i, "");
+                if (!uri.isEmpty()) {
+                    uris.add(uri);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        if (uris.isEmpty()) {
+            String uri = prefs.getString(RESUME_URI, "");
+            if (!uri.isEmpty()) {
+                uris.add(uri);
+            }
+        }
+        if (!uris.isEmpty()) {
+            rebuildQueue(uris);
+        }
+        if (this.queue.isEmpty()) {
+            this.queue.addAll(TrackStore.load(this));
+        }
     }
 
     private void advanceQueue(AdvanceReason reason, int attempts) {

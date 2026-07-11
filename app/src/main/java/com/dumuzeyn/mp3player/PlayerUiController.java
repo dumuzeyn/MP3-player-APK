@@ -1,65 +1,37 @@
 package com.dumuzeyn.mp3player;
 
-import android.view.View;
+import android.view.MotionEvent;
 
 final class PlayerUiController {
-    private final MainActivityCore host;
+    private final MiniPlayerController miniPlayerController;
+    private final FullPlayerController fullPlayerController;
 
     PlayerUiController(MainActivityCore host) {
-        this.host = host;
+        this.miniPlayerController = new MiniPlayerController(host);
+        this.fullPlayerController = new FullPlayerController(host);
+    }
+
+    void buildMini() {
+        miniPlayerController.build();
     }
 
     void openFullPlayer() {
-        host.openFullPlayerInternal();
+        fullPlayerController.open();
+    }
+
+    void renderFullPlayerSheet() {
+        fullPlayerController.open();
     }
 
     void updateMini() {
-        host.updateMiniInternal();
+        miniPlayerController.updateState();
     }
 
     void updateMiniState() {
-        if (!hasMiniPlayer()) {
-            return;
-        }
-        Track track = currentTrack();
-        if (track == null || isOverlayOpen()) {
-            hideMiniPlayer();
-            return;
-        }
-        bindMiniPlayer(track);
-        showMiniPlayer();
+        miniPlayerController.updateState();
     }
 
-    private boolean hasMiniPlayer() {
-        return host.miniPlayer != null;
-    }
-
-    private Track currentTrack() {
-        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
-            return null;
-        }
-        return host.tracks.get(host.currentIndex);
-    }
-
-    private boolean isOverlayOpen() {
-        return host.overlayHost.getChildCount() > 0;
-    }
-
-    private void bindMiniPlayer(Track track) {
-        host.miniTitle.setText(track.title);
-        host.miniSub.setText(track.artist);
-        host.miniButton.setText(playPauseLabel());
-    }
-
-    private String playPauseLabel() {
-        return host.playing ? "Ⅱ" : "▶";
-    }
-
-    private void hideMiniPlayer() {
-        host.miniPlayer.setVisibility(View.GONE);
-    }
-
-    private void showMiniPlayer() {
-        host.miniPlayer.setVisibility(View.VISIBLE);
+    boolean isInsideMiniPlayer(MotionEvent event) {
+        return miniPlayerController.isInsideMiniPlayer(event);
     }
 }

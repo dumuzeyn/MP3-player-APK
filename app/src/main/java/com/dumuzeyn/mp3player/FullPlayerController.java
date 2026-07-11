@@ -1,0 +1,307 @@
+package com.dumuzeyn.mp3player;
+
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
+
+final class FullPlayerController {
+    private final MainActivityCore host;
+
+    FullPlayerController(MainActivityCore host) {
+        this.host = host;
+    }
+
+    void open() {
+        if (host.currentIndex < 0 && !host.tracks.isEmpty()) {
+            host.currentIndex = 0;
+        }
+        if (host.currentIndex < 0) {
+            return;
+        }
+        if (host.miniPlayer != null) {
+            host.miniPlayer.setVisibility(View.GONE);
+        }
+        Track track = host.tracks.get(host.currentIndex);
+        FrameLayout sheet = createSheet();
+        sheet.setBackgroundColor(host.bg);
+
+        LinearLayout content = new LinearLayout(host);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(host.dp(16), host.dp(18), host.dp(16), host.dp(20));
+        sheet.addView(content, new FrameLayout.LayoutParams(-1, -1));
+
+        addHeader(content, sheet);
+        addCoverAndTitle(content, track);
+        addActionRow(content, sheet, track);
+        addSeekBar(content, sheet, track);
+        content.addView(new View(host), new LinearLayout.LayoutParams(-1, 0, 1.0f));
+        addTransportRow(content, sheet);
+
+        boolean animateOpen = host.animations && host.fullPlayerOpening;
+        host.fullPlayerOpening = false;
+        host.overlayHost.addView(sheet, new FrameLayout.LayoutParams(-1, -1));
+        if (animateOpen) {
+            sheet.setTranslationY(host.getResources().getDisplayMetrics().heightPixels);
+            sheet.animate().translationY(0.0f).setDuration(145L).setInterpolator(new DecelerateInterpolator()).start();
+        }
+    }
+
+    private FrameLayout createSheet() {
+        return new FrameLayout(host) {
+            private boolean draggingDown = false;
+            private boolean closingDown = false;
+            private float startX = 0.0f;
+            private float startY = 0.0f;
+            private float startTranslationY = 0.0f;
+
+            @Override
+            public boolean dispatchTouchEvent(MotionEvent event) {
+                int action = event.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    draggingDown = false;
+                    closingDown = false;
+                    startX = event.getRawX();
+                    startY = event.getRawY();
+                    startTranslationY = getTranslationY();
+                    animate().cancel();
+                    setAlpha(1.0f);
+                    super.dispatchTouchEvent(event);
+                    return true;
+                }
+                if (action == MotionEvent.ACTION_MOVE) {
+                    if (closingDown) {
+                        return true;
+                    }
+                    float dx = event.getRawX() - startX;
+                    float dy = event.getRawY() - startY;
+                    if (!draggingDown && dy > host.dp(8) && dy > Math.abs(dx) * 0.75f) {
+                        draggingDown = true;
+                        MotionEvent cancelEvent = MotionEvent.obtain(event);
+                        cancelEvent.setAction(MotionEvent.ACTION_CANCEL);
+                        super.dispatchTouchEvent(cancelEvent);
+                        cancelEvent.recycle();
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    if (draggingDown) {
+                        float drag = Math.max(0.0f, startTranslationY + dy);
+                        setTranslationY(drag);
+                        setAlpha(Math.max(0.55f, 1.0f - (drag / Math.max(1, getHeight()))));
+                        return true;
+                    }
+                    super.dispatchTouchEvent(event);
+                    return true;
+                }
+                if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    if (closingDown) {
+                        return true;
+                    }
+                    if (draggingDown) {
+                        draggingDown = false;
+                        float dy = event.getRawY() - startY;
+                        float drag = Math.max(0.0f, startTranslationY + dy);
+                        if (action == MotionEvent.ACTION_UP && drag > host.dp(56)) {
+                            closingDown = true;
+                            close(this, true);
+                        } else if (host.animations) {
+                            animate().translationY(0.0f).alpha(1.0f).setDuration(120L).setInterpolator(new DecelerateInterpolator()).start();
+                        } else {
+                            setTranslationY(0.0f);
+                            setAlpha(1.0f);
+                        }
+                        return true;
+                    }
+                    super.dispatchTouchEvent(event);
+                    return true;
+                }
+                super.dispatchTouchEvent(event);
+                return true;
+            }
+        };
+    }
+
+    private void addHeader(LinearLayout content, FrameLayout sheet) {
+        LinearLayout row = host.row();
+        Button back = host.icon("←");
+        back.setTextSize(34.0f);
+        back.setTypeface(Typeface.DEFAULT_BOLD);
+        back.setOnClickListener(view -> close(sheet, false));
+        row.addView(back, host.square(58));
+        row.addView(new View(host), new LinearLayout.LayoutParams(0, 1, 1.0f));
+        Button queue = host.icon("☰");
+        queue.setOnClickListener(view -> host.openQueuePanel());
+        row.addView(queue, host.square(58));
+        content.addView(row, new LinearLayout.LayoutParams(-1, host.dp(72)));
+    }
+
+    private void addCoverAndTitle(LinearLayout content, Track track) {
+        ImageView cover = host.coverView();
+        host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
+        LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(host.dp(280), host.dp(280));
+        coverParams.gravity = 1;
+        content.addView(cover, coverParams);
+
+        TextView title = host.text(track.title, 24, true);
+        title.setGravity(17);
+        content.addView(title, new LinearLayout.LayoutParams(-1, host.dp(54)));
+        int queueSize = host.activeQueue().size();
+        TextView subtitle = host.text(track.artist + " · " + (host.queueIndexOf(track) + 1) + " " + host.tr3("of", "из", "/") + " " + queueSize, 15, false);
+        subtitle.setGravity(17);
+        content.addView(subtitle, new LinearLayout.LayoutParams(-1, host.dp(34)));
+    }
+
+    private void addActionRow(LinearLayout content, FrameLayout sheet, Track track) {
+        LinearLayout row = host.row();
+        Button timer = host.button(host.timerButtonText());
+        timer.setOnClickListener(view -> host.timerDialog());
+        row.addView(timer, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+
+        Button like = host.button(host.tr3("♡ Like", host.favorites.contains(track.uri) ? "♥ Лайк" : "♡ Лайк", host.favorites.contains(track.uri) ? "♥" : "♡"));
+        like.setOnClickListener(view -> {
+            host.toggleFavorite(track);
+            reopen(sheet);
+        });
+        row.addView(like, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+
+        Button repeat = host.button(host.loopLabel());
+        repeat.setOnClickListener(view -> {
+            host.cycleLoopMode();
+            reopen(sheet);
+        });
+        row.addView(repeat, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+        content.addView(row);
+    }
+
+    private void addSeekBar(LinearLayout content, FrameLayout sheet, Track track) {
+        SeekBar seek = new SeekBar(host);
+        host.applySeekBarColors(seek);
+        int displayDuration = host.playbackDurationFor(track);
+        seek.setMax(Math.max(1, displayDuration));
+        seek.setProgress(Math.max(0, PlayerService.lastPosition));
+        content.addView(seek, new LinearLayout.LayoutParams(-1, host.dp(42)));
+
+        LinearLayout row = host.row();
+        TextView elapsed = host.text(host.formatMs(PlayerService.lastPosition), 13, false);
+        TextView remain = host.text("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)), 13, false);
+        remain.setGravity(MainActivityCore.TAB_CYCLES);
+        row.addView(elapsed, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
+        row.addView(remain, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
+        content.addView(row);
+
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    elapsed.setText(host.formatMs(progress));
+                    remain.setText("-" + host.formatMs(Math.max(0, host.playbackDurationFor(track) - progress)));
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                host.seekTo(seekBar.getProgress());
+            }
+        });
+
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new ProgressUpdater(sheet, track, seek, elapsed, remain, handler), 700L);
+    }
+
+    private void addTransportRow(LinearLayout content, FrameLayout sheet) {
+        LinearLayout row = host.row();
+        row.setGravity(17);
+        Button previous = host.icon("⏮");
+        previous.setOnClickListener(view -> {
+            host.previousInternal();
+            reopen(sheet);
+        });
+        row.addView(previous, host.square(68));
+
+        Button play = host.icon(host.playing ? "Ⅱ" : "▶");
+        play.setOnClickListener(view -> {
+            host.toggleCurrent();
+            reopen(sheet);
+        });
+        row.addView(play, host.square(84));
+
+        Button next = host.icon("⏭");
+        next.setOnClickListener(view -> {
+            host.nextInternal();
+            reopen(sheet);
+        });
+        row.addView(next, host.square(68));
+        content.addView(row, new LinearLayout.LayoutParams(-1, host.dp(112)));
+    }
+
+    private void reopen(FrameLayout sheet) {
+        if (sheet.getParent() != null) {
+            host.overlayHost.removeView(sheet);
+        }
+        open();
+    }
+
+    private void close(FrameLayout sheet, boolean animate) {
+        host.closeFullPlayer(sheet, animate);
+    }
+
+    private final class ProgressUpdater implements Runnable {
+        private final FrameLayout sheet;
+        private final Track track;
+        private final SeekBar seek;
+        private final TextView elapsed;
+        private final TextView remain;
+        private final Handler handler;
+
+        ProgressUpdater(FrameLayout sheet, Track track, SeekBar seek, TextView elapsed, TextView remain, Handler handler) {
+            this.sheet = sheet;
+            this.track = track;
+            this.seek = seek;
+            this.elapsed = elapsed;
+            this.remain = remain;
+            this.handler = handler;
+        }
+
+        @Override
+        public void run() {
+            Track resolvedTrack;
+            if (sheet.getParent() == null) {
+                return;
+            }
+            PlayerService.refreshSnapshot();
+            if (PlayerService.lastIndex < 0) {
+                host.currentIndex = -1;
+                host.playing = false;
+                host.overlayHost.removeView(sheet);
+                host.updateMini();
+                host.render();
+                return;
+            }
+            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(track.uri) && (resolvedTrack = host.findTrack(PlayerService.lastUri)) != null) {
+                host.currentIndex = host.tracks.indexOf(resolvedTrack);
+                host.overlayHost.removeView(sheet);
+                open();
+                host.render();
+                return;
+            }
+            int displayDuration = host.playbackDurationFor(track);
+            seek.setMax(Math.max(1, displayDuration));
+            seek.setProgress(Math.max(0, PlayerService.lastPosition));
+            elapsed.setText(host.formatMs(PlayerService.lastPosition));
+            remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
+            handler.postDelayed(this, 250L);
+        }
+    }
+}

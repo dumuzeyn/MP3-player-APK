@@ -1,6 +1,5 @@
 package com.dumuzeyn.mp3player;
 
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ComponentName;
@@ -19,6 +18,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
@@ -26,7 +26,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputFilter;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.util.LruCache;
@@ -63,7 +65,7 @@ class MainActivityCore extends Activity {
     private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
     private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
     private static final int COVER_THUMB_SIZE = 256;
-    private static final int COVER_FULL_SIZE = 1024;
+    static final int COVER_FULL_SIZE = 1024;
     private static final int SWIPE_START_DP = 21;
     private static final int SWIPE_COMMIT_DP = 52;
     private static final int PICK_AUDIO = 2001;
@@ -72,19 +74,19 @@ class MainActivityCore extends Activity {
     private static final String PLAYLISTS = "playlists";
     private static final String PREFS = "mp3_player_ui";
     private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
-    private static final int TAB_CYCLES = 21;
+    static final int TAB_CYCLES = 21;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
     private static final String CUSTOM_FG = "customFg";
-    private int bg;
-    private int fg;
+    int bg;
+    int fg;
     private int line;
     LinearLayout list;
     Button miniButton;
     LinearLayout miniPlayer;
     TextView miniSub;
     TextView miniTitle;
-    private int muted;
+    int muted;
     int purple;
     private int purpleDark;
     int purpleSoft;
@@ -92,56 +94,61 @@ class MainActivityCore extends Activity {
     private int yellowDark;
     private int yellowSoft;
     private int card;
-    private int cardStroke;
+    int cardStroke;
     int primaryText;
     int secondaryText;
     FrameLayout overlayHost;
-    private LinearLayout page;
-    private int panel;
+    LinearLayout page;
+    int panel;
     private SharedPreferences prefs;
-    private FrameLayout root;
-    private LinearLayout tabRow;
-    private ValueAnimator tabScrollAnimator;
-    private String[] tabs;
-    private HorizontalScrollView tabsScroll;
+    FrameLayout root;
+    LinearLayout tabRow;
+    String[] tabs;
+    HorizontalScrollView tabsScroll;
     final ArrayList<Track> tracks = new ArrayList<>();
     final HashSet<String> favorites = new HashSet<>();
-    private final ArrayList<Playlist> playlists = new ArrayList<>();
+    final ArrayList<Playlist> playlists = new ArrayList<>();
     final ArrayList<Track> playbackQueue = new ArrayList<>();
     private final LruCache<String, Bitmap> coverCache = createCoverCache();
+    private final Map<String, ArrayList<ImageView>> pendingCoverTargets = new LinkedHashMap<>();
     private final ExecutorService coverExecutor = Executors.newFixedThreadPool(2);
     final Handler uiHandler = new Handler(Looper.getMainLooper());
     final Handler playbackHandler = new Handler(Looper.getMainLooper());
-    private final Handler sleepHandler = new Handler(Looper.getMainLooper());
+    final Handler sleepHandler = new Handler(Looper.getMainLooper());
     final SongRowStateRegistry songRows = new SongRowStateRegistry();
-    private final SongsRenderer songsRenderer = new SongsRenderer(this);
+    final SongsRenderer songsRenderer = new SongsRenderer(this);
     private final PlayerUiController playerUiController = new PlayerUiController(this);
     private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
     private final TabsController tabsController = new TabsController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
-    private Button sourcePlayButton;
+    final SleepTimerController sleepTimerController = new SleepTimerController(this);
+    final LibraryListController libraryListController = new LibraryListController(this);
+    private final PlaylistController playlistController = new PlaylistController(this);
+    private final MainRenderer mainRenderer = new MainRenderer(this);
+    Button sourcePlayButton;
     int tabIndex = 0;
     int currentIndex = -1;
     boolean playing = false;
     int loopMode = 0;
-    private int customTimerMinutes = 10;
+    int customTimerMinutes = 10;
     int resumeWindowMinutes = 120;
     int resumePosition = 0;
-    private long sleepTimerEndsAt = 0;
-    private boolean dark = false;
+    long sleepTimerEndsAt = 0;
+    boolean dark = false;
     boolean animations = true;
     boolean shuffleMode = false;
     private String language = "en";
     private String themeMode = "light";
     private int customBg = -1;
     private int customFg = -16777216;
-    private int preferredTabDirection = 0;
+    int preferredTabDirection = 0;
     private float swipeStartX = 0.0f;
     private float swipeStartY = 0.0f;
     boolean tabAnimating = false;
     private boolean swipeStartedOnTabs = false;
+    private boolean swipeStartedOnMiniPlayer = false;
     private boolean pageSwipeConsuming = false;
-    private String search = "";
+    String search = "";
     boolean fullPlayerOpening = false;
     int songRenderGeneration = 0;
 
@@ -156,7 +163,7 @@ class MainActivityCore extends Activity {
         };
     }
 
-    private interface InputDone {
+    interface InputDone {
         void done(String str);
     }
 
@@ -278,10 +285,6 @@ class MainActivityCore extends Activity {
         mainActivity.tabIndex = i;
     }
 
-    static void callAnimateTabsScrollTo(MainActivityCore mainActivity, int i) {
-        mainActivity.animateTabsScrollTo(i);
-    }
-
     static void callApplyButtonColors(MainActivityCore mainActivity, Button button, int i, int i2) {
         mainActivity.applyButtonColors(button, i, i2);
     }
@@ -382,10 +385,6 @@ class MainActivityCore extends Activity {
         mainActivity.playList(arrayList, z);
     }
 
-    static void callPlayQueueTrack(MainActivityCore mainActivity, Track track) {
-        mainActivity.playQueueTrack(track);
-    }
-
     static void callPlayTrack(MainActivityCore mainActivity, Track track) {
         mainActivity.playTrack(track);
     }
@@ -400,10 +399,6 @@ class MainActivityCore extends Activity {
 
     static void callPrevious(MainActivityCore mainActivity) {
         mainActivity.previous();
-    }
-
-    static void callRemoveFromQueue(MainActivityCore mainActivity, Track track) {
-        mainActivity.removeFromQueue(track);
     }
 
     static void callRender(MainActivityCore mainActivity) {
@@ -632,16 +627,15 @@ class MainActivityCore extends Activity {
         }
         if (motionEvent.getActionMasked() == 0) {
             this.swipeStartedOnTabs = isInsideTabs(motionEvent);
+            this.swipeStartedOnMiniPlayer = this.playerUiController.isInsideMiniPlayer(motionEvent);
             this.pageSwipeConsuming = false;
             this.swipeStartX = motionEvent.getX();
             this.swipeStartY = motionEvent.getY();
-            if (this.tabScrollAnimator != null) {
-                this.tabScrollAnimator.cancel();
-            }
+            this.tabsController.cancelScrollAnimation();
             return false;
         }
         if (motionEvent.getActionMasked() == 2) {
-            if (this.swipeStartedOnTabs) {
+            if (this.swipeStartedOnTabs || this.swipeStartedOnMiniPlayer) {
                 return false;
             }
             float x = motionEvent.getX() - this.swipeStartX;
@@ -665,6 +659,11 @@ class MainActivityCore extends Activity {
         }
         if (this.swipeStartedOnTabs) {
             this.swipeStartedOnTabs = false;
+            this.pageSwipeConsuming = false;
+            return false;
+        }
+        if (this.swipeStartedOnMiniPlayer) {
+            this.swipeStartedOnMiniPlayer = false;
             this.pageSwipeConsuming = false;
             return false;
         }
@@ -696,17 +695,6 @@ class MainActivityCore extends Activity {
 
     private boolean isInsideTabs(MotionEvent motionEvent) {
         return this.tabsController.isInsideTabs(motionEvent);
-    }
-
-    boolean isInsideTabsInternal(MotionEvent motionEvent) {
-        if (this.tabsScroll == null) {
-            return false;
-        }
-        int[] iArr = new int[2];
-        this.tabsScroll.getLocationOnScreen(iArr);
-        float rawX = motionEvent.getRawX();
-        float rawY = motionEvent.getRawY();
-        return rawX >= ((float) iArr[0]) && rawX <= ((float) (iArr[0] + this.tabsScroll.getWidth())) && rawY >= ((float) iArr[1]) && rawY <= ((float) (iArr[1] + this.tabsScroll.getHeight()));
     }
 
     void saveState() {
@@ -909,106 +897,11 @@ class MainActivityCore extends Activity {
         this.tabsController.buildTabs();
     }
 
-    void buildTabsInternal() {
-        LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(1);
-        linearLayout.addView(lineView(), new LinearLayout.LayoutParams(-1, 1));
-        HorizontalScrollView horizontalScrollView = new HorizontalScrollView(this);
-        this.tabsScroll = horizontalScrollView;
-        horizontalScrollView.setHorizontalScrollBarEnabled(false);
-        this.tabRow = new LinearLayout(this);
-        this.tabRow.setOrientation(0);
-        horizontalScrollView.addView(this.tabRow);
-        linearLayout.addView(horizontalScrollView, new LinearLayout.LayoutParams(-1, dp(48)));
-        linearLayout.addView(lineView(), new LinearLayout.LayoutParams(-1, 1));
-        this.page.addView(linearLayout, new LinearLayout.LayoutParams(-1, dp(50)));
-        for (int i = 0; i < TAB_CYCLES; i++) {
-            for (int i2 = 0; i2 < this.tabs.length; i2++) {
-                Button button = button(this.tabs[i2]);
-                button.setTag(Integer.valueOf(i2));
-                styleTab(button, i2);
-                button.setOnClickListener(new UiAction2(this, i2));
-                this.tabRow.addView(button, new LinearLayout.LayoutParams(dp(132), dp(48)));
-            }
-        }
-        horizontalScrollView.post(new UiAction3());
+    void refreshTabs() {
+        this.tabsController.refreshTabs();
     }
 
-    class UiAction2 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final int val$index;
-
-        UiAction2(MainActivityCore mainActivity, int i) {
-            this.val$index = i;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callSwitchTabAnimated(this.this$0, this.val$index, this.this$0.tabDirectionTo(this.val$index));
-        }
-    }
-
-    class UiAction3 implements Runnable {
-        UiAction3() {
-        }
-
-        @Override
-        public void run() {
-            int iMax = Math.max(1, MainActivityCore.accessTabRow(MainActivityCore.this).getWidth() / MainActivityCore.TAB_CYCLES);
-            MainActivityCore.callScrollTabsToActive(MainActivityCore.this, false);
-            MainActivityCore.accessTabsScroll(MainActivityCore.this).setOnScrollChangeListener(new UiAction1(this, iMax));
-        }
-
-        class UiAction1 implements View.OnScrollChangeListener {
-            final UiAction3 this$1;
-            final int val$cycleWidth;
-
-            UiAction1(UiAction3 anonymousClass3, int i) {
-                this.val$cycleWidth = i;
-                this.this$1 = anonymousClass3;
-            }
-
-            @Override
-            public void onScrollChange(View view, int i, int i2, int i3, int i4) {
-                int i5 = this.val$cycleWidth * 8;
-                int i6 = this.val$cycleWidth * 12;
-                if (i < i5) {
-                    MainActivityCore.accessTabsScroll(MainActivityCore.this).scrollTo(i + this.val$cycleWidth, 0);
-                } else if (i > i6) {
-                    MainActivityCore.accessTabsScroll(MainActivityCore.this).scrollTo(i - this.val$cycleWidth, 0);
-                }
-            }
-        }
-    }
-
-    private void styleTab(Button button, int i) {
-        button.setTextSize(15.0f);
-        button.setGravity(17);
-        button.setPadding(dp(14), 0, dp(14), 0);
-        GradientDrawable gradientDrawable = new GradientDrawable();
-        gradientDrawable.setColor(i == this.tabIndex ? this.purple : 0);
-        gradientDrawable.setCornerRadius(dp(14));
-        if (i != this.tabIndex) {
-            gradientDrawable.setStroke(1, this.cardStroke);
-        }
-        button.setBackground(gradientDrawable);
-        button.setTextColor(i == this.tabIndex ? Color.WHITE : this.secondaryText);
-    }
-
-    private void refreshTabs() {
-        if (this.tabRow == null) {
-            return;
-        }
-        for (int i = 0; i < this.tabRow.getChildCount(); i++) {
-            View childAt = this.tabRow.getChildAt(i);
-            if ((childAt instanceof Button) && (childAt.getTag() instanceof Integer)) {
-                styleTab((Button) childAt, ((Integer) childAt.getTag()).intValue());
-            }
-        }
-    }
-
-    private void switchTabAnimated(int i, int i2) {
+    void switchTabAnimated(int i, int i2) {
         if (this.tabs == null || i == this.tabIndex || this.tabAnimating) {
             return;
         }
@@ -1067,204 +960,27 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void scrollTabsToActive(boolean z) {
-        scrollTabsToActive(z, this.tabIndex);
+    void scrollTabsToActive(boolean z) {
+        this.tabsController.scrollToActive(z, this.tabIndex);
     }
 
-    class UiAction5 implements Runnable {
-        final MainActivityCore this$0;
-        final boolean val$smooth;
-        final int val$targetIndex;
-
-        UiAction5(MainActivityCore mainActivity, int i, boolean z) {
-            this.val$targetIndex = i;
-            this.val$smooth = z;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void run() {
-            int iMax = Math.max(0, Math.min(this.val$targetIndex, MainActivityCore.accessTabs(this.this$0).length - 1));
-            int left = -1;
-            if (this.val$smooth) {
-                int scrollX = MainActivityCore.accessTabsScroll(this.this$0).getScrollX() + (MainActivityCore.accessTabsScroll(this.this$0).getWidth() / 2);
-                int i = Integer.MAX_VALUE;
-                int preferredDirection = this.this$0.preferredTabDirection;
-                for (int i2 = 0; i2 < MainActivityCore.accessTabRow(this.this$0).getChildCount(); i2++) {
-                    View childAt = MainActivityCore.accessTabRow(this.this$0).getChildAt(i2);
-                    Object tag = childAt.getTag();
-                    if ((tag instanceof Integer) && ((Integer) tag).intValue() == iMax) {
-                        int left2 = childAt.getLeft() + (childAt.getWidth() / 2);
-                        int left3 = childAt.getLeft() - Math.max(0, (MainActivityCore.accessTabsScroll(this.this$0).getWidth() - childAt.getWidth()) / 2);
-                        if ((preferredDirection > 0 && left2 < scrollX) || (preferredDirection < 0 && left2 > scrollX)) {
-                            continue;
-                        }
-                        int iAbs = Math.abs(left2 - scrollX);
-                        if (iAbs < i) {
-                            i = iAbs;
-                            left = left3;
-                        }
-                    }
-                }
-            }
-            if (left < 0) {
-                int length = (MainActivityCore.accessTabs(this.this$0).length * 10) + iMax;
-                if (length >= MainActivityCore.accessTabRow(this.this$0).getChildCount()) {
-                    return;
-                }
-                View childAt2 = MainActivityCore.accessTabRow(this.this$0).getChildAt(length);
-                left = childAt2.getLeft() - Math.max(0, (MainActivityCore.accessTabsScroll(this.this$0).getWidth() - childAt2.getWidth()) / 2);
-            }
-            if (this.val$smooth) {
-                MainActivityCore.callAnimateTabsScrollTo(this.this$0, left);
-            } else {
-                MainActivityCore.accessTabsScroll(this.this$0).scrollTo(left, 0);
-            }
-        }
-    }
-
-    private void scrollTabsToActive(boolean z, int i) {
-        if (this.tabsScroll == null || this.tabRow == null || this.tabs == null || this.tabs.length == 0) {
-            return;
-        }
-        this.tabsScroll.post(new UiAction5(this, i, z));
+    void scrollTabsToActive(boolean z, int i) {
+        this.tabsController.scrollToActive(z, i);
     }
 
     private int tabDirectionTo(int targetIndex) {
         return this.tabsController.directionTo(targetIndex);
     }
 
-    int tabDirectionToInternal(int targetIndex) {
-        if (this.tabs == null || this.tabs.length == 0 || targetIndex == this.tabIndex) {
-            return 1;
-        }
-        int length = this.tabs.length;
-        int forward = (targetIndex - this.tabIndex + length) % length;
-        int backward = (this.tabIndex - targetIndex + length) % length;
-        return forward <= backward ? 1 : -1;
-    }
-
-    private void animateTabsScrollTo(int i) {
-        if (this.tabsScroll == null) {
-            return;
-        }
-        if (this.tabScrollAnimator != null) {
-            this.tabScrollAnimator.cancel();
-        }
-        int scrollX = this.tabsScroll.getScrollX();
-        if (Math.abs(i - scrollX) < 2) {
-            this.tabsScroll.scrollTo(i, 0);
-            return;
-        }
-        if (!this.animations) {
-            this.tabsScroll.scrollTo(i, 0);
-            return;
-        }
-        this.tabScrollAnimator = ValueAnimator.ofInt(scrollX, i);
-        this.tabScrollAnimator.setDuration(96L);
-        this.tabScrollAnimator.setInterpolator(new DecelerateInterpolator());
-        this.tabScrollAnimator.addUpdateListener(new UiAction6());
-        this.tabScrollAnimator.start();
-    }
-
-    class UiAction6 implements ValueAnimator.AnimatorUpdateListener {
-        UiAction6() {
-        }
-
-        @Override
-        public void onAnimationUpdate(ValueAnimator valueAnimator) {
-            if (MainActivityCore.accessTabsScroll(MainActivityCore.this) != null) {
-                MainActivityCore.accessTabsScroll(MainActivityCore.this).scrollTo(((Integer) valueAnimator.getAnimatedValue()).intValue(), 0);
-            }
-        }
-    }
-
     private void buildMiniPlayer() {
-        this.miniPlayer = new LinearLayout(this);
-        this.miniPlayer.setOrientation(0);
-        this.miniPlayer.setGravity(16);
-        this.miniPlayer.setPadding(dp(14), 0, dp(10), 0);
-        applyCardStyle(this.miniPlayer);
-        this.miniPlayer.setVisibility(8);
-        this.miniPlayer.setOnClickListener(new UiAction7());
-        LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(1);
-        this.miniTitle = text(tr("Song", "Песня"), 16, true);
-        this.miniSub = text(tr("Unknown artist", "Неизвестный исполнитель"), 12, false);
-        this.miniTitle.setSingleLine(true);
-        this.miniTitle.setEllipsize(TextUtils.TruncateAt.END);
-        this.miniSub.setSingleLine(true);
-        this.miniSub.setEllipsize(TextUtils.TruncateAt.END);
-        linearLayout.addView(this.miniTitle);
-        linearLayout.addView(this.miniSub);
-        this.miniPlayer.addView(linearLayout, new LinearLayout.LayoutParams(0, -2, 1.0f));
-        this.miniButton = icon("▶");
-        applyPrimaryButtonStyle(this.miniButton);
-        this.miniButton.setOnClickListener(new UiAction8());
-        this.miniPlayer.addView(this.miniButton, square(52));
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(-1, dp(74), 80);
-        layoutParams.setMargins(dp(10), 0, dp(10), dp(10));
-        this.root.addView(this.miniPlayer, layoutParams);
-    }
-
-    class UiAction7 implements View.OnClickListener {
-        UiAction7() {
-        }
-
-        @Override
-        public void onClick(View view) {
-            if (MainActivityCore.this.animations) {
-                view.animate().scaleX(0.985f).scaleY(0.985f).setDuration(35L).withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(60L).start();
-                        MainActivityCore.this.fullPlayerOpening = true;
-                        MainActivityCore.callOpenFullPlayer(MainActivityCore.this);
-                    }
-                }).start();
-            } else {
-                MainActivityCore.this.fullPlayerOpening = true;
-                MainActivityCore.callOpenFullPlayer(MainActivityCore.this);
-            }
-        }
-    }
-
-    class UiAction8 implements View.OnClickListener {
-        UiAction8() {
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callToggleCurrent(MainActivityCore.this);
-        }
+        this.playerUiController.buildMini();
     }
 
     void render() {
-        refreshTabs();
-        this.songRenderGeneration++;
-        this.list.removeAllViews();
-        this.songRows.clear();
-        this.sourcePlayButton = null;
-        renderSectionHeader();
-        boolean songTab = this.tabIndex == 0 || this.tabIndex == 1;
-        if (this.tabIndex == 0) {
-            renderSongs(filter(this.tracks));
-        } else if (this.tabIndex == 1) {
-            renderSongs(filter(favoriteTracks()));
-        } else if (this.tabIndex == 2) {
-            renderPlaylists();
-        } else if (this.tabIndex == 6) {
-            renderSettings();
-        } else {
-            renderGroups(this.tabs[this.tabIndex]);
-        }
-        if (!songTab) {
-            addMiniSpacerIfNeeded();
-        }
-        updateMini();
+        this.mainRenderer.render();
     }
 
-    private void renderSectionHeader() {
+    void renderSectionHeader() {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
         String str = this.tabs[this.tabIndex];
@@ -1405,7 +1121,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void renderSettings() {
+    void renderSettings() {
         this.settingsRenderer.render();
     }
 
@@ -1746,7 +1462,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void stopPlaybackAndClearQueue() {
+    void stopPlaybackAndClearQueue() {
         this.playbackQueue.clear();
         this.currentIndex = -1;
         this.playing = false;
@@ -1758,45 +1474,30 @@ class MainActivityCore extends Activity {
         } catch (Exception e) {
         }
         updateMini();
+        refreshAfterTrackChange();
     }
 
     private ArrayList<Track> currentVisibleTracks() {
-        return this.tabIndex == 1 ? filter(favoriteTracks()) : filter(this.tracks);
+        return this.libraryListController.currentVisibleTracks();
     }
 
     private ArrayList<Track> favoriteTracks() {
-        ArrayList<Track> arrayList = new ArrayList<>();
-        for (Track track : this.tracks) {
-            if (this.favorites.contains(track.uri)) {
-                arrayList.add(track);
-            }
-        }
-        return arrayList;
+        return this.libraryListController.favoriteTracks();
     }
 
     private ArrayList<Track> filter(ArrayList<Track> arrayList) {
-        if (this.search.trim().isEmpty()) {
-            return arrayList;
-        }
-        ArrayList<Track> arrayList2 = new ArrayList<>();
-        String lowerCase = this.search.toLowerCase(Locale.ROOT);
-        for (Track track : arrayList) {
-            if (matchesTrackSearch(track, lowerCase)) {
-                arrayList2.add(track);
-            }
-        }
-        return arrayList2;
+        return this.libraryListController.filter(arrayList);
     }
 
-    private boolean matchesTrackSearch(Track track, String query) {
-        return containsSearch(track.title, query) || containsSearch(track.artist, query) || containsSearch(track.album, query) || containsSearch(track.genre, query);
+    boolean matchesTrackSearch(Track track, String query) {
+        return this.libraryListController.matchesTrackSearch(track, query);
     }
 
-    private boolean containsSearch(String value, String query) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    boolean containsSearch(String value, String query) {
+        return this.libraryListController.containsSearch(value, query);
     }
 
-    private void renderSongs(ArrayList<Track> arrayList) {
+    void renderSongs(ArrayList<Track> arrayList) {
         this.songsRenderer.render(arrayList);
     }
 
@@ -1804,14 +1505,8 @@ class MainActivityCore extends Activity {
         this.songsRenderer.renderSongsState(arrayList);
     }
 
-    private void renderPlaylists() {
-        ArrayList<Playlist> arrayList = new ArrayList();
-        String lowerCase = this.search.toLowerCase(Locale.ROOT);
-        for (Playlist playlist : this.playlists) {
-            if (this.search.trim().isEmpty() || containsSearch(playlist.name, lowerCase) || playlistContainsSearch(playlist, lowerCase)) {
-                arrayList.add(playlist);
-            }
-        }
+    void renderPlaylists() {
+        ArrayList<Playlist> arrayList = this.playlistController.filteredPlaylists(this.search);
         if (arrayList.isEmpty()) {
             TextView textViewText = text(tr3("No playlists yet", "Плейлистов пока нет", "∅ ▤"), 18, true);
             textViewText.setPadding(dp(12), dp(24), dp(12), dp(24));
@@ -1824,7 +1519,7 @@ class MainActivityCore extends Activity {
             linearLayout.setPadding(dp(14), dp(12), dp(14), dp(12));
             setSurface(linearLayout, this.panel, false);
             LinearLayout linearLayoutRow = row();
-            ArrayList<Track> arrayListPlaylistTracks = playlistTracks(playlist2);
+            ArrayList<Track> arrayListPlaylistTracks = this.playlistController.sortedPlaylistTracks(playlist2);
             LinearLayout linearLayout2 = new LinearLayout(this);
             linearLayout2.setOrientation(1);
             TextView textViewText2 = text(playlist2.name, 22, true);
@@ -1864,9 +1559,10 @@ class MainActivityCore extends Activity {
                 loadCover(imageViewCoverView, arrayListPlaylistTracks.get(0), Color.rgb(i, i, i));
             }
             linearLayoutRow2.addView(imageViewCoverView, square(86));
-            TextView textViewText4 = text(previewText(arrayListPlaylistTracks), 16, true);
+            TextView textViewText4 = text("", 16, true);
             textViewText4.setPadding(dp(12), 0, 0, 0);
             linearLayoutRow2.addView(textViewText4, new LinearLayout.LayoutParams(0, dp(96), 1.0f));
+            this.playlistController.bindRollingPreview(textViewText4, imageViewCoverView, arrayListPlaylistTracks, this.songRenderGeneration);
             linearLayout.addView(linearLayoutRow2);
             linearLayout.setOnClickListener(new UiAction31(this, playlist2));
             this.list.addView(spaced(linearLayout));
@@ -1938,43 +1634,15 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private String previewText(ArrayList<Track> arrayList) {
-        if (arrayList.isEmpty()) {
-            return tr3("No songs in this playlist yet.", "В плейлисте пока нет песен.", "∅ ♪");
-        }
-        StringBuilder sb = new StringBuilder();
-        int iMin = Math.min(3, arrayList.size());
-        for (int i = 0; i < iMin; i++) {
-            if (i > 0) {
-                sb.append("\n");
-            }
-            sb.append(arrayList.get(i).title);
-        }
-        return sb.toString();
-    }
-
     private ArrayList<Track> playlistTracks(Playlist playlist) {
-        ArrayList<Track> arrayList = new ArrayList<>();
-        Iterator<String> it = playlist.uris.iterator();
-        while (it.hasNext()) {
-            Track trackFindTrack = findTrack(it.next());
-            if (trackFindTrack != null) {
-                arrayList.add(trackFindTrack);
-            }
-        }
-        return arrayList;
+        return this.playlistController.playlistTracks(playlist);
     }
 
     private boolean playlistContainsSearch(Playlist playlist, String query) {
-        for (Track track : playlistTracks(playlist)) {
-            if (matchesTrackSearch(track, query)) {
-                return true;
-            }
-        }
-        return false;
+        return this.playlistController.playlistContainsSearch(playlist, query);
     }
 
-    private void renderGroups(String str) {
+    void renderGroups(String str) {
         for (Map.Entry<String, ArrayList<Track>> entry : groupedTracks().entrySet()) {
             String lowerCase = this.search.toLowerCase(Locale.ROOT);
             if (!this.search.trim().isEmpty() && !containsSearch(entry.getKey(), lowerCase) && !groupContainsSearch(entry.getValue(), lowerCase)) {
@@ -2375,7 +2043,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void openQueuePanel() {
+    void openQueuePanel() {
         if (this.playbackQueue.isEmpty() && this.currentIndex >= 0 && this.currentIndex < this.tracks.size()) {
             this.playbackQueue.add(this.tracks.get(this.currentIndex));
         }
@@ -2393,26 +2061,22 @@ class MainActivityCore extends Activity {
         ScrollView scrollView = new ScrollView(this);
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
-        for (Track track : new ArrayList<Track>(activeQueue())) {
-            LinearLayout linearLayout2 = new LinearLayout(this);
-            linearLayout2.setOrientation(0);
-            linearLayout2.setGravity(16);
-            linearLayout2.setPadding(dp(10), dp(8), dp(10), dp(8));
-            setSurface(linearLayout2, isCurrent(track) ? this.fg : this.panel, false);
-            ImageView imageViewCoverView = coverView();
-            loadCover(imageViewCoverView, track, this.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235));
-            linearLayout2.addView(imageViewCoverView, square(58));
-            TextView textViewText = text(track.title, 17, true);
-            textViewText.setPadding(dp(12), 0, dp(8), 0);
-            textViewText.setTextColor(isCurrent(track) ? this.bg : this.fg);
-            linearLayout2.addView(textViewText, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
-            Button buttonIcon3 = icon("−");
-            buttonIcon3.setOnClickListener(new UiAction46(this, track, frameLayoutShade));
-            linearLayout2.addView(buttonIcon3, square(48));
-            Button buttonIcon4 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
-            buttonIcon4.setOnClickListener(new UiAction47(this, track, frameLayoutShade));
-            linearLayout2.addView(buttonIcon4, square(48));
-            linearLayout.addView(spaced(linearLayout2));
+        for (final Track track : new ArrayList<Track>(activeQueue())) {
+            linearLayout.addView(this.songsRenderer.queueRow(track, new Runnable() {
+                @Override
+                public void run() {
+                    removeFromQueue(track);
+                    overlayHost.removeView(frameLayoutShade);
+                    openQueuePanel();
+                }
+            }, new Runnable() {
+                @Override
+                public void run() {
+                    playQueueTrack(track);
+                    overlayHost.removeView(frameLayoutShade);
+                    openQueuePanel();
+                }
+            }));
         }
         scrollView.addView(linearLayout);
         linearLayoutPanelCard.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1.0f));
@@ -2447,44 +2111,6 @@ class MainActivityCore extends Activity {
         }
     }
 
-    class UiAction46 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final FrameLayout val$shade;
-        final Track val$track;
-
-        UiAction46(MainActivityCore mainActivity, Track track, FrameLayout frameLayout) {
-            this.val$track = track;
-            this.val$shade = frameLayout;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callRemoveFromQueue(this.this$0, this.val$track);
-            MainActivityCore.accessOverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivityCore.callOpenQueuePanel(this.this$0);
-        }
-    }
-
-    class UiAction47 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final FrameLayout val$shade;
-        final Track val$track;
-
-        UiAction47(MainActivityCore mainActivity, Track track, FrameLayout frameLayout) {
-            this.val$track = track;
-            this.val$shade = frameLayout;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callPlayQueueTrack(this.this$0, this.val$track);
-            MainActivityCore.accessOverlayHost(this.this$0).removeView(this.val$shade);
-            MainActivityCore.callOpenQueuePanel(this.this$0);
-        }
-    }
-
     class UiAction48 implements PickDone {
         UiAction48() {
         }
@@ -2510,7 +2136,7 @@ class MainActivityCore extends Activity {
         showPickPanel(tr3("Add to queue", "Добавить в список", "+ ▤"), new HashSet<>(), new UiAction48());
     }
 
-    private void removeFromQueue(Track track) {
+    void removeFromQueue(Track track) {
         for (int size = this.playbackQueue.size() - 1; size >= 0; size--) {
             if (this.playbackQueue.get(size).uri.equals(track.uri)) {
                 this.playbackQueue.remove(size);
@@ -2529,7 +2155,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void playQueueTrack(Track track) {
+    void playQueueTrack(Track track) {
         int iQueueIndexOf = queueIndexOf(track);
         if (iQueueIndexOf < 0) {
             return;
@@ -2579,12 +2205,7 @@ class MainActivityCore extends Activity {
 
         @Override
         public void done(Set<String> set) {
-            for (String str : set) {
-                if (!this.val$playlist.uris.contains(str)) {
-                    this.val$playlist.uris.add(str);
-                }
-            }
-            MainActivityCore.callSaveState(this.this$0);
+            this.this$0.playlistController.addTracksToPlaylist(this.val$playlist, set);
             MainActivityCore.callRender(this.this$0);
             MainActivityCore.accessOverlayHost(this.this$0).removeAllViews();
             MainActivityCore.callOpenPlaylist(this.this$0, this.val$playlist);
@@ -2607,18 +2228,59 @@ class MainActivityCore extends Activity {
         buttonIcon2.setOnClickListener(new UiAction52(this, frameLayoutShade));
         linearLayoutRow.addView(buttonIcon2, square(52));
         linearLayoutPanelCard.addView(linearLayoutRow);
+        EditText searchField = new EditText(this);
+        searchField.setSingleLine(true);
+        searchField.setHint(tr3("Search songs", "Поиск песен", "⌕ ♪"));
+        searchField.setTextColor(this.fg);
+        searchField.setHintTextColor(this.muted);
+        searchField.setTextSize(16.0f);
+        searchField.setPadding(dp(14), 0, dp(14), 0);
+        searchField.setInputType(1);
+        searchField.setFilters(new InputFilter[]{new InputFilter.LengthFilter(80)});
+        setSurface(searchField, this.panel, true);
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(52));
+        searchParams.setMargins(0, 0, 0, dp(8));
+        linearLayoutPanelCard.addView(searchField, searchParams);
         ScrollView scrollView = new ScrollView(this);
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
-        Iterator<Track> it = this.tracks.iterator();
-        while (it.hasNext()) {
-            linearLayout.addView(pickSongRow(it.next(), hashSet));
-        }
+        renderPickRows(linearLayout, hashSet, "");
+        searchField.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                renderPickRows(linearLayout, hashSet, s == null ? "" : s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
         scrollView.addView(linearLayout);
         linearLayoutPanelCard.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1.0f));
         frameLayoutShade.addView(linearLayoutPanelCard, bottomParams());
         this.overlayHost.addView(frameLayoutShade);
         updateMini();
+    }
+
+    private void renderPickRows(LinearLayout parent, HashSet<String> selected, String query) {
+        parent.removeAllViews();
+        String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        int count = 0;
+        for (Track track : this.tracks) {
+            if (normalized.isEmpty() || matchesTrackSearch(track, normalized)) {
+                parent.addView(pickSongRow(track, selected));
+                count++;
+            }
+        }
+        if (count == 0) {
+            TextView empty = text(tr3("Nothing found", "Ничего не найдено", "∅"), 16, true);
+            empty.setPadding(dp(12), dp(18), dp(12), dp(18));
+            parent.addView(empty);
+        }
     }
 
     class UiAction51 implements View.OnClickListener {
@@ -2920,10 +2582,7 @@ class MainActivityCore extends Activity {
 
         @Override
         public void onClick(View view) {
-            if (!this.val$playlist.uris.contains(this.val$track.uri)) {
-                this.val$playlist.uris.add(this.val$track.uri);
-            }
-            MainActivityCore.callSaveState(this.this$0);
+            this.this$0.playlistController.addTrackToPlaylist(this.val$playlist, this.val$track);
             MainActivityCore.accessOverlayHost(this.this$0).removeView(this.val$shade);
             MainActivityCore.callRender(this.this$0);
         }
@@ -2958,14 +2617,7 @@ class MainActivityCore extends Activity {
 
         @Override
         public void done(String str) {
-            String strTrim = PlaylistManager.cleanName(str);
-            if (strTrim.isEmpty()) {
-                strTrim = MainActivityCore.callTranslate(this.this$0, "Playlist", "Плейлист");
-            }
-            Playlist playlist = new Playlist(strTrim);
-            playlist.uris.add(this.val$track.uri);
-            MainActivityCore.accessPlaylists(this.this$0).add(playlist);
-            MainActivityCore.callSaveState(this.this$0);
+            this.this$0.playlistController.createPlaylistWithTrack(str, this.val$track);
             MainActivityCore.callRender(this.this$0);
         }
     }
@@ -2991,10 +2643,7 @@ class MainActivityCore extends Activity {
         public void run() {
             MainActivityCore.accessTracks(this.this$0).remove(this.val$track);
             MainActivityCore.accessFavorites(this.this$0).remove(this.val$track.uri);
-            Iterator it = MainActivityCore.accessPlaylists(this.this$0).iterator();
-            while (it.hasNext()) {
-                ((Playlist) it.next()).uris.remove(this.val$track.uri);
-            }
+            this.this$0.playlistController.removeTrackFromAllPlaylists(this.val$track);
             TrackStore.save(this.this$0, MainActivityCore.accessTracks(this.this$0));
             MainActivityCore.callSaveState(this.this$0);
             MainActivityCore.callRender(this.this$0);
@@ -3016,8 +2665,7 @@ class MainActivityCore extends Activity {
 
         @Override
         public void run() {
-            MainActivityCore.accessPlaylists(this.this$0).remove(this.val$playlist);
-            MainActivityCore.callSaveState(this.this$0);
+            this.this$0.playlistController.deletePlaylist(this.val$playlist);
             MainActivityCore.callRender(this.this$0);
         }
     }
@@ -3028,13 +2676,7 @@ class MainActivityCore extends Activity {
 
         @Override
         public void done(String str) {
-            String strTrim = PlaylistManager.cleanName(str);
-            ArrayList playlistList = MainActivityCore.accessPlaylists(MainActivityCore.this);
-            if (strTrim.isEmpty()) {
-                strTrim = MainActivityCore.callTranslate(MainActivityCore.this, "Playlist", "Плейлист");
-            }
-            playlistList.add(new Playlist(strTrim));
-            MainActivityCore.callSaveState(MainActivityCore.this);
+            MainActivityCore.this.playlistController.createPlaylist(str);
             MainActivityCore.callRender(MainActivityCore.this);
         }
     }
@@ -3047,9 +2689,7 @@ class MainActivityCore extends Activity {
         showInputPanel(tr3("Rename playlist", "Переименовать плейлист", "✎ ▤"), tr3("Playlist name", "Название плейлиста", "▤"), playlist.name, false, new InputDone() {
             @Override
             public void done(String value) {
-                String name = PlaylistManager.cleanName(value);
-                playlist.name = name.isEmpty() ? tr("Playlist", "Плейлист") : name;
-                saveState();
+                playlistController.renamePlaylist(playlist, value);
                 render();
             }
         });
@@ -3125,7 +2765,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void showInputPanel(String str, String str2, String str3, boolean z, InputDone inputDone) {
+    void showInputPanel(String str, String str2, String str3, boolean z, InputDone inputDone) {
         FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -3217,7 +2857,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void closeFullPlayer(FrameLayout frameLayout, boolean animate) {
+    void closeFullPlayer(FrameLayout frameLayout, boolean animate) {
         if (frameLayout == null || frameLayout.getParent() == null) {
             updateMini();
             return;
@@ -3252,7 +2892,11 @@ class MainActivityCore extends Activity {
         this.playerUiController.openFullPlayer();
     }
 
-    void openFullPlayerInternal() {
+    void renderFullPlayerSheet() {
+        this.playerUiController.renderFullPlayerSheet();
+    }
+
+    void renderFullPlayerSheetInternal() {
         if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
             this.currentIndex = 0;
         }
@@ -3266,6 +2910,7 @@ class MainActivityCore extends Activity {
             private boolean closingDown = false;
             private float startX = 0.0f;
             private float startY = 0.0f;
+            private float startTranslationY = 0.0f;
 
             @Override
             public boolean dispatchTouchEvent(MotionEvent motionEvent) {
@@ -3273,19 +2918,19 @@ class MainActivityCore extends Activity {
                 if (action == MotionEvent.ACTION_DOWN) {
                     this.draggingDown = false;
                     this.closingDown = false;
-                    this.startX = motionEvent.getX();
-                    this.startY = motionEvent.getY();
+                    this.startX = motionEvent.getRawX();
+                    this.startY = motionEvent.getRawY();
+                    this.startTranslationY = getTranslationY();
                     animate().cancel();
                     setAlpha(1.0f);
-                    setTranslationY(0.0f);
                     super.dispatchTouchEvent(motionEvent);
                     return true;
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     if (this.closingDown) {
                         return true;
                     }
-                    float dx = motionEvent.getX() - this.startX;
-                    float dy = motionEvent.getY() - this.startY;
+                    float dx = motionEvent.getRawX() - this.startX;
+                    float dy = motionEvent.getRawY() - this.startY;
                     if (!this.draggingDown && dy > dp(8) && dy > Math.abs(dx) * 0.75f) {
                         this.draggingDown = true;
                         MotionEvent cancelEvent = MotionEvent.obtain(motionEvent);
@@ -3295,15 +2940,9 @@ class MainActivityCore extends Activity {
                         getParent().requestDisallowInterceptTouchEvent(true);
                     }
                     if (this.draggingDown) {
-                        float drag = Math.max(0.0f, dy);
-                        if (MainActivityCore.this.animations) {
-                            setTranslationY(drag);
-                            setAlpha(Math.max(0.55f, 1.0f - (drag / Math.max(1, getHeight()))));
-                        }
-                        if (dy > dp(56)) {
-                            this.closingDown = true;
-                            MainActivityCore.this.closeFullPlayer(this, true);
-                        }
+                        float drag = Math.max(0.0f, this.startTranslationY + dy);
+                        setTranslationY(drag);
+                        setAlpha(Math.max(0.55f, 1.0f - (drag / Math.max(1, getHeight()))));
                         return true;
                     }
                     super.dispatchTouchEvent(motionEvent);
@@ -3314,7 +2953,12 @@ class MainActivityCore extends Activity {
                     }
                     if (this.draggingDown) {
                         this.draggingDown = false;
-                        if (MainActivityCore.this.animations) {
+                        float dy = motionEvent.getRawY() - this.startY;
+                        float drag = Math.max(0.0f, this.startTranslationY + dy);
+                        if (action == MotionEvent.ACTION_UP && drag > dp(56)) {
+                            this.closingDown = true;
+                            MainActivityCore.this.closeFullPlayer(this, true);
+                        } else if (MainActivityCore.this.animations) {
                             animate().translationY(0.0f).alpha(1.0f).setDuration(120L).setInterpolator(new DecelerateInterpolator()).start();
                         } else {
                             setTranslationY(0.0f);
@@ -3627,11 +3271,11 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private String loopLabel() {
-        return this.loopMode == 1 ? tr3("Repeat: song", "Повтор: песня", "↻ ♪") : this.loopMode == 2 ? tr3("Repeat: list", "Повтор: список", "↻ ▤") : tr3("Repeat: off", "Повтор: выкл", "↻ ○");
+    String loopLabel() {
+        return this.playbackController.loopLabel();
     }
 
-    private String formatMs(int i) {
+    String formatMs(int i) {
         int iMax = Math.max(0, i / 1000);
         return (iMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Integer.valueOf(iMax % 60));
     }
@@ -3648,44 +3292,13 @@ class MainActivityCore extends Activity {
         return track == null ? 0 : Math.max(0, track.durationMs);
     }
 
-    private String formatSeconds(long j) {
+    String formatSeconds(long j) {
         long jMax = Math.max(0L, j);
         return (jMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Long.valueOf(jMax % 60));
     }
 
-    private void timerDialog() {
-        FrameLayout frameLayoutShade = shade();
-        LinearLayout linearLayoutPanelCard = panelCard();
-        linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        linearLayoutPanelCard.addView(text("Таймер сна", 22, true), new LinearLayout.LayoutParams(-1, dp(46)));
-        LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(1);
-        int[] iArr = {5, 15, 30, this.customTimerMinutes};
-        String[] strArr = {"5 минут", "15 минут", "30 минут", this.customTimerMinutes + " минут"};
-        for (int i = 0; i < 4; i++) {
-            int i2 = iArr[i];
-            Button button = button(strArr[i]);
-            button.setOnClickListener(new UiAction80(this, frameLayoutShade, i2));
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, dp(50));
-            layoutParams.setMargins(0, dp(4), 0, dp(4));
-            linearLayout.addView(button, layoutParams);
-        }
-        Button button2 = button("Свое время");
-        button2.setOnClickListener(new UiAction81(this, frameLayoutShade));
-        LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(-1, dp(50));
-        layoutParams2.setMargins(0, dp(4), 0, dp(4));
-        linearLayout.addView(button2, layoutParams2);
-        if (this.sleepTimerEndsAt > 0) {
-            Button button3 = button("Выключить таймер");
-            button3.setOnClickListener(new UiAction82(this, frameLayoutShade));
-            LinearLayout.LayoutParams layoutParams3 = new LinearLayout.LayoutParams(-1, dp(50));
-            layoutParams3.setMargins(0, dp(4), 0, 0);
-            linearLayout.addView(button3, layoutParams3);
-        }
-        linearLayoutPanelCard.addView(linearLayout);
-        frameLayoutShade.addView(linearLayoutPanelCard, centerParams(dp(330), -2));
-        this.overlayHost.addView(frameLayoutShade);
-        updateMini();
+    void timerDialog() {
+        this.sleepTimerController.openDialog();
     }
 
     class UiAction80 implements View.OnClickListener {
@@ -3753,15 +3366,12 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void customTimerDialog() {
-        showInputPanel(tr3("Custom time", "Свое время", "◷"), tr3("Minutes", "Минуты", "′"), String.valueOf(this.customTimerMinutes), true, new UiAction83());
+    void customTimerDialog() {
+        this.sleepTimerController.openCustomDialog();
     }
 
-    private void startSleepTimer(int i) {
-        long j = ((long) i) * 60 * 1000;
-        this.sleepTimerEndsAt = System.currentTimeMillis() + j;
-        this.sleepHandler.removeCallbacksAndMessages(null);
-        this.sleepHandler.postDelayed(new UiAction84(), j);
+    void startSleepTimer(int i) {
+        this.sleepTimerController.start(i);
     }
 
     class UiAction84 implements Runnable {
@@ -3785,17 +3395,12 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void cancelSleepTimer() {
-        this.sleepTimerEndsAt = 0L;
-        this.sleepHandler.removeCallbacksAndMessages(null);
+    void cancelSleepTimer() {
+        this.sleepTimerController.cancel();
     }
 
-    private String timerButtonText() {
-        if (this.sleepTimerEndsAt <= 0) {
-            return tr3("Timer", "Таймер", "◷");
-        }
-        long jMax = Math.max(0L, this.sleepTimerEndsAt - System.currentTimeMillis());
-        return tr3("Timer", "Таймер", "◷") + "\n" + formatSeconds((jMax + 999) / 1000);
+    String timerButtonText() {
+        return this.sleepTimerController.buttonText();
     }
 
     void playTrack(Track track) {
@@ -3844,6 +3449,14 @@ class MainActivityCore extends Activity {
 
     void startPlaybackWatcher() {
         this.playbackController.startPlaybackWatcher();
+    }
+
+    void cycleLoopMode() {
+        this.playbackController.cycleLoopMode();
+    }
+
+    void seekTo(int position) {
+        this.playbackController.seekTo(position);
     }
 
     void startServiceAction(String str, int i) {
@@ -3923,6 +3536,10 @@ class MainActivityCore extends Activity {
 
     void loadCover(final ImageView imageView, final Track track, int fallbackColor, final int maxSize) {
         final String key = coverCacheKey(track, maxSize);
+        Object currentTag = imageView.getTag();
+        if (key.equals(currentTag) && imageView.getDrawable() != null) {
+            return;
+        }
         imageView.setTag(key);
         Bitmap cached = this.coverCache.get(key);
         if (cached != null) {
@@ -3936,23 +3553,75 @@ class MainActivityCore extends Activity {
             imageView.setImageDrawable(null);
             imageView.setBackgroundColor(fallbackColor);
         }
+        synchronized (this.pendingCoverTargets) {
+            ArrayList<ImageView> waitingTargets = this.pendingCoverTargets.get(key);
+            if (waitingTargets != null) {
+                waitingTargets.add(imageView);
+                return;
+            }
+            waitingTargets = new ArrayList<>();
+            waitingTargets.add(imageView);
+            this.pendingCoverTargets.put(key, waitingTargets);
+        }
         this.coverExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 final Bitmap bitmap = MainActivityCore.this.readCover(track, maxSize);
                 if (bitmap != null) {
                     MainActivityCore.this.coverCache.put(key, bitmap);
+                    if (maxSize != COVER_THUMB_SIZE) {
+                        MainActivityCore.this.cacheThumbnailFromFullCover(track, bitmap);
+                    }
+                }
+                final ArrayList<ImageView> targets;
+                synchronized (MainActivityCore.this.pendingCoverTargets) {
+                    targets = MainActivityCore.this.pendingCoverTargets.remove(key);
                 }
                 MainActivityCore.this.uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (bitmap != null && key.equals(imageView.getTag())) {
-                            imageView.setImageBitmap(bitmap);
+                        if (bitmap == null || targets == null) {
+                            return;
+                        }
+                        for (ImageView target : targets) {
+                            if (target != null && key.equals(target.getTag())) {
+                                target.setImageBitmap(bitmap);
+                            }
                         }
                     }
                 });
             }
         });
+    }
+
+    void seedCoverCacheFromView(ImageView imageView, Track track) {
+        if (imageView == null || track == null || !(imageView.getDrawable() instanceof BitmapDrawable)) {
+            return;
+        }
+        Bitmap bitmap = ((BitmapDrawable) imageView.getDrawable()).getBitmap();
+        if (bitmap == null || bitmap.isRecycled()) {
+            return;
+        }
+        this.coverCache.put(coverCacheKey(track, COVER_THUMB_SIZE), bitmap);
+    }
+
+    private void cacheThumbnailFromFullCover(Track track, Bitmap fullCover) {
+        String thumbKey = coverCacheKey(track, COVER_THUMB_SIZE);
+        if (this.coverCache.get(thumbKey) != null || fullCover == null || fullCover.isRecycled()) {
+            return;
+        }
+        int width = fullCover.getWidth();
+        int height = fullCover.getHeight();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        float scale = Math.min((float) COVER_THUMB_SIZE / (float) width, (float) COVER_THUMB_SIZE / (float) height);
+        if (scale >= 1.0f) {
+            this.coverCache.put(thumbKey, fullCover);
+            return;
+        }
+        Bitmap thumb = Bitmap.createScaledBitmap(fullCover, Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)), true);
+        this.coverCache.put(thumbKey, thumb);
     }
 
     private String coverCacheKey(Track track, int maxSize) {
@@ -4227,7 +3896,7 @@ class MainActivityCore extends Activity {
         return -1L;
     }
 
-    private LinearLayout row() {
+    LinearLayout row() {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(0);
         linearLayout.setGravity(16);
@@ -4245,7 +3914,7 @@ class MainActivityCore extends Activity {
         return textView;
     }
 
-    private void makeMarquee(TextView textView) {
+    void makeMarquee(TextView textView) {
         textView.setSingleLine(true);
         textView.setEllipsize(TextUtils.TruncateAt.MARQUEE);
         textView.setMarqueeRepeatLimit(-1);
@@ -4254,7 +3923,7 @@ class MainActivityCore extends Activity {
         textView.setFocusableInTouchMode(true);
     }
 
-    private Button button(String str) {
+    Button button(String str) {
         Button button = new Button(this);
         button.setText(str);
         button.setTextColor(this.fg);
@@ -4358,7 +4027,7 @@ class MainActivityCore extends Activity {
         button.setBackground(createCardBackground());
     }
 
-    private void applySeekBarColors(SeekBar seekBar) {
+    void applySeekBarColors(SeekBar seekBar) {
         if (Build.VERSION.SDK_INT >= 21) {
             seekBar.setProgressTintList(ColorStateList.valueOf(this.purple));
             seekBar.setThumbTintList(ColorStateList.valueOf(this.yellow));
@@ -4403,11 +4072,11 @@ class MainActivityCore extends Activity {
         return gradientDrawable;
     }
 
-    private void setSurface(View view, int i, boolean z) {
+    void setSurface(View view, int i, boolean z) {
         view.setBackground(rounded(i, z));
     }
 
-    private View lineView() {
+    View lineView() {
         View view = new View(this);
         view.setBackgroundColor(this.line);
         return view;
@@ -4552,7 +4221,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private FrameLayout shade() {
+    FrameLayout shade() {
         FrameLayout frameLayout = new FrameLayout(this);
         int i = this.dark ? 0 : 255;
         frameLayout.setBackgroundColor(Color.argb(190, i, i, i));
@@ -4571,7 +4240,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private LinearLayout panelCard() {
+    LinearLayout panelCard() {
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
         linearLayout.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -4691,13 +4360,13 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private FrameLayout.LayoutParams centerParams(int i, int i2) {
+    FrameLayout.LayoutParams centerParams(int i, int i2) {
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(i, i2, 17);
         layoutParams.setMargins(dp(14), dp(14), dp(14), dp(14));
         return layoutParams;
     }
 
-    private FrameLayout.LayoutParams bottomParams() {
+    FrameLayout.LayoutParams bottomParams() {
         return new FrameLayout.LayoutParams(-1, (int) (getResources().getDisplayMetrics().heightPixels * 0.78f), 80);
     }
 
