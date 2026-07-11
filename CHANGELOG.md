@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3 - Controller redistribution
+
+- Moved playback queue commands, service start logic, and playback watcher behavior into `PlaybackController`.
+- Moved mini-player state rendering into `PlayerUiController`.
+- Moved settings screen rendering into `SettingsRenderer`.
+- Moved song list rendering, chunked row rendering, and song row click handling into `SongsRenderer`.
+
 ## 2.2 - MainActivity split and README refresh
 
 - Split first UI responsibilities out of `MainActivity` into `SongsRenderer`, `PlayerUiController`, `SettingsRenderer`, `TabsController`, `PlaybackController`, and `ThemeController`.

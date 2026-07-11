@@ -82,23 +82,23 @@ class MainActivityCore extends Activity {
     private int bg;
     private int fg;
     private int line;
-    private LinearLayout list;
-    private Button miniButton;
-    private LinearLayout miniPlayer;
-    private TextView miniSub;
-    private TextView miniTitle;
+    LinearLayout list;
+    Button miniButton;
+    LinearLayout miniPlayer;
+    TextView miniSub;
+    TextView miniTitle;
     private int muted;
-    private int purple;
+    int purple;
     private int purpleDark;
-    private int purpleSoft;
-    private int yellow;
+    int purpleSoft;
+    int yellow;
     private int yellowDark;
     private int yellowSoft;
     private int card;
     private int cardStroke;
-    private int primaryText;
-    private int secondaryText;
-    private FrameLayout overlayHost;
+    int primaryText;
+    int secondaryText;
+    FrameLayout overlayHost;
     private LinearLayout page;
     private int panel;
     private SharedPreferences prefs;
@@ -107,33 +107,33 @@ class MainActivityCore extends Activity {
     private ValueAnimator tabScrollAnimator;
     private String[] tabs;
     private HorizontalScrollView tabsScroll;
-    private final ArrayList<Track> tracks = new ArrayList<>();
-    private final HashSet<String> favorites = new HashSet<>();
+    final ArrayList<Track> tracks = new ArrayList<>();
+    final HashSet<String> favorites = new HashSet<>();
     private final ArrayList<Playlist> playlists = new ArrayList<>();
-    private final ArrayList<Track> playbackQueue = new ArrayList<>();
+    final ArrayList<Track> playbackQueue = new ArrayList<>();
     private final LruCache<String, Bitmap> coverCache = createCoverCache();
     private final ExecutorService coverExecutor = Executors.newFixedThreadPool(2);
-    private final Handler uiHandler = new Handler(Looper.getMainLooper());
-    private final Handler playbackHandler = new Handler(Looper.getMainLooper());
+    final Handler uiHandler = new Handler(Looper.getMainLooper());
+    final Handler playbackHandler = new Handler(Looper.getMainLooper());
     private final Handler sleepHandler = new Handler(Looper.getMainLooper());
-    private final SongRowStateRegistry songRows = new SongRowStateRegistry();
+    final SongRowStateRegistry songRows = new SongRowStateRegistry();
     private final SongsRenderer songsRenderer = new SongsRenderer(this);
     private final PlayerUiController playerUiController = new PlayerUiController(this);
     private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
     private final TabsController tabsController = new TabsController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
     private Button sourcePlayButton;
-    private int tabIndex = 0;
-    private int currentIndex = -1;
-    private boolean playing = false;
-    private int loopMode = 0;
+    int tabIndex = 0;
+    int currentIndex = -1;
+    boolean playing = false;
+    int loopMode = 0;
     private int customTimerMinutes = 10;
-    private int resumeWindowMinutes = 120;
-    private int resumePosition = 0;
+    int resumeWindowMinutes = 120;
+    int resumePosition = 0;
     private long sleepTimerEndsAt = 0;
     private boolean dark = false;
-    private boolean animations = true;
-    private boolean shuffleMode = false;
+    boolean animations = true;
+    boolean shuffleMode = false;
     private String language = "en";
     private String themeMode = "light";
     private int customBg = -1;
@@ -141,12 +141,12 @@ class MainActivityCore extends Activity {
     private int preferredTabDirection = 0;
     private float swipeStartX = 0.0f;
     private float swipeStartY = 0.0f;
-    private boolean tabAnimating = false;
+    boolean tabAnimating = false;
     private boolean swipeStartedOnTabs = false;
     private boolean pageSwipeConsuming = false;
     private String search = "";
-    private boolean fullPlayerOpening = false;
-    private int songRenderGeneration = 0;
+    boolean fullPlayerOpening = false;
+    int songRenderGeneration = 0;
 
     private static LruCache<String, Bitmap> createCoverCache() {
         int maxMemoryKb = (int) (Runtime.getRuntime().maxMemory() / 1024L);
@@ -641,15 +641,15 @@ class MainActivityCore extends Activity {
         return "en".equals(this.language);
     }
 
-    private String tr(String str, String str2) {
+    String tr(String str, String str2) {
         return english() ? str : str2;
     }
 
-    private String tr3(String str, String str2, String str3) {
+    String tr3(String str, String str2, String str3) {
         return english() ? str : str2;
     }
 
-    private String languageName() {
+    String languageName() {
         return english() ? "English" : "Русский";
     }
 
@@ -748,7 +748,7 @@ class MainActivityCore extends Activity {
         return rawX >= ((float) iArr[0]) && rawX <= ((float) (iArr[0] + this.tabsScroll.getWidth())) && rawY >= ((float) iArr[1]) && rawY <= ((float) (iArr[1] + this.tabsScroll.getHeight()));
     }
 
-    private void saveState() {
+    void saveState() {
         this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
@@ -806,7 +806,7 @@ class MainActivityCore extends Activity {
         this.panel = this.card;
     }
 
-    private void refreshAfterTrackChange() {
+    void refreshAfterTrackChange() {
         refreshPlaybackChrome();
     }
 
@@ -1278,7 +1278,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void render() {
+    void render() {
         refreshTabs();
         this.songRenderGeneration++;
         this.list.removeAllViews();
@@ -1449,50 +1449,10 @@ class MainActivityCore extends Activity {
     }
 
     void renderSettingsInternal() {
-        addSettingsButton(tr("Theme: ", "Тема: ") + themeName(), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MainActivityCore.this.openThemeDialog();
-            }
-        });
-        addSettingsButton(tr3(this.animations ? "Turn animations off" : "Turn animations on", this.animations ? "Отключить анимации" : "Включить анимации", this.animations ? "◌" : "◍"), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MainActivityCore.this.animations = !MainActivityCore.this.animations;
-                MainActivityCore.this.tabAnimating = false;
-                if (!MainActivityCore.this.animations && MainActivityCore.this.list != null) {
-                    MainActivityCore.this.list.animate().cancel();
-                    MainActivityCore.this.list.setTranslationX(0.0f);
-                    MainActivityCore.this.list.setAlpha(1.0f);
-                }
-                MainActivityCore.this.saveState();
-                MainActivityCore.this.render();
-            }
-        });
-        addSettingsButton(tr3("Language: ", "Язык: ", "◐ ") + languageName(), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MainActivityCore.this.openLanguageDialog();
-            }
-        });
-        addSettingsButton(tr3("Mini-player memory: ", "Память мини-плеера: ", "▣ ") + resumeWindowText(), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MainActivityCore.this.openResumeWindowDialog();
-            }
-        });
-        addSettingsButton(tr3("Check songs", "Проверить песни", "✓ ♪"), new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                MainActivityCore.this.openSongDiagnostics();
-            }
-        });
-        addSettingsButton(tr3("Delete all songs from app", "Удалить все песни из приложения", "⌫ ♪"), new UiAction20());
-        addSettingsButton(tr3("Delete all playlists", "Удалить все плейлисты", "⌫ ▤"), new UiAction21());
-        addSettingsButton(tr3("GitHub project", "GitHub проект", "⌘"), new UiAction19());
+        this.settingsRenderer.renderSettingsState();
     }
 
-    private String themeName() {
+    String themeName() {
         if ("dark".equals(this.themeMode)) {
             return tr("Dark", "Темная");
         }
@@ -1502,7 +1462,7 @@ class MainActivityCore extends Activity {
         return tr("Light", "Светлая");
     }
 
-    private void openThemeDialog() {
+    void openThemeDialog() {
         final FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -1674,37 +1634,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    class UiAction19 implements View.OnClickListener {
-        UiAction19() {
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callOpenGithub(MainActivityCore.this);
-        }
-    }
-
-    class UiAction20 implements View.OnClickListener {
-        UiAction20() {
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callConfirmDeleteAllSongs(MainActivityCore.this);
-        }
-    }
-
-    class UiAction21 implements View.OnClickListener {
-        UiAction21() {
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callConfirmDeleteAllPlaylists(MainActivityCore.this);
-        }
-    }
-
-    private String resumeWindowText() {
+    String resumeWindowText() {
         if (this.resumeWindowMinutes <= 0) {
             return tr3("off", "выкл", "○");
         }
@@ -1715,7 +1645,7 @@ class MainActivityCore extends Activity {
         return this.resumeWindowMinutes + " " + tr3("min", "мин", "′");
     }
 
-    private void openLanguageDialog() {
+    void openLanguageDialog() {
         final FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -1743,7 +1673,7 @@ class MainActivityCore extends Activity {
         updateMini();
     }
 
-    private void openResumeWindowDialog() {
+    void openResumeWindowDialog() {
         final FrameLayout frameLayoutShade = shade();
         LinearLayout linearLayoutPanelCard = panelCard();
         linearLayoutPanelCard.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -1790,7 +1720,7 @@ class MainActivityCore extends Activity {
         linearLayoutPanelCard.addView(button, layoutParams);
     }
 
-    private void addSettingsButton(String str, View.OnClickListener onClickListener) {
+    void addSettingsButton(String str, View.OnClickListener onClickListener) {
         Button button = button(str);
         button.setTextSize(17.0f);
         button.setGravity(8388627);
@@ -1805,7 +1735,7 @@ class MainActivityCore extends Activity {
         this.list.addView(button, layoutParams);
     }
 
-    private void openGithub() {
+    void openGithub() {
         try {
             Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("https://github.com/dumuzeyn/MP3-player"));
             intent.addCategory("android.intent.category.BROWSABLE");
@@ -1816,7 +1746,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void confirmDeleteAllSongs() {
+    void confirmDeleteAllSongs() {
         showConfirmPanel(tr("Delete all songs?", "Удалить все песни?"), tr("Songs will disappear only from this app. Files on the phone will stay untouched.", "Песни исчезнут только из приложения. Файлы на телефоне останутся."), new UiAction22());
     }
 
@@ -1839,7 +1769,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void confirmDeleteAllPlaylists() {
+    void confirmDeleteAllPlaylists() {
         showConfirmPanel(tr("Delete all playlists?", "Удалить все плейлисты?"), tr("Songs will stay in the app.", "Песни останутся в приложении."), new UiAction23());
     }
 
@@ -1910,177 +1840,7 @@ class MainActivityCore extends Activity {
     }
 
     void renderSongsInternal(ArrayList<Track> arrayList) {
-        String str;
-        String str2;
-        if (arrayList.isEmpty()) {
-            if (this.tabIndex == 0) {
-                str = "Add MP3 or another audio file";
-                str2 = "Добавьте MP3 или другой аудиофайл";
-            } else {
-                str = "Nothing here yet";
-                str2 = "Здесь пока пусто";
-            }
-            TextView textViewText = text(tr(str, str2), 18, true);
-            textViewText.setPadding(dp(12), dp(24), dp(12), dp(24));
-            this.list.addView(textViewText);
-            addMiniSpacerIfNeeded();
-            return;
-        }
-        appendSongRows(arrayList, 0, this.songRenderGeneration);
-    }
-
-    private void appendSongRows(final ArrayList<Track> tracksToRender, int start, final int generation) {
-        if (generation != this.songRenderGeneration || this.tabIndex > 1) {
-            return;
-        }
-        int end = Math.min(tracksToRender.size(), start + 24);
-        for (int i = start; i < end; i++) {
-            this.list.addView(songRow(tracksToRender.get(i), true, true));
-        }
-        if (end < tracksToRender.size()) {
-            final int nextStart = end;
-            this.uiHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    MainActivityCore.this.appendSongRows(tracksToRender, nextStart, generation);
-                }
-            });
-        } else {
-            addMiniSpacerIfNeeded();
-        }
-    }
-
-    private View songRow(Track track, boolean z, boolean z2) {
-        return songRow(track, z, z2, null);
-    }
-
-    private View songRow(Track track, boolean z, boolean z2, Runnable runnable) {
-        LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(0);
-        linearLayout.setGravity(16);
-        linearLayout.setPadding(dp(8), dp(8), dp(10), dp(8));
-        applyCardStyle(linearLayout);
-        View marker = new View(this);
-        marker.setBackgroundColor(this.yellow);
-        marker.setVisibility(isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        this.songRows.registerCurrentMarker(track.uri, marker);
-        LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(dp(4), dp(58));
-        markerParams.setMargins(0, 0, dp(6), 0);
-        linearLayout.addView(marker, markerParams);
-        ImageView imageViewCoverView = coverView();
-        loadCover(imageViewCoverView, track, this.purpleSoft);
-        imageViewCoverView.setOnClickListener(new UiAction24(this, track));
-        linearLayout.addView(imageViewCoverView, square(58));
-        LinearLayout linearLayout2 = new LinearLayout(this);
-        linearLayout2.setOrientation(1);
-        linearLayout2.setPadding(dp(12), 0, dp(8), 0);
-        TextView textViewText = text(track.title, 17, true);
-        textViewText.setTextColor(this.primaryText);
-        textViewText.setSingleLine(true);
-        textViewText.setEllipsize(TextUtils.TruncateAt.END);
-        linearLayout2.addView(textViewText);
-        LinearLayout metaRow = new LinearLayout(this);
-        metaRow.setOrientation(0);
-        metaRow.setGravity(16);
-        WaveformView waveformView = wave(track, isCurrent(track));
-        this.songRows.registerWaveform(track.uri, waveformView);
-        metaRow.addView(waveformView, new LinearLayout.LayoutParams(0, dp(30), 1.0f));
-        TextView durationText = text(formatTrackDuration(track), 12, false);
-        durationText.setGravity(17);
-        durationText.setTextColor(this.secondaryText);
-        metaRow.addView(durationText, new LinearLayout.LayoutParams(dp(48), dp(30)));
-        linearLayout2.addView(metaRow);
-        linearLayout.addView(linearLayout2, new LinearLayout.LayoutParams(0, dp(70), 1.0f));
-        if (this.tabIndex == 1) {
-            Button buttonIcon = icon(this.favorites.contains(track.uri) ? "♥︎" : "♡︎");
-            buttonIcon.setTextSize(14.0f);
-            applyPlainIconStyle(buttonIcon, this.favorites.contains(track.uri) ? this.purple : this.secondaryText);
-            buttonIcon.setOnClickListener(new UiAction25(this, track));
-            linearLayout.addView(buttonIcon, square(42));
-        } else if (z) {
-            Button buttonIcon2 = icon("⋯");
-            applyPlainIconStyle(buttonIcon2);
-            buttonIcon2.setOnClickListener(new UiAction26(this, track));
-            linearLayout.addView(buttonIcon2, square(48));
-        }
-        Button buttonIcon3 = icon((isCurrent(track) && this.playing) ? "Ⅱ" : "▶");
-        applyPrimaryButtonStyle(buttonIcon3);
-        buttonIcon3.setOnClickListener(new UiAction27(this, track, runnable));
-        this.songRows.registerPlayButton(track.uri, buttonIcon3);
-        linearLayout.addView(buttonIcon3, square(48));
-        return spaced(linearLayout);
-    }
-
-    class UiAction24 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final Track val$track;
-
-        UiAction24(MainActivityCore mainActivity, Track track) {
-            this.val$track = track;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callPlayTrack(this.this$0, this.val$track);
-            this.this$0.fullPlayerOpening = true;
-            MainActivityCore.callOpenFullPlayer(this.this$0);
-        }
-    }
-
-    class UiAction25 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final Track val$track;
-
-        UiAction25(MainActivityCore mainActivity, Track track) {
-            this.val$track = track;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callToggleFavorite(this.this$0, this.val$track);
-            MainActivityCore.callRender(this.this$0);
-        }
-    }
-
-    class UiAction26 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final Track val$track;
-
-        UiAction26(MainActivityCore mainActivity, Track track) {
-            this.val$track = track;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            MainActivityCore.callOpenSongActions(this.this$0, this.val$track);
-        }
-    }
-
-    class UiAction27 implements View.OnClickListener {
-        final MainActivityCore this$0;
-        final Runnable val$afterPlay;
-        final Track val$track;
-
-        UiAction27(MainActivityCore mainActivity, Track track, Runnable runnable) {
-            this.val$track = track;
-            this.val$afterPlay = runnable;
-            this.this$0 = mainActivity;
-        }
-
-        @Override
-        public void onClick(View view) {
-            if (MainActivityCore.callIsCurrent(this.this$0, this.val$track)) {
-                MainActivityCore.callToggleCurrent(this.this$0);
-            } else {
-                MainActivityCore.callPlayTrack(this.this$0, this.val$track);
-            }
-            if (this.val$afterPlay != null) {
-                this.val$afterPlay.run();
-            }
-        }
+        this.songsRenderer.renderSongsState(arrayList);
     }
 
     private void renderPlaylists() {
@@ -2439,7 +2199,7 @@ class MainActivityCore extends Activity {
         linearLayout.setOrientation(1);
         for (Track track : arrayList) {
             if (panelAction2 == null) {
-                linearLayout.addView(songRow(track, false, true, new UiAction40(this, frameLayoutShade, str, arrayList, panelAction)));
+                linearLayout.addView(this.songsRenderer.songRow(track, false, true, new UiAction40(this, frameLayoutShade, str, arrayList, panelAction)));
             } else {
                 LinearLayout linearLayout2 = new LinearLayout(this);
                 linearLayout2.setOrientation(0);
@@ -3915,11 +3675,11 @@ class MainActivityCore extends Activity {
         return (iMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Integer.valueOf(iMax % 60));
     }
 
-    private String formatTrackDuration(Track track) {
+    String formatTrackDuration(Track track) {
         return track.durationMs > 0 ? formatMs(track.durationMs) : "--:--";
     }
 
-    private int playbackDurationFor(Track track) {
+    int playbackDurationFor(Track track) {
         int serviceDuration = Math.max(0, PlayerService.lastDuration);
         if (serviceDuration > 0) {
             return serviceDuration;
@@ -4082,7 +3842,7 @@ class MainActivityCore extends Activity {
     }
 
     void playTrackInternal(Track track) {
-        playTrackInternal(track, true);
+        this.playbackController.playTrack(track);
     }
 
     private void playTrack(Track track, boolean z) {
@@ -4090,45 +3850,11 @@ class MainActivityCore extends Activity {
     }
 
     void playTrackInternal(Track track, boolean z) {
-        int iIndexOf = this.tracks.indexOf(track);
-        if (iIndexOf < 0) {
-            return;
-        }
-        this.playbackQueue.clear();
-        this.playbackQueue.add(track);
-        this.shuffleMode = false;
-        this.currentIndex = iIndexOf;
-        this.playing = true;
-        this.resumePosition = 0;
-        startServiceAction(PlayerService.ACTION_PLAY_INDEX, 0, true);
-        startPlaybackWatcher();
-        updateMini();
-        if (z) {
-            refreshAfterTrackChange();
-        }
+        this.playbackController.playTrack(track, z);
     }
 
-    private void playList(ArrayList<Track> arrayList, boolean z) {
-        if (arrayList.isEmpty()) {
-            return;
-        }
-        ArrayList arrayList2 = new ArrayList(arrayList);
-        if (z) {
-            Collections.shuffle(arrayList2, new Random());
-        }
-        int iIndexOf = this.tracks.indexOf((Track) arrayList2.get(0));
-        if (iIndexOf < 0) {
-            return;
-        }
-        this.playbackQueue.clear();
-        this.playbackQueue.addAll(arrayList2);
-        this.shuffleMode = z;
-        this.currentIndex = iIndexOf;
-        this.playing = true;
-        this.resumePosition = 0;
-        startServiceAction(PlayerService.ACTION_PLAY_INDEX, 0, false);
-        startPlaybackWatcher();
-        refreshAfterTrackChange();
+    void playList(ArrayList<Track> arrayList, boolean z) {
+        this.playbackController.playList(arrayList, z);
     }
 
     private void toggleCurrent() {
@@ -4136,26 +3862,7 @@ class MainActivityCore extends Activity {
     }
 
     void toggleCurrentInternal() {
-        if (this.currentIndex < 0 && !this.tracks.isEmpty()) {
-            playList(this.tracks, false);
-            return;
-        }
-        if (this.currentIndex < 0) {
-            return;
-        }
-        boolean shouldPlay = !this.playing;
-        this.playing = shouldPlay;
-        if (shouldPlay && this.resumePosition > 0) {
-            startServiceAction(PlayerService.ACTION_PLAY_INDEX, queueIndexOf(this.tracks.get(this.currentIndex)), false, this.resumePosition);
-        } else {
-            startServiceAction(PlayerService.ACTION_TOGGLE, this.currentIndex, false);
-            if (!shouldPlay) {
-                this.resumePosition = Math.max(this.resumePosition, PlayerService.lastPosition);
-            }
-        }
-        startPlaybackWatcher();
-        updateMini();
-        refreshAfterTrackChange();
+        this.playbackController.toggleCurrent();
     }
 
     private void next() {
@@ -4163,17 +3870,7 @@ class MainActivityCore extends Activity {
     }
 
     void nextInternal() {
-        ArrayList<Track> arrayListActiveQueue = activeQueue();
-        if (arrayListActiveQueue.isEmpty()) {
-            return;
-        }
-        int iQueueIndexOf = this.currentIndex < 0 ? 0 : (queueIndexOf(this.tracks.get(this.currentIndex)) + 1) % arrayListActiveQueue.size();
-        this.currentIndex = this.tracks.indexOf(arrayListActiveQueue.get(iQueueIndexOf));
-        this.playing = true;
-        this.resumePosition = 0;
-        startServiceAction(PlayerService.ACTION_PLAY_INDEX, iQueueIndexOf, false);
-        startPlaybackWatcher();
-        refreshAfterTrackChange();
+        this.playbackController.next();
     }
 
     private void previous() {
@@ -4181,139 +3878,50 @@ class MainActivityCore extends Activity {
     }
 
     void previousInternal() {
-        ArrayList<Track> arrayListActiveQueue = activeQueue();
-        if (arrayListActiveQueue.isEmpty()) {
-            return;
-        }
-        int iQueueIndexOf = this.currentIndex < 0 ? 0 : queueIndexOf(this.tracks.get(this.currentIndex));
-        if (iQueueIndexOf <= 0) {
-            iQueueIndexOf = arrayListActiveQueue.size();
-        }
-        int i = iQueueIndexOf - 1;
-        this.currentIndex = this.tracks.indexOf(arrayListActiveQueue.get(i));
-        this.playing = true;
-        this.resumePosition = 0;
-        startServiceAction(PlayerService.ACTION_PLAY_INDEX, i, false);
-        startPlaybackWatcher();
-        refreshAfterTrackChange();
+        this.playbackController.previous();
     }
 
-    class PlaybackWatcher implements Runnable {
-        PlaybackWatcher() {
-        }
-
-        @Override
-        public void run() {
-            Track resolvedTrack;
-            PlayerService.refreshSnapshot();
-            if (PlayerService.lastIndex < 0) {
-                if (MainActivityCore.this.resumeWindowMinutes <= 0) {
-                    MainActivityCore.setCurrentIndexValue(MainActivityCore.this, -1);
-                }
-                MainActivityCore.setPlayingValue(MainActivityCore.this, false);
-                MainActivityCore.this.resumePosition = Math.max(0, PlayerService.lastPosition);
-                MainActivityCore.callUpdateMini(MainActivityCore.this);
-                MainActivityCore.callRender(MainActivityCore.this);
-                return;
-            }
-            MainActivityCore.setPlayingValue(MainActivityCore.this, PlayerService.lastPlaying);
-            MainActivityCore.this.resumePosition = Math.max(0, PlayerService.lastPosition);
-            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && (resolvedTrack = MainActivityCore.callFindTrack(MainActivityCore.this, PlayerService.lastUri)) != null && !MainActivityCore.callIsCurrent(MainActivityCore.this, resolvedTrack)) {
-                MainActivityCore.setCurrentIndexValue(MainActivityCore.this, MainActivityCore.accessTracks(MainActivityCore.this).indexOf(resolvedTrack));
-                MainActivityCore.this.refreshAfterTrackChange();
-            } else {
-                MainActivityCore.callUpdateMini(MainActivityCore.this);
-            }
-            if (MainActivityCore.accessPlaying(MainActivityCore.this) || MainActivityCore.accessCurrentIndex(MainActivityCore.this) >= 0) {
-                MainActivityCore.accessPlaybackHandler(MainActivityCore.this).postDelayed(this, 900L);
-            }
-        }
+    void startPlaybackWatcher() {
+        this.playbackController.startPlaybackWatcher();
     }
 
-    private void startPlaybackWatcher() {
-        this.playbackHandler.removeCallbacksAndMessages(null);
-        this.playbackHandler.postDelayed(new PlaybackWatcher(), 900L);
+    void startServiceAction(String str, int i) {
+        this.playbackController.startServiceAction(str, i);
     }
 
-    private void startServiceAction(String str, int i) {
-        startServiceAction(str, i, false);
+    void startServiceAction(String str, int i, boolean z) {
+        this.playbackController.startServiceAction(str, i, z);
     }
 
-    private void startServiceAction(String str, int i, boolean z) {
-        startServiceAction(str, i, z, 0);
+    void startServiceAction(String str, int i, boolean z, int position) {
+        this.playbackController.startServiceAction(str, i, z, position);
     }
 
-    private void startServiceAction(String str, int i, boolean z, int position) {
-        Intent intent = new Intent(this, (Class<?>) PlayerService.class);
-        intent.setAction(str);
-        intent.putExtra(PlayerService.EXTRA_INDEX, i);
-        intent.putExtra(PlayerService.EXTRA_ONE_SHOT, z);
-        intent.putExtra(PlayerService.EXTRA_SHUFFLE, this.shuffleMode);
-        intent.putExtra(PlayerService.EXTRA_LOOP_MODE, this.loopMode);
-        intent.putExtra(PlayerService.EXTRA_POSITION, Math.max(0, position));
-        intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
-        if (Build.VERSION.SDK_INT < 26) {
-            startService(intent);
-        } else {
-            startForegroundService(intent);
-        }
+    ArrayList<String> queueUris() {
+        return this.playbackController.queueUris();
     }
 
-    private ArrayList<String> queueUris() {
-        ArrayList<String> arrayList = new ArrayList<>();
-        Iterator<Track> it = activeQueue().iterator();
-        while (it.hasNext()) {
-            arrayList.add(it.next().uri);
-        }
-        return arrayList;
+    ArrayList<Track> activeQueue() {
+        return this.playbackController.activeQueue();
     }
 
-    private ArrayList<Track> activeQueue() {
-        return this.playbackQueue.isEmpty() ? this.tracks : this.playbackQueue;
+    boolean isPlayingSource(ArrayList<Track> arrayList) {
+        return this.playbackController.isPlayingSource(arrayList);
     }
 
-    private boolean isPlayingSource(ArrayList<Track> arrayList) {
-        if (!this.playing || arrayList == null || arrayList.isEmpty() || this.playbackQueue.size() != arrayList.size()) {
-            return false;
-        }
-        for (int i = 0; i < arrayList.size(); i++) {
-            if (!this.playbackQueue.get(i).uri.equals(arrayList.get(i).uri)) {
-                return false;
-            }
-        }
-        return true;
+    int queueIndexOf(Track track) {
+        return this.playbackController.queueIndexOf(track);
     }
 
-    private int queueIndexOf(Track track) {
-        ArrayList<Track> arrayListActiveQueue = activeQueue();
-        for (int i = 0; i < arrayListActiveQueue.size(); i++) {
-            if (arrayListActiveQueue.get(i).uri.equals(track.uri)) {
-                return i;
-            }
-        }
-        return Math.max(0, this.tracks.indexOf(track));
-    }
-
-    private void updateMini() {
+    void updateMini() {
         this.playerUiController.updateMini();
     }
 
     void updateMiniInternal() {
-        if (this.miniPlayer == null) {
-            return;
-        }
-        if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size() || this.overlayHost.getChildCount() > 0) {
-            this.miniPlayer.setVisibility(8);
-            return;
-        }
-        Track track = this.tracks.get(this.currentIndex);
-        this.miniTitle.setText(track.title);
-        this.miniSub.setText(track.artist);
-        this.miniButton.setText(this.playing ? "Ⅱ" : "▶");
-        this.miniPlayer.setVisibility(0);
+        this.playerUiController.updateMiniState();
     }
 
-    private void toggleFavorite(Track track) {
+    void toggleFavorite(Track track) {
         if (this.favorites.contains(track.uri)) {
             this.favorites.remove(track.uri);
         } else {
@@ -4322,11 +3930,11 @@ class MainActivityCore extends Activity {
         saveState();
     }
 
-    private boolean isCurrent(Track track) {
+    boolean isCurrent(Track track) {
         return this.currentIndex >= 0 && this.currentIndex < this.tracks.size() && this.tracks.get(this.currentIndex).uri.equals(track.uri);
     }
 
-    private Track findTrack(String str) {
+    Track findTrack(String str) {
         for (Track track : this.tracks) {
             if (track.uri.equals(str)) {
                 return track;
@@ -4348,11 +3956,11 @@ class MainActivityCore extends Activity {
         return cover;
     }
 
-    private void loadCover(final ImageView imageView, final Track track, int fallbackColor) {
+    void loadCover(final ImageView imageView, final Track track, int fallbackColor) {
         loadCover(imageView, track, fallbackColor, COVER_THUMB_SIZE);
     }
 
-    private void loadCover(final ImageView imageView, final Track track, int fallbackColor, final int maxSize) {
+    void loadCover(final ImageView imageView, final Track track, int fallbackColor, final int maxSize) {
         final String key = coverCacheKey(track, maxSize);
         imageView.setTag(key);
         Bitmap cached = this.coverCache.get(key);
@@ -4446,7 +4054,7 @@ class MainActivityCore extends Activity {
         return Math.max(1, sampleSize);
     }
 
-    private WaveformView wave(Track track, boolean z) {
+    WaveformView wave(Track track, boolean z) {
         WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.purple : this.purpleSoft, z && this.playing);
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));
@@ -4665,7 +4273,7 @@ class MainActivityCore extends Activity {
         return linearLayout;
     }
 
-    private TextView text(String str, int i, boolean z) {
+    TextView text(String str, int i, boolean z) {
         TextView textView = new TextView(this);
         textView.setText(str);
         textView.setTextColor(this.fg);
@@ -4703,7 +4311,7 @@ class MainActivityCore extends Activity {
         return button;
     }
 
-    private Button icon(String str) {
+    Button icon(String str) {
         Button button = button(str);
         button.setTextSize(24.0f);
         return button;
@@ -4732,11 +4340,11 @@ class MainActivityCore extends Activity {
         button.setBackground(gradientDrawableRounded);
     }
 
-    private void applyPlainIconStyle(Button button) {
+    void applyPlainIconStyle(Button button) {
         applyPlainIconStyle(button, this.dark ? Color.rgb(230, 226, 236) : this.primaryText);
     }
 
-    private void applyPlainIconStyle(Button button, int color) {
+    void applyPlainIconStyle(Button button, int color) {
         button.setTextColor(color);
         button.setBackgroundColor(Color.TRANSPARENT);
         button.setElevation(0.0f);
@@ -4774,12 +4382,12 @@ class MainActivityCore extends Activity {
         return drawable;
     }
 
-    private void applyCardStyle(View view) {
+    void applyCardStyle(View view) {
         view.setBackground(createCardBackground());
         view.setElevation(dp(1));
     }
 
-    private void applyPrimaryButtonStyle(Button button) {
+    void applyPrimaryButtonStyle(Button button) {
         button.setTextColor(Color.WHITE);
         button.setBackground(createPrimaryButtonBackground());
     }
@@ -4806,7 +4414,7 @@ class MainActivityCore extends Activity {
         return view;
     }
 
-    private LinearLayout.LayoutParams square(int i) {
+    LinearLayout.LayoutParams square(int i) {
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(dp(i), dp(i));
         layoutParams.setMargins(dp(4), dp(4), dp(4), dp(4));
         return layoutParams;
@@ -4816,7 +4424,7 @@ class MainActivityCore extends Activity {
         return spaced(view);
     }
 
-    private View spaced(View view) {
+    View spaced(View view) {
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(-1, -2);
         layoutParams.setMargins(0, dp(5), 0, dp(5));
         view.setLayoutParams(layoutParams);
@@ -4844,7 +4452,7 @@ class MainActivityCore extends Activity {
         return view;
     }
 
-    private ImageView coverView() {
+    ImageView coverView() {
         ImageView imageView = new ImageView(this);
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         GradientDrawable gradientDrawable = new GradientDrawable();
@@ -5020,7 +4628,7 @@ class MainActivityCore extends Activity {
         }
     }
 
-    private void addMiniSpacerIfNeeded() {
+    void addMiniSpacerIfNeeded() {
         if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size() || this.overlayHost.getChildCount() > 0) {
             return;
         }
@@ -5029,7 +4637,7 @@ class MainActivityCore extends Activity {
         this.list.addView(view);
     }
 
-    private void openSongDiagnostics() {
+    void openSongDiagnostics() {
         int available = 0;
         int unavailable = 0;
         int withDuration = 0;
@@ -5132,7 +4740,7 @@ class MainActivityCore extends Activity {
         return new FrameLayout.LayoutParams(-1, (int) (getResources().getDisplayMetrics().heightPixels * 0.78f), 80);
     }
 
-    private int dp(int i) {
+    int dp(int i) {
         return Math.round(i * getResources().getDisplayMetrics().density);
     }
 
