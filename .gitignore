@@ -16,3 +16,7 @@ commandlinetools.zip
 !docs/
 !docs/screenshots/
 !docs/screenshots/*.png
+!docs/screenshots/ru/
+!docs/screenshots/en/
+!docs/screenshots/ru/*.png
+!docs/screenshots/en/*.png

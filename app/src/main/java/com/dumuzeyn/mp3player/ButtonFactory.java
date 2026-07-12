@@ -43,18 +43,6 @@ final class ButtonFactory {
         return button;
     }
 
-    Button searchButton() {
-        Button button = icon("⌕");
-        button.setTextSize(31.0f);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        return button;
-    }
-
-    void applyColors(Button button, int background, int foreground) {
-        button.setTextColor(foreground);
-        button.setBackground(background(background, false));
-    }
-
     void applyPlainIcon(Button button, int color) {
         button.setTextColor(color);
         button.setBackgroundColor(Color.TRANSPARENT);

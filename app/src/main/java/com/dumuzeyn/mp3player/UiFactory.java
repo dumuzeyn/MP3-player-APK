@@ -62,14 +62,6 @@ final class UiFactory {
         return buttons.shuffleButton();
     }
 
-    Button searchButton() {
-        return buttons.searchButton();
-    }
-
-    void applyButtonColors(Button button, int background, int foreground) {
-        buttons.applyColors(button, background, foreground);
-    }
-
     void applyPlainIconStyle(Button button, int color) {
         buttons.applyPlainIcon(button, color);
     }
@@ -105,15 +97,6 @@ final class UiFactory {
             seekBar.setThumbTintList(ColorStateList.valueOf(host.yellow));
             seekBar.setProgressBackgroundTintList(ColorStateList.valueOf(host.purpleSoft));
         }
-    }
-
-    TriangleDecorView triangleArtwork(int mode) {
-        TriangleDecorView view = new TriangleDecorView(host);
-        view.setMode(mode);
-        view.setColors(host.purple, host.yellow);
-        view.setDecorAlpha(host.dark ? 0.78f : 0.9f);
-        view.setStrokeWidth(host.dp(2));
-        return view;
     }
 
     LinearLayout.LayoutParams square(int size) {

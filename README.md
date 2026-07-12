@@ -1,259 +1,489 @@
-# MP3 Player APK
+# MP3 Player
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player/actions">
-    <img src="https://img.shields.io/badge/Download_APK-GitHub_Actions-7c3aed?style=for-the-badge" alt="Download APK">
+  <a href="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android.yml">
+    <img src="https://img.shields.io/badge/Скачать_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
-    <img src="https://img.shields.io/badge/English_version-Open-black?style=for-the-badge" alt="English version">
+    <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
   </a>
 </p>
 
-MP3 Player APK - Android-приложение для локального прослушивания музыки. Оно работает без WebView, браузера и локального сервера: пользователь устанавливает APK, выбирает песни или папку через системный выбор Android, а приложение сохраняет доступ к этим файлам и воспроизводит их через foreground service.
+MP3 Player — Android-плеер для музыки, уже скачанной на телефон. Он открывает локальные аудиофайлы через системный выбор Android, сохраняет доступ к ним и воспроизводит музыку в приложении, в фоне и через системную медиапанель.
 
-Приложение не копирует, не изменяет и не удаляет исходные музыкальные файлы. Если удалить песню внутри MP3 Player, удаляется только запись из библиотеки приложения, а сам файл остается на телефоне.
+## Возможности
 
-## Скачать
+### Библиотека и импорт
 
-Готовый APK не хранится в git как бинарный файл. Актуальную сборку нужно брать из GitHub Actions artifact или из GitHub Releases, когда релиз опубликован.
+- Добавление одной песни, нескольких файлов или целой папки через Android Storage Access Framework.
+- Сохранение разрешений для `content://` URI, чтобы треки оставались доступны после перезапуска приложения и телефона.
+- Проверка доступности файла перед добавлением в библиотеку.
+- Чтение названия, исполнителя, альбома, продолжительности и встроенной обложки.
+- Повторное получение отсутствующих метаданных без блокировки интерфейса.
+- Разделы «Песни», «Избранное», «Плейлисты», «Жанры», «Исполнители», «Альбомы» и «Настройки».
+- Поиск по библиотеке, сортировка, последовательное и случайное воспроизведение текущего списка.
+- Диагностика недоступных и повреждённых треков.
+- Удаление записи из библиотеки без удаления исходного аудиофайла с телефона.
 
-[Скачать APK / открыть GitHub Actions](https://github.com/dumuzeyn/MP3-player/actions)
+### Плейлисты и очередь
 
-Если Android предупреждает об установке из неизвестного источника, разреши установку APK для приложения, через которое открыт файл. Это стандартное поведение Android для APK не из магазина.
+- Создание, переименование и удаление плейлистов.
+- Добавление одной или нескольких песен в плейлист.
+- Поиск песен во время добавления в плейлист.
+- Добавление трека в избранное или любой пользовательский плейлист через одну кнопку большого плеера.
+- Удаление песни из плейлиста через свойства трека.
+- Очередь воспроизведения с просмотром, запуском выбранной позиции и удалением элементов.
+- Добавление песни в текущую очередь из её свойств.
+- Анимированные титры и смена обложки на карточках плейлистов с регулируемой скоростью.
+
+### Воспроизведение
+
+- Фоновое воспроизведение через foreground service и системную медиапанель Android.
+- Асинхронная подготовка треков через `MediaPlayer.prepareAsync()`.
+- Play, pause, предыдущая и следующая песня, перемотка и восстановление позиции.
+- Повтор выключен, повтор очереди и повтор одного трека.
+- Случайный порядок воспроизведения.
+- Защита от мгновенного пролистывания всей очереди при повреждённых или недоступных файлах.
+- Восстановление последнего трека, очереди, позиции и режима повтора.
+- Настраиваемое время хранения состояния мини-плеера.
+- Режим «Всегда играть», который не отдаёт обычный аудиофокус другим приложениям.
+- Режим без приглушения громкости при изменении аудиофокуса.
+- Обработка отключения наушников, если режим непрерывного воспроизведения не включён.
+
+### Мини-плеер и большой плеер
+
+- Мини-плеер с названием, исполнителем и кнопкой play/pause.
+- Открытие большого плеера нажатием на мини-плеер.
+- Удаление мини-плеера горизонтальным свайпом вместе с очисткой очереди и сохранённого состояния.
+- Большой плеер с качественной обложкой, очередью, seek bar и транспортными кнопками.
+- Закрытие большого плеера лёгким свайпом вниз из любой области экрана.
+- Таймер сна с готовыми вариантами, пользовательской длительностью и остановкой воспроизведения.
+- Добавление трека в избранное или плейлист прямо из большого плеера.
+- Эквалайзер с отдельными полосами частот.
+- Выравнивание воспринимаемой громкости между песнями.
+
+### Оформление и управление
+
+- Светлая, тёмная и пользовательская темы.
+- Выбор любого цвета фона и текста пользовательской темы через цветовое колесо.
+- Отдельный градиент для основного интерфейса и большого плеера.
+- Независимый выбор двух цветов каждого градиента.
+- Скруглённые квадратные обложки или вращающиеся круглые обложки.
+- Синхронизация формы обложки с системной медиапанелью.
+- Плавные свайпы между меню с предварительным отображением соседнего экрана.
+- История навигации для системной кнопки «Назад».
+- Независимое отключение анимаций и частиц.
+- Фиолетовые и жёлтые частицы-треугольники и молнии, реагирующие на касания.
+- Настройка частоты, размера и времени жизни частиц в безопасных пределах.
+- Русский и английский интерфейс.
+- Тематические vector/adaptive launcher icons и отдельные splash-ресурсы.
 
 ## Скриншоты
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="260" alt="Songs screen">
-  <img src="docs/screenshots/player.png" width="260" alt="Full player">
-  <img src="docs/screenshots/settings.png" width="260" alt="Settings screen">
+  <img src="docs/screenshots/ru/library.png" width="30%" alt="Библиотека песен">
+  <img src="docs/screenshots/ru/player.png" width="30%" alt="Большой плеер">
+  <img src="docs/screenshots/ru/settings.png" width="30%" alt="Настройки">
 </p>
 
-## Что умеет приложение
+## Как взаимодействуют части приложения
 
-- Добавлять одну песню, несколько песен или целую папку с музыкой через Android SAF.
-- Сохранять persistable URI permissions, чтобы песни играли после перезапуска телефона и приложения.
-- Показывать название, исполнителя, альбом, длительность и встроенную обложку.
-- Кешировать обложки, чтобы список и большой плеер не мигали при повторном открытии.
-- Показывать список песен, избранное, плейлисты, жанры, исполнителей и альбомы.
-- Искать песни, сортировать библиотеку и запускать текущий список подряд или в случайном порядке.
-- Создавать плейлисты, добавлять песни в избранное и управлять очередью воспроизведения.
-- Играть в фоне через `PlayerService` с foreground notification.
-- Открывать большой плеер с качественной обложкой, seek bar, таймером, повтором, лайком и очередью.
-- Закрывать большой плеер свайпом вниз из любой области экрана.
-- Показывать мини-плеер снизу и восстанавливать его состояние после повторного открытия приложения.
-- Переключать светлую, темную и пользовательскую тему.
-- Для пользовательской темы выбирать цвет фона и текста.
-- Менять язык интерфейса между русским и английским.
-- Использовать vector/adaptive icon ресурсы без PNG для иконки приложения.
+```mermaid
+flowchart TB
+    A["MainActivity / DarkMainActivity<br/>точки входа"] --> B["MainActivityCore<br/>сборка экрана и координация"]
+    B --> S["AppState<br/>состояние интерфейса"]
 
-## Что нового в текущей версии
+    subgraph UI["Интерфейс"]
+        MR["MainRenderer"] --> MENUS["Рендереры меню<br/>песни · избранное · плейлисты<br/>жанры · исполнители · альбомы · настройки"]
+        PU["PlayerUiController"] --> MINI["MiniPlayerController"]
+        PU --> FULL["FullPlayerController"]
+        NAV["TabsController + SwipeController<br/>+ BackNavigationController"]
+        STYLE["ThemeController + UiFactory<br/>градиенты · частицы · кнопки"]
+    end
 
-- Текущая версия проекта: `2.3` (`versionCode 23`).
-- `MainActivity` разгружен первыми отдельными классами: `SongsRenderer`, `PlayerUiController`, `SettingsRenderer`, `TabsController`, `PlaybackController`, `ThemeController`.
-- Убраны сгенерированные имена вида `AnonymousClass...`, `RunnableC000...`, `m19$$Nest...`; внутренние методы получили читаемые названия.
-- Release-сборка включает `minifyEnabled true` и `shrinkResources true`.
-- README полностью обновлен, добавлены реальные скриншоты с телефона без верхней панели уведомлений.
-- APK больше не хранится в `output/` как основной способ распространения; сборку нужно брать из Actions/Releases.
+    B --> MR
+    B --> PU
+    B --> NAV
+    B --> STYLE
 
-## Как устроен проект
+    subgraph DATA["Музыка и данные"]
+        IMPORT["AudioImportController"] --> STORE["TrackStore<br/>URI и метаданные"]
+        STORE --> DB["LibraryDatabase<br/>SQLite"]
+        DB --> LISTS["Песни · избранное · плейлисты"]
+        PL["PlaylistController"] --> DB
+        COVERS["CoverLoader"] --> CACHE["Кеш обложек"]
+    end
 
-Основной пакет приложения: `app/src/main/java/com/dumuzeyn/mp3player`.
+    B --> IMPORT
+    MR --> LISTS
+    MR --> COVERS
 
-`MainActivity` остается главным экраном и точкой сборки UI. В нем все еще находится много Android View-кода, но теперь часть ответственности вынесена в отдельные классы-контроллеры. Это первый шаг к нормальной архитектуре без риска сломать весь плеер одним большим рефакторингом.
+    subgraph AUDIO["Воспроизведение"]
+        PC["PlaybackController"] --> PS["PlayerService"]
+        PS --> MP["MediaPlayer"]
+        PS --> NOTIFY["Foreground notification<br/>и MediaSession"]
+        PS --> FX["Эквалайзер · единая громкость<br/>аудиофокус"]
+        TIMER["SleepTimerController"] --> PS
+    end
 
-`SongsRenderer` отвечает за рендер списка песен. Если нужно менять карточку песни, кнопки строки, отображение длительности, waveform или поведение списка, начинать нужно отсюда; `MainActivity` должен оставаться только точкой вызова.
+    PU --> PC
+    MENUS --> PC
+    PC --> S
+    PS --> S
 
-`PlayerUiController` управляет большим и мини-плеером. Он вызывает внутренние методы `openFullPlayerInternal()` и `updateMiniInternal()`. Все доработки большого плеера, мини-плеера, свайпа вниз, seek bar и состояния текущего трека должны постепенно уходить сюда.
+    classDef entry fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
+    classDef data fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
+    classDef audio fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
+    class A,B entry;
+    class IMPORT,STORE,DB,LISTS,PL,COVERS,CACHE data;
+    class PC,PS,MP,NOTIFY,FX,TIMER audio;
+```
 
-`SettingsRenderer` отвечает за экран настроек. Темы, язык, отключение анимаций, проверка песен и опасные действия вроде удаления библиотеки относятся к этому направлению.
+`MainActivityCore` создаёт общую структуру экрана и связывает специализированные компоненты. Рендереры получают данные из состояния и базы, а команды воспроизведения отправляют через `PlaybackController` в `PlayerService`. Сервис владеет `MediaPlayer`, обновляет `MediaSession` и возвращает актуальное состояние в интерфейс. Импорт идёт отдельно: системный picker передаёт URI в `AudioImportController`, затем `TrackStore` проверяет файл и метаданные, а `LibraryDatabase` сохраняет библиотеку.
 
-`TabsController` управляет верхними вкладками и жестами переключения меню. Если нужно менять силу свайпа, поведение бесконечной ленты вкладок или переключение разделов, смотри этот класс и методы `buildTabsInternal()`, `tabDirectionToInternal()`, `isInsideTabsInternal()`.
+## Ответственность файлов
 
-`PlaybackController` связывает UI с командами воспроизведения: play, pause, next, previous. Сейчас он делегирует в `MainActivity`, но новые команды очереди и истории лучше добавлять через него, чтобы не раздувать главный activity дальше.
+Основной код находится в `app/src/main/java/com/dumuzeyn/mp3player`.
 
-`ThemeController` содержит простую обвязку над цветовой логикой. Базовая работа с палитрами и сохранением темы находится в `ThemeManager`, а применение темы к текущему экрану пока выполняет `MainActivity`.
+### Точки входа и состояние
 
-`PlayerService` - foreground service для реального воспроизведения. Он работает с `MediaPlayer`, audio focus, уведомлением, wake lock, `prepareAsync()`, ошибками чтения трека и переходом по очереди. Если музыка не играет, сначала проверяй именно `PlayerService` и URI, который в него передается.
+- `MainActivity.java` — светлая точка входа приложения.
+- `DarkMainActivity.java` — точка входа с тёмной системной темой окна.
+- `MainActivityCore.java` — создаёт корневой UI, соединяет контроллеры, обрабатывает lifecycle и хранит только общие делегаты.
+- `AppState.java` — единое состояние: текущий трек, очередь, вкладка, поиск, тема, язык, таймер и визуальные настройки.
 
-`TrackStore` отвечает за импорт файлов, чтение метаданных и сохранение песен. Здесь важны `content://` URI, `takePersistableUriPermission(...)`, проверка доступности файла и получение длительности через `MediaMetadataRetriever`.
+### Экраны и списки
 
-`LibraryDatabase` хранит библиотеку, избранное и плейлисты в SQLite. Настройки интерфейса и легкое состояние плеера остаются в `SharedPreferences`.
+- `MainRenderer.java` — выбирает рендерер активного раздела и координирует обновление экрана.
+- `MenuRenderer.java` — общий контракт для рендереров меню.
+- `SongsMenuRenderer.java` — загружает и показывает общую библиотеку песен.
+- `FavoritesMenuRenderer.java` — загружает и показывает избранные песни.
+- `PlaylistsMenuRenderer.java` — показывает карточки плейлистов и их анимированные превью.
+- `GenresMenuRenderer.java` — группирует библиотеку по жанрам.
+- `ArtistsMenuRenderer.java` — группирует библиотеку по исполнителям.
+- `AlbumsMenuRenderer.java` — группирует библиотеку по альбомам.
+- `SettingsMenuRenderer.java` — подключает экран настроек к общей системе меню.
+- `SongsRenderer.java` — создаёт карточки песен, очередь, waveform и порционную отрисовку списка.
+- `TrackGroupMenuRenderer.java` — общая реализация карточек жанров, исполнителей и альбомов.
+- `SettingsRenderer.java` — создаёт список пользовательских настроек.
+- `LibraryListController.java` — фильтрует библиотеку, избранное и текущий видимый список.
+- `HeaderController.java` — строит шапку приложения и панель действий активного раздела.
 
-`PlaylistManager` содержит вспомогательную логику плейлистов: поиск, очистку имен, сериализацию старого формата и совместимость с миграцией.
+### Плеер
 
-`SongRowStateRegistry` хранит состояние строк песен отдельно от activity, чтобы при обновлении списка не терять текущий прогресс и не пересоздавать лишнее состояние.
+- `PlayerUiController.java` — связывает мини-плеер и большой плеер с общим состоянием.
+- `MiniPlayerController.java` — создаёт мини-плеер, обновляет его и обрабатывает свайп удаления.
+- `FullPlayerController.java` — полностью создаёт большой плеер, кнопки, очередь, seek bar и свайп закрытия.
+- `PlaybackController.java` — формирует очередь, восстанавливает сессию и отправляет команды сервису.
+- `PlayerService.java` — владеет `MediaPlayer`, audio focus, wake lock, MediaSession и уведомлением.
+- `SleepTimerController.java` — запускает, отображает и отменяет таймер сна.
+- `EqualizerController.java` — хранит настройки эквалайзера и управляет его интерфейсом.
+- `VolumeLevelingController.java` — включает и отображает режим выравнивания громкости.
+- `StableVolumeController.java` — управляет запретом приглушения при изменении аудиофокуса.
+- `UninterruptedPlaybackController.java` — управляет режимом непрерывного воспроизведения.
+- `SongRowStateRegistry.java` — обновляет play-кнопки, индикаторы, waveform и обложки без полного ререндера списка.
+- `WaveformView.java` — рисует визуальную звуковую дорожку песни.
+- `RotatingCoverImageView.java` — делает обложку круглой и вращает её во время воспроизведения.
+- `PlayerGradientBackground.java` — рисует настраиваемый анимированный градиент.
 
-`WaveformView` рисует визуальную дорожку под названием песни. `TriangleDecorView` рисует декоративные треугольники в шапке.
+### Импорт, библиотека и плейлисты
 
-## Как добавить новую функцию
+- `AudioImportController.java` — запускает выбор файлов/папки и обрабатывает результат Android SAF.
+- `TrackStore.java` — проверяет URI, читает метаданные и объединяет восстановленные данные трека.
+- `Track.java` — модель одной песни.
+- `LibraryDatabase.java` — SQLite-хранилище песен, избранного и плейлистов, включая миграцию старых данных.
+- `Playlist.java` — модель пользовательского плейлиста.
+- `PlaylistManager.java` — очистка названий и совместимость со старым JSON-форматом.
+- `PlaylistController.java` — создание, переименование и удаление плейлистов, добавление и удаление песен.
+- `CoverLoader.java` — асинхронно читает и кеширует встроенные обложки.
+- `FrameLayoutCover.java` — контейнер обложки плейлиста с плавной сменой изображения.
+- `SmoothPlaylistTicker.java` — непрерывно прокручивает названия песен в карточке плейлиста.
+- `PlaylistTickerSettingsController.java` — регулирует скорость титров плейлистов.
 
-1. Найди область функции: список песен, плеер, настройки, вкладки, воспроизведение, тема или хранение.
-2. Добавляй новый код в соответствующий controller/manager, а не сразу в `MainActivity`.
-3. Если старый UI-код пока находится в `MainActivity`, сделай маленький внутренний метод `...Internal()` и вызывай его через controller.
-4. Для песен и плейлистов не добавляй новые JSON-строки в `SharedPreferences`; используй `LibraryDatabase`.
-5. Для настроек интерфейса можно использовать `SharedPreferences`, потому что это маленькие значения.
-6. Для Android-файлов используй `content://` URI и persistable permissions. Не сохраняй путь вида `/storage/...` как основной источник.
-7. После изменения запускай `./gradlew clean testDebugUnitTest assembleRelease`.
-8. Проверяй на телефоне: импорт одной песни, импорт папки, запуск песни, большой плеер, мини-плеер, смена темы.
+### Навигация, диалоги и оформление
+
+- `TabsController.java` — строит циклическую ленту вкладок и плавно двигает активный индикатор.
+- `SwipeController.java` — обрабатывает свайпы между разделами и предварительный экран соседнего меню.
+- `BackNavigationController.java` — хранит историю вкладок и реализует системную кнопку «Назад».
+- `OverlayController.java` — показывает поиск, свойства песен, очередь и выбор плейлистов.
+- `DialogController.java` — общий безопасный диалог подтверждения.
+- `SettingsController.java` — язык, память мини-плеера, диагностика и очистка пользовательских данных.
+- `ThemeController.java` — применяет тему окна, пользовательские цвета и launcher alias.
+- `ThemeManager.java` — вычисляет контрастные цвета и смешивает оттенки.
+- `GradientSettingsController.java` — выбирает режим и цвета градиентов основного экрана и плеера.
+- `ThemeColorWheelView.java` — рисует полное цветовое колесо и выбирает оттенок/яркость.
+- `ParticleEffectsView.java` — рисует фоновые частицы и эффекты касания.
+- `ParticleSettingsController.java` — регулирует частоту, размер и время жизни частиц.
+- `ButtonFactory.java` — создаёт единообразные кнопки и их состояния.
+- `UiFactory.java` — создаёт общие элементы, карточки, панели, отступы и формы.
+- `TriangleDecorView.java` — рисует треугольный декор шапки.
+
+### Сборка и проверки
+
+- `app/src/main/AndroidManifest.xml` — разрешения, activity aliases и foreground service.
+- `app/build.gradle` — Android-конфигурация, версия, подпись и release-настройки R8.
+- `app/proguard-rules.pro` — правила сохранения необходимых классов при minify.
+- `.github/workflows/android.yml` — unit-тесты, release-сборка и публикация APK artifact.
+- `TrackStoreTest.java` — тесты сортировки и миграции данных песен.
+- `PlaylistManagerTest.java` — тесты сохранения плейлистов и очистки названий.
 
 ## Сборка
 
-Для локальной debug-сборки:
+Требуются Android SDK и JDK 17.
 
 ```bash
-./gradlew clean assembleDebug
+./gradlew clean testDebugUnitTest assembleRelease
 ```
 
-Для release-сборки:
-
-```bash
-./gradlew clean assembleRelease
-```
-
-Release использует R8:
-
-```gradle
-release {
-    minifyEnabled true
-    shrinkResources true
-}
-```
-
-Если заданы переменные `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, `MP3_RELEASE_KEY_PASS`, Gradle подпишет release этим ключом. Если переменных нет, CI использует репозиторный debug-like ключ только для сборочной проверки.
+Release APK создаётся в `app/build/outputs/apk/release/`. Готовые APK не хранятся в git: актуальную сборку загружает GitHub Actions.
 
 ## Авторство
 
-Проект: MP3 Player APK. Автор: Rasul / dumuzeyn.
+MP3 Player создан и развивается Rasul / [dumuzeyn](https://github.com/dumuzeyn).
 
 ---
 
 <a id="english"></a>
 
-# MP3 Player APK
+# MP3 Player
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player/actions">
-    <img src="https://img.shields.io/badge/Download_APK-GitHub_Actions-7c3aed?style=for-the-badge" alt="Download APK">
+  <a href="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android.yml">
+    <img src="https://img.shields.io/badge/Download_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
-  <a href="#mp3-player-apk">
-    <img src="https://img.shields.io/badge/Russian_version-Open-black?style=for-the-badge" alt="Russian version">
+  <a href="#mp3-player">
+    <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
   </a>
 </p>
 
-MP3 Player APK is a native Android app for local music playback. It does not use a browser, WebView, or local server. The user installs the APK, selects audio files or a music folder through Android system pickers, and the app stores access to those files for playback through a foreground service.
+MP3 Player is an Android player for music already downloaded to the phone. It opens local audio through Android's system picker, keeps access to selected files, and plays music inside the app, in the background, and through the system media panel.
 
-The app does not copy, modify, or delete the original music files. Removing a song inside MP3 Player removes only the app library entry; the file stays on the phone.
+## Features
 
-## Download
+### Library and import
 
-The built APK is not stored in git as a binary file. Download the current APK from GitHub Actions artifacts or GitHub Releases when a release is published.
+- Import one song, multiple files, or an entire folder through Android Storage Access Framework.
+- Persist `content://` URI permissions so tracks remain available after app and device restarts.
+- Verify file readability before adding it to the library.
+- Read title, artist, album, duration, and embedded artwork.
+- Refresh missing metadata without blocking the interface.
+- Browse Songs, Favorites, Playlists, Genres, Artists, Albums, and Settings.
+- Search and sort the library, then play the current list in order or shuffle mode.
+- Diagnose unavailable and corrupted tracks.
+- Remove a library entry without deleting the original audio file from the phone.
 
-[Download APK / open GitHub Actions](https://github.com/dumuzeyn/MP3-player/actions)
+### Playlists and queue
 
-If Android warns about installing from an unknown source, allow APK installation for the app that opened the file. This is normal Android behavior for apps installed outside a store.
+- Create, rename, and delete playlists.
+- Add one or multiple songs to a playlist.
+- Search while selecting songs for a playlist.
+- Use one full-player button to save a track to Favorites or any custom playlist.
+- Remove a song from a playlist through track properties.
+- View the playback queue, start any position, and remove queue items.
+- Add a song to the current queue from its properties.
+- Animated playlist titles and artwork previews with adjustable speed.
+
+### Playback
+
+- Background playback through a foreground service and Android system media controls.
+- Asynchronous track preparation through `MediaPlayer.prepareAsync()`.
+- Play, pause, previous, next, seeking, and position recovery.
+- Repeat off, repeat queue, and repeat one track.
+- Shuffle playback.
+- Protection against rapidly skipping through the whole queue when files are broken or unavailable.
+- Restore the last track, queue, position, and repeat mode.
+- Configurable mini-player state retention time.
+- Always Play mode that does not yield normal audio focus to other apps.
+- Stable Volume Focus mode that prevents focus-driven ducking.
+- Headphone disconnect handling when uninterrupted playback is disabled.
+
+### Mini-player and full player
+
+- Mini-player with title, artist, and play/pause.
+- Open the full player by tapping the mini-player.
+- Dismiss the mini-player with a horizontal swipe, clearing both queue and saved playback state.
+- Full player with high-quality artwork, queue, seek bar, and transport controls.
+- Close the full player with a light downward swipe from any part of the screen.
+- Sleep timer with presets, custom duration, and playback stop.
+- Save the current track to Favorites or a playlist from the full player.
+- Multi-band equalizer.
+- Per-track perceived volume leveling.
+
+### Appearance and navigation
+
+- Light, dark, and custom themes.
+- Pick any custom background and text colors using a full color wheel.
+- Separate gradients for the main interface and full player.
+- Independently select both colors of each gradient.
+- Rounded-square artwork or spinning circular artwork.
+- Synchronize circular artwork with the system media panel.
+- Smooth menu swipes with a live preview of the adjacent screen.
+- Back-stack navigation for the phone's system Back button.
+- Disable animations and particles independently.
+- Purple and yellow triangle/lightning particles, including touch effects.
+- Bounded particle frequency, size, and lifetime controls.
+- Russian and English interface.
+- Theme-aware vector/adaptive launcher icons and dedicated splash resources.
 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="260" alt="Songs screen">
-  <img src="docs/screenshots/player.png" width="260" alt="Full player">
-  <img src="docs/screenshots/settings.png" width="260" alt="Settings screen">
+  <img src="docs/screenshots/en/library.png" width="30%" alt="Song library">
+  <img src="docs/screenshots/en/player.png" width="30%" alt="Full player">
+  <img src="docs/screenshots/en/settings.png" width="30%" alt="Settings">
 </p>
 
-## Features
+## Component interaction
 
-- Import one song, multiple songs, or a full music folder through Android SAF.
-- Persist URI permissions so imported songs remain playable after app and phone restarts.
-- Display title, artist, album, duration, waveform, and embedded album art.
-- Cache album art so lists and the full player do not flicker on repeated renders.
-- Browse songs, favorites, playlists, genres, artists, and albums.
-- Search the library and play the current list in order or shuffle mode.
-- Create playlists, favorite songs, and manage the playback queue.
-- Play in the background through `PlayerService` with a foreground notification.
-- Open a full player with high-quality album art, seek bar, timer, repeat, like, and queue access.
-- Close the full player with a downward swipe from any area of the screen.
-- Show a bottom mini-player and restore its state after reopening the app.
-- Switch between light, dark, and custom themes.
-- Pick custom background and text colors for the custom theme.
-- Switch the UI language between Russian and English.
-- Use vector/adaptive icon resources without PNG launcher assets.
+```mermaid
+flowchart TB
+    A["MainActivity / DarkMainActivity<br/>entry points"] --> B["MainActivityCore<br/>screen composition and coordination"]
+    B --> S["AppState<br/>shared UI state"]
 
-## Current Version Highlights
+    subgraph UI["User interface"]
+        MR["MainRenderer"] --> MENUS["Menu renderers<br/>songs · favorites · playlists<br/>genres · artists · albums · settings"]
+        PU["PlayerUiController"] --> MINI["MiniPlayerController"]
+        PU --> FULL["FullPlayerController"]
+        NAV["TabsController + SwipeController<br/>+ BackNavigationController"]
+        STYLE["ThemeController + UiFactory<br/>gradients · particles · buttons"]
+    end
 
-- Current project version: `2.3` (`versionCode 23`).
-- `MainActivity` has been split into the first dedicated classes: `SongsRenderer`, `PlayerUiController`, `SettingsRenderer`, `TabsController`, `PlaybackController`, `ThemeController`.
-- Generated-looking names such as `AnonymousClass...`, `RunnableC000...`, and `m19$$Nest...` were replaced with readable names.
-- Release builds now use `minifyEnabled true` and `shrinkResources true`.
-- The README was rebuilt and now includes real phone screenshots without the notification bar.
-- APK files are no longer tracked in `output/` as the main distribution path; use Actions/Releases instead.
+    B --> MR
+    B --> PU
+    B --> NAV
+    B --> STYLE
 
-## Project Structure
+    subgraph DATA["Music and data"]
+        IMPORT["AudioImportController"] --> STORE["TrackStore<br/>URI and metadata"]
+        STORE --> DB["LibraryDatabase<br/>SQLite"]
+        DB --> LISTS["Songs · favorites · playlists"]
+        PL["PlaylistController"] --> DB
+        COVERS["CoverLoader"] --> CACHE["Artwork cache"]
+    end
 
-Main package: `app/src/main/java/com/dumuzeyn/mp3player`.
+    B --> IMPORT
+    MR --> LISTS
+    MR --> COVERS
 
-`MainActivity` is still the main screen and UI composition host. It still contains a lot of Android View code, but responsibilities are now being moved into small controller classes. This keeps the app working while reducing the risk of a huge one-shot refactor.
+    subgraph AUDIO["Playback"]
+        PC["PlaybackController"] --> PS["PlayerService"]
+        PS --> MP["MediaPlayer"]
+        PS --> NOTIFY["Foreground notification<br/>and MediaSession"]
+        PS --> FX["Equalizer · volume leveling<br/>audio focus"]
+        TIMER["SleepTimerController"] --> PS
+    end
 
-`SongsRenderer` renders the song list. If you need to change song cards, row buttons, duration display, waveform display, or list behavior, start there; `MainActivity` should remain only the caller.
+    PU --> PC
+    MENUS --> PC
+    PC --> S
+    PS --> S
 
-`PlayerUiController` controls the full player and mini-player. It delegates to `openFullPlayerInternal()` and `updateMiniInternal()`. Full player layout, swipe-down behavior, seek bar, and current-track UI should gradually move here.
+    classDef entry fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
+    classDef data fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
+    classDef audio fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
+    class A,B entry;
+    class IMPORT,STORE,DB,LISTS,PL,COVERS,CACHE data;
+    class PC,PS,MP,NOTIFY,FX,TIMER audio;
+```
 
-`SettingsRenderer` renders the settings screen. Theme switching, language switching, disabled animations, song checks, and destructive library actions belong here.
+`MainActivityCore` builds the shared screen structure and connects specialized components. Renderers read state and database data, while playback commands travel through `PlaybackController` to `PlayerService`. The service owns `MediaPlayer`, updates `MediaSession`, and exposes current playback state to the UI. Import follows a separate path: Android's picker returns a URI to `AudioImportController`, `TrackStore` validates the file and metadata, and `LibraryDatabase` persists the library.
 
-`TabsController` controls top tabs and menu swipe behavior. If you need to change swipe sensitivity, the infinite tab strip, or tab switching, check this class and `buildTabsInternal()`, `tabDirectionToInternal()`, `isInsideTabsInternal()`.
+## File responsibilities
 
-`PlaybackController` connects UI actions to playback commands: play, pause, next, previous. New queue and history commands should go through this controller instead of growing `MainActivity`.
+The main package is `app/src/main/java/com/dumuzeyn/mp3player`.
 
-`ThemeController` wraps theme helper logic. Palette rules and saved theme data are handled by `ThemeManager`; applying the active palette to views still happens mostly in `MainActivity`.
+### Entry points and state
 
-`PlayerService` is the foreground service that performs playback. It owns `MediaPlayer`, audio focus, notification updates, wake lock, `prepareAsync()`, playback errors, and queue advancement. If music does not play, inspect `PlayerService` and the URI passed into it first.
+- `MainActivity.java` — light-system-theme application entry point.
+- `DarkMainActivity.java` — dark-system-theme application entry point.
+- `MainActivityCore.java` — composes the root UI, connects controllers, handles lifecycle, and keeps shared delegates only.
+- `AppState.java` — shared track, queue, tab, search, theme, language, timer, and visual state.
 
-`TrackStore` handles file import, metadata reading, and song persistence. The critical parts are `content://` URIs, `takePersistableUriPermission(...)`, file readability checks, and duration extraction through `MediaMetadataRetriever`.
+### Screens and lists
 
-`LibraryDatabase` stores the song library, favorites, and playlists in SQLite. Lightweight UI settings and resume state remain in `SharedPreferences`.
+- `MainRenderer.java` — selects the active section renderer and coordinates screen refreshes.
+- `MenuRenderer.java` — common menu-renderer contract.
+- `SongsMenuRenderer.java` — loads and displays the complete song library.
+- `FavoritesMenuRenderer.java` — loads and displays favorite songs.
+- `PlaylistsMenuRenderer.java` — displays playlist cards and animated previews.
+- `GenresMenuRenderer.java` — groups the library by genre.
+- `ArtistsMenuRenderer.java` — groups the library by artist.
+- `AlbumsMenuRenderer.java` — groups the library by album.
+- `SettingsMenuRenderer.java` — connects settings to the common menu system.
+- `SongsRenderer.java` — creates song cards, queue rows, waveforms, and chunked list rendering.
+- `TrackGroupMenuRenderer.java` — shared implementation for genre, artist, and album cards.
+- `SettingsRenderer.java` — creates the user-facing settings list.
+- `LibraryListController.java` — filters the library, favorites, and current visible list.
+- `HeaderController.java` — builds the app header and active-section action bar.
 
-`PlaylistManager` contains playlist helpers: lookup, name cleanup, legacy JSON serialization, and migration compatibility.
+### Player
 
-`SongRowStateRegistry` stores row state outside the activity so list rerenders do not lose current progress or recreate unnecessary state.
+- `PlayerUiController.java` — connects mini-player and full player to shared state.
+- `MiniPlayerController.java` — builds and updates the mini-player and handles swipe dismissal.
+- `FullPlayerController.java` — owns the full-player layout, buttons, queue, seek bar, and close gesture.
+- `PlaybackController.java` — builds queues, restores sessions, and sends service commands.
+- `PlayerService.java` — owns `MediaPlayer`, audio focus, wake lock, MediaSession, and notification.
+- `SleepTimerController.java` — starts, displays, and cancels the sleep timer.
+- `EqualizerController.java` — stores equalizer settings and controls its interface.
+- `VolumeLevelingController.java` — enables and displays perceived-volume leveling.
+- `StableVolumeController.java` — manages focus ducking prevention.
+- `UninterruptedPlaybackController.java` — manages uninterrupted playback mode.
+- `SongRowStateRegistry.java` — updates row buttons, markers, waveforms, and covers without a full list render.
+- `WaveformView.java` — draws each song's visual waveform.
+- `RotatingCoverImageView.java` — clips artwork to a circle and rotates it during playback.
+- `PlayerGradientBackground.java` — draws a configurable animated gradient.
 
-`WaveformView` draws the waveform below song titles. `TriangleDecorView` draws the header triangle decoration.
+### Import, library, and playlists
 
-## Adding a Feature
+- `AudioImportController.java` — launches file/folder selection and handles Android SAF results.
+- `TrackStore.java` — validates URIs, reads metadata, and merges recovered track data.
+- `Track.java` — single-song model.
+- `LibraryDatabase.java` — SQLite storage for songs, favorites, playlists, and legacy migration.
+- `Playlist.java` — custom playlist model.
+- `PlaylistManager.java` — playlist-name cleanup and legacy JSON compatibility.
+- `PlaylistController.java` — creates, renames, and deletes playlists and manages their songs.
+- `CoverLoader.java` — asynchronously reads and caches embedded artwork.
+- `FrameLayoutCover.java` — playlist artwork container with smooth image transitions.
+- `SmoothPlaylistTicker.java` — continuously scrolls song titles inside playlist cards.
+- `PlaylistTickerSettingsController.java` — adjusts playlist title speed.
 
-1. Identify the feature area: songs, player, settings, tabs, playback, theme, or storage.
-2. Add new code to the matching controller/manager instead of placing everything directly in `MainActivity`.
-3. If older UI code still lives in `MainActivity`, expose a small `...Internal()` method and call it through a controller.
-4. For songs and playlists, do not add new JSON strings in `SharedPreferences`; use `LibraryDatabase`.
-5. For small UI settings, `SharedPreferences` is fine.
-6. For Android files, use `content://` URIs and persistable permissions. Do not rely on `/storage/...` paths as the main source.
-7. After changes, run `./gradlew clean testDebugUnitTest assembleRelease`.
-8. Test on a phone: single-song import, folder import, playback, full player, mini-player, and theme switching.
+### Navigation, dialogs, and styling
+
+- `TabsController.java` — builds the cyclic tab strip and animates its active indicator.
+- `SwipeController.java` — handles section swipes and adjacent-menu previews.
+- `BackNavigationController.java` — stores tab history and handles the system Back button.
+- `OverlayController.java` — shows search, track properties, queue, and playlist selection.
+- `DialogController.java` — shared safe confirmation dialog.
+- `SettingsController.java` — language, mini-player memory, diagnostics, and user-data cleanup.
+- `ThemeController.java` — applies window themes, custom colors, and launcher aliases.
+- `ThemeManager.java` — calculates readable colors and blends shades.
+- `GradientSettingsController.java` — selects gradient modes and main/full-player colors.
+- `ThemeColorWheelView.java` — draws the complete hue/brightness color picker.
+- `ParticleEffectsView.java` — draws ambient and touch particles.
+- `ParticleSettingsController.java` — controls particle frequency, size, and lifetime.
+- `ButtonFactory.java` — creates consistent buttons and states.
+- `UiFactory.java` — creates shared views, cards, panels, spacing, and shapes.
+- `TriangleDecorView.java` — draws the header triangle decoration.
+
+### Build and verification
+
+- `app/src/main/AndroidManifest.xml` — permissions, activity aliases, and foreground service.
+- `app/build.gradle` — Android configuration, version, signing, and release R8 settings.
+- `app/proguard-rules.pro` — keeps required classes during minification.
+- `.github/workflows/android.yml` — unit tests, release build, and APK artifact upload.
+- `TrackStoreTest.java` — track sorting and migration tests.
+- `PlaylistManagerTest.java` — playlist persistence and name-cleanup tests.
 
 ## Build
 
-Debug build:
+Android SDK and JDK 17 are required.
 
 ```bash
-./gradlew clean assembleDebug
+./gradlew clean testDebugUnitTest assembleRelease
 ```
 
-Release build:
-
-```bash
-./gradlew clean assembleRelease
-```
-
-Release uses R8:
-
-```gradle
-release {
-    minifyEnabled true
-    shrinkResources true
-}
-```
-
-If `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS` are set, Gradle signs release builds with that key. Without them, CI uses the repository debug-like key only for build verification.
+The release APK is written to `app/build/outputs/apk/release/`. APK binaries are not tracked in git; GitHub Actions publishes the current build.
 
 ## Authorship
 
-Project: MP3 Player APK. Author: Rasul / dumuzeyn.
+MP3 Player is created and maintained by Rasul / [dumuzeyn](https://github.com/dumuzeyn).

@@ -22,15 +22,7 @@ final class PlayerUiController {
         fullPlayerController.open();
     }
 
-    void renderFullPlayerSheet() {
-        fullPlayerController.open();
-    }
-
     void updateMini() {
-        miniPlayerController.updateState();
-    }
-
-    void updateMiniState() {
         miniPlayerController.updateState();
     }
 
@@ -39,10 +31,6 @@ final class PlayerUiController {
         if (fullPlayerController.isOpen()) {
             fullPlayerController.refresh();
         }
-    }
-
-    boolean isFullPlayerOpen() {
-        return fullPlayerController.isOpen();
     }
 
     boolean isInsideMiniPlayer(MotionEvent event) {

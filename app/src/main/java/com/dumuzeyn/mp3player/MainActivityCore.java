@@ -3,7 +3,6 @@ package com.dumuzeyn.mp3player;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -296,10 +295,6 @@ class MainActivityCore extends AppState {
         this.headerController.buildAppHeader();
     }
 
-    private void buildTabs() {
-        this.tabsController.buildTabs();
-    }
-
     void refreshTabs() {
         this.tabsController.refreshTabs();
     }
@@ -332,10 +327,6 @@ class MainActivityCore extends AppState {
         this.tabsController.scrollToActive(z, i);
     }
 
-    private int tabDirectionTo(int targetIndex) {
-        return this.tabsController.directionTo(targetIndex);
-    }
-
     private void buildMiniPlayer() {
         this.playerUiController.buildMini();
     }
@@ -353,10 +344,6 @@ class MainActivityCore extends AppState {
     }
 
     void renderSettings() {
-        this.settingsRenderer.render();
-    }
-
-    void renderSettingsInternal() {
         this.settingsRenderer.render();
     }
 
@@ -378,14 +365,6 @@ class MainActivityCore extends AppState {
         return this.libraryListController.currentVisibleTracks();
     }
 
-    private ArrayList<Track> favoriteTracks() {
-        return this.libraryListController.favoriteTracks();
-    }
-
-    private ArrayList<Track> filter(ArrayList<Track> arrayList) {
-        return this.libraryListController.filter(arrayList);
-    }
-
     boolean matchesTrackSearch(Track track, String query) {
         return this.libraryListController.matchesTrackSearch(track, query);
     }
@@ -396,18 +375,6 @@ class MainActivityCore extends AppState {
 
     void renderSongs(ArrayList<Track> arrayList) {
         this.songsRenderer.render(arrayList);
-    }
-
-    void renderSongsInternal(ArrayList<Track> arrayList) {
-        this.songsRenderer.renderSongsState(arrayList);
-    }
-
-    private ArrayList<Track> playlistTracks(Playlist playlist) {
-        return this.playlistController.playlistTracks(playlist);
-    }
-
-    private boolean playlistContainsSearch(Playlist playlist, String query) {
-        return this.playlistController.playlistContainsSearch(playlist, query);
     }
 
     void openGroupSongs(String title, ArrayList<Track> tracks) {
@@ -458,10 +425,6 @@ class MainActivityCore extends AppState {
         this.playerUiController.openFullPlayer();
     }
 
-    void renderFullPlayerSheet() {
-        this.playerUiController.renderFullPlayerSheet();
-    }
-
     String loopLabel() {
         return this.playbackController.loopLabel();
     }
@@ -506,18 +469,6 @@ class MainActivityCore extends AppState {
         PlayerService.refreshAppearance();
     }
 
-    void customTimerDialog() {
-        this.sleepTimerController.openCustomDialog();
-    }
-
-    void startSleepTimer(int i) {
-        this.sleepTimerController.start(i);
-    }
-
-    void cancelSleepTimer() {
-        this.sleepTimerController.cancel();
-    }
-
     String timerButtonText() {
         return this.sleepTimerController.buttonText();
     }
@@ -526,15 +477,7 @@ class MainActivityCore extends AppState {
         this.playbackController.playTrack(track);
     }
 
-    void playTrackInternal(Track track) {
-        this.playbackController.playTrack(track);
-    }
-
     void playTrack(Track track, boolean z) {
-        this.playbackController.playTrack(track, z);
-    }
-
-    void playTrackInternal(Track track, boolean z) {
         this.playbackController.playTrack(track, z);
     }
 
@@ -546,20 +489,8 @@ class MainActivityCore extends AppState {
         this.playbackController.toggleCurrent();
     }
 
-    void toggleCurrentInternal() {
-        this.playbackController.toggleCurrent();
-    }
-
-    private void next() {
-        this.playbackController.next();
-    }
-
     void nextInternal() {
         this.playbackController.next();
-    }
-
-    private void previous() {
-        this.playbackController.previous();
     }
 
     void previousInternal() {
@@ -608,10 +539,6 @@ class MainActivityCore extends AppState {
 
     void updateMini() {
         this.playerUiController.updateMini();
-    }
-
-    void updateMiniInternal() {
-        this.playerUiController.updateMiniState();
     }
 
     void toggleFavorite(Track track) {
@@ -710,24 +637,12 @@ class MainActivityCore extends AppState {
         return this.uiFactory.shuffleButton();
     }
 
-    private Button searchButton() {
-        return this.uiFactory.searchButton();
-    }
-
-    private void applyButtonColors(Button button, int background, int foreground) {
-        this.uiFactory.applyButtonColors(button, background, foreground);
-    }
-
     void applyPlainIconStyle(Button button) {
         this.uiFactory.applyPlainIconStyle(button, this.dark ? Color.rgb(230, 226, 236) : this.primaryText);
     }
 
     void applyPlainIconStyle(Button button, int color) {
         this.uiFactory.applyPlainIconStyle(button, color);
-    }
-
-    private GradientDrawable createCardBackground() {
-        return this.uiFactory.cardBackground();
     }
 
     void applyCardStyle(View view) {
@@ -748,10 +663,6 @@ class MainActivityCore extends AppState {
 
     void applySeekBarColors(SeekBar seekBar) {
         this.uiFactory.applySeekBarColors(seekBar);
-    }
-
-    private TriangleDecorView createTriangleArtwork(int mode) {
-        return this.uiFactory.triangleArtwork(mode);
     }
 
     LinearLayout.LayoutParams square(int size) {
