@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -13,6 +14,12 @@ import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -877,15 +884,35 @@ public class PlayerService extends Service {
         }
     }
 
+    public static void refreshAppearance() {
+        if (instance != null && instance.player != null) {
+            instance.startForeground(NOTIFICATION_ID, instance.buildNotification());
+        }
+    }
+
     private Notification buildNotification() {
         Track track = (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) ? this.queue.get(this.currentIndex) : new Track("", "MP3 Player", "Музыка готова");
         SharedPreferences uiPrefs = getSharedPreferences("mp3_player_ui", 0);
         String theme = uiPrefs.getString("theme", "light");
-        Class<?> launchClass = "dark".equals(theme) ? DarkMainActivity.class : MainActivity.class;
-        PendingIntent activity = PendingIntent.getActivity(this, 1, new Intent(this, launchClass), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        int customBackground = uiPrefs.getInt("customBg", 0xffffffff);
+        boolean darkTheme = "dark".equals(theme)
+                || ("custom".equals(theme) && ThemeManager.isDarkColor(customBackground));
+        boolean circularCover = uiPrefs.getBoolean("circularCovers", false);
+        int accentColor = "custom".equals(theme)
+                ? uiPrefs.getInt("customFg", 0xff7c32e8)
+                : darkTheme ? 0xffa35cff : 0xff7c32e8;
+        ComponentName launcher = new ComponentName(this,
+                getPackageName() + (darkTheme ? ".LauncherDark" : ".LauncherLight"));
+        Intent launchIntent = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setComponent(launcher);
+        PendingIntent activity = PendingIntent.getActivity(this, 1, launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
         int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        Bitmap cover = coverFor(track);
+        Bitmap rawCover = coverFor(track);
+        Bitmap cover = circularCover ? circularBitmap(rawCover) : rawCover;
+        Bitmap themedIcon = themedAppIcon(darkTheme);
         builder.setSmallIcon(getResources().getIdentifier("ic_notification_music", "drawable", getPackageName()))
                 .setContentTitle(track.title)
                 .setContentText(track.artist)
@@ -895,15 +922,20 @@ public class PlayerService extends Service {
                 .setCategory(Notification.CATEGORY_TRANSPORT)
                 .setPriority(Notification.PRIORITY_LOW)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setColor(accentColor)
                 .addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2))
                 .addAction(playPauseIcon, safeIsPlaying() ? "Пауза" : "Играть", serviceIntent(ACTION_TOGGLE, 3))
                 .addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
-        updateMediaSession(track, cover);
+        if (Build.VERSION.SDK_INT >= 26) {
+            builder.setColorized(true);
+        }
+        this.mediaSession.setSessionActivity(activity);
+        updateMediaSession(track, cover, themedIcon);
         builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         return builder.build();
     }
 
-    private void updateMediaSession(Track track, Bitmap cover) {
+    private void updateMediaSession(Track track, Bitmap cover, Bitmap themedIcon) {
         long currentPosition = safePosition();
         long duration = safeDuration();
         int state = safeIsPlaying() ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
@@ -915,6 +947,9 @@ public class PlayerService extends Service {
         if (cover != null) {
             metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, cover);
             metadata.putBitmap(MediaMetadata.METADATA_KEY_ART, cover);
+        }
+        if (themedIcon != null) {
+            metadata.putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, themedIcon);
         }
         this.mediaSession.setMetadata(metadata.build());
         this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP).setState(state, currentPosition, 1.0f).build());
@@ -957,6 +992,41 @@ public class PlayerService extends Service {
                 retriever.release();
             } catch (Exception ignored) {
             }
+        }
+    }
+
+    private Bitmap circularBitmap(Bitmap source) {
+        if (source == null || source.isRecycled()) {
+            return source;
+        }
+        int size = Math.max(1, Math.min(source.getWidth(), source.getHeight()));
+        Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        BitmapShader shader = new BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+        float scale = Math.max((float) size / source.getWidth(), (float) size / source.getHeight());
+        Matrix matrix = new Matrix();
+        matrix.setScale(scale, scale);
+        matrix.postTranslate((size - source.getWidth() * scale) * 0.5f,
+                (size - source.getHeight() * scale) * 0.5f);
+        shader.setLocalMatrix(matrix);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        paint.setShader(shader);
+        canvas.drawCircle(size * 0.5f, size * 0.5f, size * 0.5f, paint);
+        return output;
+    }
+
+    private Bitmap themedAppIcon(boolean darkTheme) {
+        try {
+            Drawable drawable = getResources().getDrawable(
+                    darkTheme ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
+            int size = 128;
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.setBounds(0, 0, size, size);
+            drawable.draw(canvas);
+            return bitmap;
+        } catch (RuntimeException error) {
+            return null;
         }
     }
 

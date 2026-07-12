@@ -35,6 +35,14 @@ class MainActivityCore extends AppState {
     private static final String PARTICLE_SIZE = "particleSize";
     private static final String PARTICLE_LIFETIME = "particleLifetime";
     private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
+    private static final String PARTICLES_ENABLED = "particlesEnabled";
+    private static final String PLAYER_GRADIENT = "playerGradient";
+    private static final String CIRCULAR_COVERS = "circularCovers";
+    private static final String MAIN_GRADIENT = "mainGradient";
+    private static final String MAIN_GRADIENT_START = "mainGradientStart";
+    private static final String MAIN_GRADIENT_END = "mainGradientEnd";
+    private static final String PLAYER_GRADIENT_START = "playerGradientStart";
+    private static final String PLAYER_GRADIENT_END = "playerGradientEnd";
     static final int TAB_CYCLES = 21;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
@@ -95,6 +103,7 @@ class MainActivityCore extends AppState {
     final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
     final StableVolumeController stableVolumeController = new StableVolumeController(this);
     final PlaylistTickerSettingsController playlistTickerSettingsController = new PlaylistTickerSettingsController(this);
+    final GradientSettingsController gradientSettingsController = new GradientSettingsController(this);
     final LibraryListController libraryListController = new LibraryListController(this);
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
@@ -120,6 +129,14 @@ class MainActivityCore extends AppState {
         this.particleSize = clamp(this.prefs.getInt(PARTICLE_SIZE, 100), 60, 150);
         this.particleLifetime = clamp(this.prefs.getInt(PARTICLE_LIFETIME, 100), 50, 180);
         this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
+        this.particlesEnabled = this.prefs.getBoolean(PARTICLES_ENABLED, true);
+        this.gradientPlayerBackground = this.prefs.getBoolean(PLAYER_GRADIENT, true);
+        this.circularCovers = this.prefs.getBoolean(CIRCULAR_COVERS, false);
+        this.gradientMainBackground = this.prefs.getBoolean(MAIN_GRADIENT, false);
+        this.mainGradientStart = this.prefs.getInt(MAIN_GRADIENT_START, 0xff351b5d);
+        this.mainGradientEnd = this.prefs.getInt(MAIN_GRADIENT_END, 0xff3a3013);
+        this.playerGradientStart = this.prefs.getInt(PLAYER_GRADIENT_START, 0xff351b5d);
+        this.playerGradientEnd = this.prefs.getInt(PLAYER_GRADIENT_END, 0xff3a3013);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
         }
@@ -183,7 +200,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -240,6 +257,10 @@ class MainActivityCore extends AppState {
         refreshTabLabels();
         this.root = new FrameLayout(this);
         this.root.setBackgroundColor(this.bg);
+        if (this.gradientMainBackground) {
+            this.root.addView(new PlayerGradientBackground(this, this.mainGradientStart, this.mainGradientEnd),
+                    new FrameLayout.LayoutParams(-1, -1));
+        }
         this.page = new LinearLayout(this);
         this.page.setOrientation(1);
         this.page.setPadding(dp(8), dp(14), dp(8), dp(8));
@@ -481,6 +502,10 @@ class MainActivityCore extends AppState {
         }
     }
 
+    void refreshPlaybackAppearance() {
+        PlayerService.refreshAppearance();
+    }
+
     void customTimerDialog() {
         this.sleepTimerController.openCustomDialog();
     }
@@ -616,11 +641,23 @@ class MainActivityCore extends AppState {
     }
 
     void loadCover(ImageView view, Track track, int fallbackColor) {
+        registerCoverState(view, track);
         this.coverLoader.load(view, track, fallbackColor);
     }
 
     void loadCover(ImageView view, Track track, int fallbackColor, int maxSize) {
+        registerCoverState(view, track);
         this.coverLoader.load(view, track, fallbackColor, maxSize);
+    }
+
+    private void registerCoverState(ImageView view, Track track) {
+        if (view instanceof RotatingCoverImageView) {
+            RotatingCoverImageView cover = (RotatingCoverImageView) view;
+            cover.bindTrack(track);
+            if (!this.renderingTabPreview && track != null) {
+                this.songRows.registerCover(track.uri, cover);
+            }
+        }
     }
 
     void seedCoverCacheFromView(ImageView view, Track track) {

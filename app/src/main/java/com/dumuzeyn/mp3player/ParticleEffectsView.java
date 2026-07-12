@@ -32,7 +32,7 @@ final class ParticleEffectsView extends View {
             if (!attached || !windowVisible) {
                 return;
             }
-            if (host.animations && getWidth() > 0 && getHeight() > 0) {
+            if (host.particlesEnabled && getWidth() > 0 && getHeight() > 0) {
                 addParticle(random.nextFloat() * getWidth(), random.nextFloat() * getHeight(), false);
             }
             postDelayed(this, ambientDelayMs());
@@ -50,7 +50,7 @@ final class ParticleEffectsView extends View {
     }
 
     void observeTouch(MotionEvent event) {
-        if (!host.animations || getVisibility() != VISIBLE) {
+        if (!host.particlesEnabled || getVisibility() != VISIBLE) {
             return;
         }
         int action = event.getActionMasked();
@@ -112,7 +112,7 @@ final class ParticleEffectsView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (!host.animations) {
+        if (!host.particlesEnabled) {
             particles.clear();
             return;
         }
@@ -146,9 +146,9 @@ final class ParticleEffectsView extends View {
 
     private void updateEmitter() {
         removeCallbacks(ambientEmitter);
-        if (attached && windowVisible) {
+        if (attached && windowVisible && host.particlesEnabled) {
             postDelayed(ambientEmitter, 350L);
-        } else if (!windowVisible) {
+        } else {
             particles.clear();
         }
     }

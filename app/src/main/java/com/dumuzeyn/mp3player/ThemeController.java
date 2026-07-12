@@ -203,6 +203,7 @@ final class ThemeController {
         host.themeMode = mode;
         host.dark = isDarkTheme(mode, host.customBg);
         host.saveState();
+        host.refreshPlaybackAppearance();
         if (host.overlayHost != null) {
             host.overlayHost.removeAllViews();
         }

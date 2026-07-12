@@ -77,11 +77,10 @@ final class ButtonFactory {
     void applyPlayerTool(Button button, boolean active) {
         button.setSingleLine(true);
         button.setTextSize(13.0f);
-        if (active) {
-            applyPrimary(button);
-        } else {
-            applySecondary(button);
-        }
+        button.setTextColor(active ? host.yellow : host.primaryText);
+        GradientDrawable drawable = background(Color.TRANSPARENT, false);
+        drawable.setStroke(host.dp(1), active ? host.purple : host.cardStroke);
+        button.setBackground(drawable);
     }
 
     private GradientDrawable background(int color, boolean outlined) {

@@ -49,7 +49,10 @@ final class FullPlayerController {
         FrameLayout sheet = createSheet();
         this.currentSheet = sheet;
         sheet.setBackgroundColor(host.bg);
-        sheet.addView(new PlayerGradientBackground(host), new FrameLayout.LayoutParams(-1, -1));
+        if (host.gradientPlayerBackground) {
+            sheet.addView(new PlayerGradientBackground(host, host.playerGradientStart, host.playerGradientEnd),
+                    new FrameLayout.LayoutParams(-1, -1));
+        }
 
         LinearLayout content = new LinearLayout(host);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -202,7 +205,6 @@ final class FullPlayerController {
         LinearLayout row = host.row();
         Button timer = host.button(host.timerButtonText());
         this.timerButton = timer;
-        styleTimerButton(timer);
         host.applyPlayerToolStyle(timer, host.sleepTimerEndsAt > 0);
         timer.setSingleLine(true);
         timer.setOnClickListener(view -> host.timerDialog());
@@ -361,7 +363,6 @@ final class FullPlayerController {
         }
         if (this.timerButton != null) {
             this.timerButton.setText(host.timerButtonText());
-            styleTimerButton(this.timerButton);
             host.applyPlayerToolStyle(this.timerButton, host.sleepTimerEndsAt > 0);
         }
         if (this.likeButton != null) {
@@ -376,10 +377,6 @@ final class FullPlayerController {
         if (this.playButton != null) {
             this.playButton.setText(host.playing ? "Ⅱ" : "▶");
         }
-    }
-
-    private void styleTimerButton(Button button) {
-        button.setTextSize(host.sleepTimerEndsAt > 0 ? 18.0f : 14.0f);
     }
 
     private void styleRepeatButton(Button button) {
@@ -437,7 +434,6 @@ final class FullPlayerController {
             remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
             if (timerButton != null) {
                 timerButton.setText(host.timerButtonText());
-                styleTimerButton(timerButton);
             }
             handler.postDelayed(this, 250L);
         }

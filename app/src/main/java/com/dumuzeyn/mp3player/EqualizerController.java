@@ -25,7 +25,7 @@ final class EqualizerController {
     }
 
     Button createPlayerButton() {
-        Button button = host.button(host.tr("Equalizer", "Эквалайзер"));
+        Button button = host.button(host.tr("Equalizer ≋", "Эквалайзер ≋"));
         button.setSingleLine(true);
         button.setTextSize(14.0f);
         button.setOnClickListener(view -> openDialog());

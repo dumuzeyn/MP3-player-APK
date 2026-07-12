@@ -17,8 +17,16 @@ final class SettingsRenderer {
         addButton(host.tr("Theme: ", "Тема: ") + host.themeName(), view -> host.openThemeDialog());
         addButton(host.tr(host.animations ? "Turn animations off" : "Turn animations on",
                 host.animations ? "Отключить анимации" : "Включить анимации"), view -> toggleAnimations());
+        addButton(host.tr(host.particlesEnabled ? "Turn particles off" : "Turn particles on",
+                host.particlesEnabled ? "Отключить частицы" : "Включить частицы"), view -> toggleParticles());
         addButton(host.tr("Particle effects", "Эффекты частиц"),
                 view -> host.particleSettingsController.openDialog());
+        addButton(host.tr("Gradient backgrounds", "Градиентные фоны"),
+                view -> host.gradientSettingsController.openDialog());
+        addButton(host.tr("Cover style: ", "Стиль обложек: ")
+                        + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
+                        host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),
+                view -> toggleCoverStyle());
         addButton(host.playlistTickerSettingsController.settingLabel(),
                 view -> host.playlistTickerSettingsController.openDialog());
         addButton(host.uninterruptedPlaybackController.settingLabel(),
@@ -48,6 +56,20 @@ final class SettingsRenderer {
         }
         host.saveState();
         host.render();
+    }
+
+    private void toggleParticles() {
+        host.particlesEnabled = !host.particlesEnabled;
+        host.saveState();
+        host.refreshParticleSettings();
+        host.render();
+    }
+
+    private void toggleCoverStyle() {
+        host.circularCovers = !host.circularCovers;
+        host.saveState();
+        host.refreshPlaybackAppearance();
+        host.rebuildUi();
     }
 
     private void addButton(String label, View.OnClickListener listener) {

@@ -25,6 +25,14 @@ abstract class AppState extends Activity {
     long sleepTimerEndsAt = 0L;
     boolean dark = false;
     boolean animations = true;
+    boolean particlesEnabled = true;
+    boolean gradientPlayerBackground = true;
+    boolean gradientMainBackground = false;
+    boolean circularCovers = false;
+    int mainGradientStart = 0xff351b5d;
+    int mainGradientEnd = 0xff3a3013;
+    int playerGradientStart = 0xff351b5d;
+    int playerGradientEnd = 0xff3a3013;
     boolean shuffleMode = false;
     String language = "en";
     String themeMode = "light";

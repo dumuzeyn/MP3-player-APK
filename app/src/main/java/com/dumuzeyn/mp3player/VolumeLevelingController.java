@@ -36,9 +36,9 @@ final class VolumeLevelingController {
 
     private String buttonText() {
         if (enabled()) {
-            return host.tr("Level volume: on", "Единая громкость: вкл");
+            return host.tr("Level volume ●", "Единая громкость ●");
         }
-        return host.tr("Level volume: off", "Единая громкость: выкл");
+        return host.tr("Level volume ○", "Единая громкость ○");
     }
 
     private void refreshButton() {

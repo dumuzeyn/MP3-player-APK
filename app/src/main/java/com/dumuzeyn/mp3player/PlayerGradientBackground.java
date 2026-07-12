@@ -10,10 +10,14 @@ import android.view.View;
 final class PlayerGradientBackground extends View {
     private final MainActivityCore host;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final int startColor;
+    private final int endColor;
 
-    PlayerGradientBackground(MainActivityCore host) {
+    PlayerGradientBackground(MainActivityCore host, int startColor, int endColor) {
         super(host);
         this.host = host;
+        this.startColor = startColor;
+        this.endColor = endColor;
     }
 
     @Override
@@ -28,8 +32,8 @@ final class PlayerGradientBackground extends View {
         float radius = Math.max(getWidth(), getHeight()) * 0.72f;
         float dx = (float) Math.cos(angle) * radius;
         float dy = (float) Math.sin(angle) * radius;
-        int purpleTint = blend(host.bg, host.purpleDark, host.dark ? 0.34f : 0.18f);
-        int yellowTint = blend(host.bg, host.yellowDark, host.dark ? 0.13f : 0.08f);
+        int purpleTint = blend(host.bg, this.startColor, host.dark ? 0.82f : 0.38f);
+        int yellowTint = blend(host.bg, this.endColor, host.dark ? 0.72f : 0.30f);
         paint.setShader(new LinearGradient(centerX - dx, centerY - dy, centerX + dx, centerY + dy,
                 new int[]{host.bg, purpleTint, yellowTint, host.bg},
                 new float[]{0.0f, 0.38f, 0.68f, 1.0f}, Shader.TileMode.CLAMP));

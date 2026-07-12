@@ -4,6 +4,7 @@ import android.view.View;
 import android.widget.Button;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
 
 final class SongRowStateRegistry {
     interface StateResolver {
@@ -17,11 +18,13 @@ final class SongRowStateRegistry {
     private final HashMap<String, Button> playButtons = new HashMap<>();
     private final HashMap<String, View> currentMarkers = new HashMap<>();
     private final HashMap<String, WaveformView> waveforms = new HashMap<>();
+    private final HashMap<String, ArrayList<RotatingCoverImageView>> covers = new HashMap<>();
 
     void clear() {
         playButtons.clear();
         currentMarkers.clear();
         waveforms.clear();
+        covers.clear();
     }
 
     void registerPlayButton(String uri, Button button) {
@@ -34,6 +37,17 @@ final class SongRowStateRegistry {
 
     void registerWaveform(String uri, WaveformView waveform) {
         waveforms.put(uri, waveform);
+    }
+
+    void registerCover(String uri, RotatingCoverImageView cover) {
+        ArrayList<RotatingCoverImageView> registered = covers.get(uri);
+        if (registered == null) {
+            registered = new ArrayList<>();
+            covers.put(uri, registered);
+        }
+        if (!registered.contains(cover)) {
+            registered.add(cover);
+        }
     }
 
     void refresh(StateResolver resolver) {
@@ -50,6 +64,11 @@ final class SongRowStateRegistry {
             Track track = resolver.findTrack(entry.getKey());
             boolean current = track != null && resolver.isCurrent(track);
             entry.getValue().setState(current ? resolver.activeColor() : resolver.inactiveColor(), current && resolver.isPlaying());
+        }
+        for (ArrayList<RotatingCoverImageView> registered : covers.values()) {
+            for (RotatingCoverImageView cover : registered) {
+                cover.updatePlaybackState();
+            }
         }
     }
 }

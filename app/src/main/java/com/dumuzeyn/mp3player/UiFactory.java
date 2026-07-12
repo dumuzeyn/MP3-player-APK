@@ -2,13 +2,11 @@ package com.dumuzeyn.mp3player;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Outline;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.text.TextUtils;
 import android.view.View;
-import android.view.ViewOutlineProvider;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -142,16 +140,8 @@ final class UiFactory {
     }
 
     ImageView coverView() {
-        ImageView cover = new ImageView(host);
-        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        ImageView cover = new RotatingCoverImageView(host);
         cover.setBackgroundColor(Color.TRANSPARENT);
-        cover.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), host.dp(8));
-            }
-        });
-        cover.setClipToOutline(true);
         return cover;
     }
 
