@@ -15,6 +15,16 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         this.host = host;
     }
 
+    void loadPlaylists() {
+        LibraryDatabase database = new LibraryDatabase(host);
+        try {
+            host.playlists.clear();
+            host.playlists.addAll(database.loadPlaylists());
+        } finally {
+            database.close();
+        }
+    }
+
     @Override
     public boolean needsMiniSpacer() {
         return true;
@@ -22,19 +32,19 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
 
     @Override
     public void render() {
-        ArrayList<MainActivityCore.Playlist> playlists = host.playlistController.filteredPlaylists(host.search);
+        ArrayList<Playlist> playlists = host.playlistController.filteredPlaylists(host.search);
         if (playlists.isEmpty()) {
             TextView empty = host.text(host.tr3("No playlists yet", "Плейлистов пока нет", "∅ ▤"), 18, true);
             empty.setPadding(host.dp(12), host.dp(24), host.dp(12), host.dp(24));
             host.list.addView(empty);
             return;
         }
-        for (MainActivityCore.Playlist playlist : playlists) {
+        for (Playlist playlist : playlists) {
             host.list.addView(host.spaced(playlistCard(playlist)));
         }
     }
 
-    private View playlistCard(final MainActivityCore.Playlist playlist) {
+    private View playlistCard(final Playlist playlist) {
         final ArrayList<Track> tracks = host.playlistController.sortedPlaylistTracks(playlist);
         LinearLayout card = new LinearLayout(host);
         card.setOrientation(LinearLayout.VERTICAL);

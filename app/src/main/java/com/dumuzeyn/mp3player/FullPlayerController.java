@@ -279,7 +279,25 @@ final class FullPlayerController {
     }
 
     private void close(FrameLayout sheet, boolean animate) {
-        host.closeFullPlayer(sheet, animate);
+        if (sheet == null || sheet.getParent() == null) {
+            host.updateMini();
+        } else if (animate && host.animations) {
+            sheet.animate()
+                    .translationY(host.getResources().getDisplayMetrics().heightPixels)
+                    .alpha(0.0f)
+                    .setDuration(135L)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .withEndAction(() -> {
+                        if (sheet.getParent() != null) {
+                            host.overlayHost.removeView(sheet);
+                        }
+                        host.updateMini();
+                    })
+                    .start();
+        } else {
+            host.overlayHost.removeView(sheet);
+            host.updateMini();
+        }
         if (sheet == this.currentSheet) {
             this.currentSheet = null;
             this.boundTrack = null;

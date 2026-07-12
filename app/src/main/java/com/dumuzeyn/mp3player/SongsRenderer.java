@@ -1,5 +1,6 @@
 package com.dumuzeyn.mp3player;
 
+import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -7,12 +8,109 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.ArrayList;
+import org.json.JSONArray;
 
 final class SongsRenderer {
     private final MainActivityCore host;
 
     SongsRenderer(MainActivityCore host) {
         this.host = host;
+    }
+
+    void restoreRecentPlayback() {
+        if (host.resumeWindowMinutes <= 0) {
+            return;
+        }
+        SharedPreferences prefs = host.getSharedPreferences(PlayerService.RESUME_PREFS, 0);
+        long savedAt = prefs.getLong(PlayerService.RESUME_SAVED_AT, 0L);
+        long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
+        if (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow) {
+            return;
+        }
+        String uri = prefs.getString(PlayerService.RESUME_URI, "");
+        Track track = host.findTrack(uri);
+        if (track == null) {
+            return;
+        }
+        host.currentIndex = host.tracks.indexOf(track);
+        host.playing = false;
+        host.resumePosition = Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
+        PlayerService.lastIndex = host.currentIndex;
+        PlayerService.lastPlaying = false;
+        PlayerService.lastPosition = host.resumePosition;
+        PlayerService.lastDuration = Math.max(0, prefs.getInt(PlayerService.RESUME_DURATION, 0));
+        if (PlayerService.lastDuration <= 0 && track.durationMs > 0) {
+            PlayerService.lastDuration = track.durationMs;
+        }
+        PlayerService.lastUri = uri;
+        PlayerService.lastLoopMode = prefs.getInt(PlayerService.RESUME_LOOP_MODE, 0);
+        host.loopMode = PlayerService.lastLoopMode;
+        host.playbackQueue.clear();
+        try {
+            JSONArray queue = new JSONArray(prefs.getString(PlayerService.RESUME_QUEUE, "[]"));
+            for (int i = 0; i < queue.length(); i++) {
+                Track queueTrack = host.findTrack(queue.optString(i, ""));
+                if (queueTrack != null) {
+                    host.playbackQueue.add(queueTrack);
+                }
+            }
+        } catch (Exception ignored) {
+            // A malformed saved queue must not prevent the current track from restoring.
+        }
+        if (host.playbackQueue.isEmpty()) {
+            host.playbackQueue.add(track);
+        }
+    }
+
+    void refreshMissingMetadataAsync() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final ArrayList<Track> refreshed = new ArrayList<>(host.tracks);
+                boolean changed = false;
+                for (int i = 0; i < refreshed.size(); i++) {
+                    Track track = refreshed.get(i);
+                    if (!needsMetadataRefresh(track)) {
+                        continue;
+                    }
+                    Track updated = TrackStore.refreshMetadata(host, track);
+                    if (metadataChanged(track, updated)) {
+                        refreshed.set(i, updated);
+                        changed = true;
+                    }
+                }
+                if (!changed) {
+                    return;
+                }
+                TrackStore.save(host, refreshed);
+                host.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        host.tracks.clear();
+                        host.tracks.addAll(refreshed);
+                        host.render();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private boolean needsMetadataRefresh(Track track) {
+        return track.durationMs <= 0
+                || track.artist == null || track.artist.trim().isEmpty()
+                || track.album == null || track.album.trim().isEmpty()
+                || track.genre == null || track.genre.trim().isEmpty();
+    }
+
+    private boolean metadataChanged(Track before, Track after) {
+        return before.durationMs != after.durationMs
+                || !safeEquals(before.artist, after.artist)
+                || !safeEquals(before.album, after.album)
+                || !safeEquals(before.genre, after.genre);
+    }
+
+    private boolean safeEquals(String left, String right) {
+        return left == null ? right == null : left.equals(right);
     }
 
     void render(ArrayList<Track> tracks) {

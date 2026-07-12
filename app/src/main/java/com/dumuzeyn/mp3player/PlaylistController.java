@@ -12,10 +12,10 @@ final class PlaylistController {
         this.host = host;
     }
 
-    ArrayList<MainActivityCore.Playlist> filteredPlaylists(String query) {
-        ArrayList<MainActivityCore.Playlist> result = new ArrayList<>();
+    ArrayList<Playlist> filteredPlaylists(String query) {
+        ArrayList<Playlist> result = new ArrayList<>();
         String normalized = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        for (MainActivityCore.Playlist playlist : host.playlists) {
+        for (Playlist playlist : host.playlists) {
             if (normalized.isEmpty()
                     || host.containsSearch(playlist.name, normalized)
                     || playlistContainsSearch(playlist, normalized)) {
@@ -25,7 +25,7 @@ final class PlaylistController {
         return result;
     }
 
-    ArrayList<Track> playlistTracks(MainActivityCore.Playlist playlist) {
+    ArrayList<Track> playlistTracks(Playlist playlist) {
         ArrayList<Track> result = new ArrayList<>();
         for (String uri : playlist.uris) {
             Track track = host.findTrack(uri);
@@ -36,7 +36,7 @@ final class PlaylistController {
         return result;
     }
 
-    ArrayList<Track> sortedPlaylistTracks(MainActivityCore.Playlist playlist) {
+    ArrayList<Track> sortedPlaylistTracks(Playlist playlist) {
         ArrayList<Track> result = playlistTracks(playlist);
         Collections.sort(result, new Comparator<Track>() {
             @Override
@@ -74,7 +74,7 @@ final class PlaylistController {
         }, 14500L);
     }
 
-    boolean playlistContainsSearch(MainActivityCore.Playlist playlist, String query) {
+    boolean playlistContainsSearch(Playlist playlist, String query) {
         for (Track track : playlistTracks(playlist)) {
             if (host.matchesTrackSearch(track, query)) {
                 return true;
@@ -83,7 +83,7 @@ final class PlaylistController {
         return false;
     }
 
-    void addTracksToPlaylist(MainActivityCore.Playlist playlist, Set<String> uris) {
+    void addTracksToPlaylist(Playlist playlist, Set<String> uris) {
         for (String uri : uris) {
             if (!playlist.uris.contains(uri)) {
                 playlist.uris.add(uri);
@@ -92,23 +92,23 @@ final class PlaylistController {
         host.saveState();
     }
 
-    void addTrackToPlaylist(MainActivityCore.Playlist playlist, Track track) {
+    void addTrackToPlaylist(Playlist playlist, Track track) {
         if (!playlist.uris.contains(track.uri)) {
             playlist.uris.add(track.uri);
         }
         host.saveState();
     }
 
-    MainActivityCore.Playlist createPlaylist(String rawName) {
+    Playlist createPlaylist(String rawName) {
         String name = cleanPlaylistName(rawName);
-        MainActivityCore.Playlist playlist = new MainActivityCore.Playlist(name);
+        Playlist playlist = new Playlist(name);
         host.playlists.add(playlist);
         host.saveState();
         return playlist;
     }
 
-    MainActivityCore.Playlist createPlaylistWithTrack(String rawName, Track track) {
-        MainActivityCore.Playlist playlist = createPlaylist(rawName);
+    Playlist createPlaylistWithTrack(String rawName, Track track) {
+        Playlist playlist = createPlaylist(rawName);
         if (!playlist.uris.contains(track.uri)) {
             playlist.uris.add(track.uri);
             host.saveState();
@@ -116,18 +116,18 @@ final class PlaylistController {
         return playlist;
     }
 
-    void renamePlaylist(MainActivityCore.Playlist playlist, String rawName) {
+    void renamePlaylist(Playlist playlist, String rawName) {
         playlist.name = cleanPlaylistName(rawName);
         host.saveState();
     }
 
-    void deletePlaylist(MainActivityCore.Playlist playlist) {
+    void deletePlaylist(Playlist playlist) {
         host.playlists.remove(playlist);
         host.saveState();
     }
 
     void removeTrackFromAllPlaylists(Track track) {
-        for (MainActivityCore.Playlist playlist : host.playlists) {
+        for (Playlist playlist : host.playlists) {
             playlist.uris.remove(track.uri);
         }
         host.saveState();

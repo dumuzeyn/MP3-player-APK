@@ -15,13 +15,13 @@ public class PlaylistManagerTest {
 
     @Test
     public void playlistsRoundTripThroughJson() {
-        ArrayList<MainActivity.Playlist> playlists = new ArrayList<>();
-        MainActivity.Playlist playlist = new MainActivity.Playlist("Road");
+        ArrayList<Playlist> playlists = new ArrayList<>();
+        Playlist playlist = new Playlist("Road");
         playlist.uris.add("content://one");
         playlist.uris.add("content://two");
         playlists.add(playlist);
 
-        ArrayList<MainActivity.Playlist> restored = PlaylistManager.fromJson(PlaylistManager.toJson(playlists));
+        ArrayList<Playlist> restored = PlaylistManager.fromJson(PlaylistManager.toJson(playlists));
 
         assertEquals(1, restored.size());
         assertEquals("Road", restored.get(0).name);
@@ -31,7 +31,7 @@ public class PlaylistManagerTest {
 
     @Test
     public void fromJsonReturnsEmptyListForInvalidData() {
-        ArrayList<MainActivity.Playlist> restored = PlaylistManager.fromJson("{broken");
+        ArrayList<Playlist> restored = PlaylistManager.fromJson("{broken");
 
         assertEquals(0, restored.size());
     }

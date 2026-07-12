@@ -7,6 +7,11 @@ final class SongsMenuRenderer implements MenuRenderer {
         this.host = host;
     }
 
+    void loadSongs() {
+        host.tracks.clear();
+        host.tracks.addAll(TrackStore.load(host));
+    }
+
     @Override
     public boolean needsMiniSpacer() {
         return false;

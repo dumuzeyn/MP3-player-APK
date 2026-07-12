@@ -2,10 +2,12 @@ package com.dumuzeyn.mp3player;
 
 final class MainRenderer {
     private final MainActivityCore host;
-    private final MenuRenderer songsRenderer;
-    private final MenuRenderer favoritesRenderer;
-    private final MenuRenderer playlistsRenderer;
-    private final MenuRenderer groupsRenderer;
+    private final SongsMenuRenderer songsRenderer;
+    private final FavoritesMenuRenderer favoritesRenderer;
+    private final PlaylistsMenuRenderer playlistsRenderer;
+    private final MenuRenderer genresRenderer;
+    private final MenuRenderer artistsRenderer;
+    private final MenuRenderer albumsRenderer;
     private final MenuRenderer settingsRenderer;
 
     MainRenderer(MainActivityCore host) {
@@ -13,8 +15,16 @@ final class MainRenderer {
         this.songsRenderer = new SongsMenuRenderer(host);
         this.favoritesRenderer = new FavoritesMenuRenderer(host);
         this.playlistsRenderer = new PlaylistsMenuRenderer(host);
-        this.groupsRenderer = new GroupsMenuRenderer(host);
+        this.genresRenderer = new GenresMenuRenderer(host);
+        this.artistsRenderer = new ArtistsMenuRenderer(host);
+        this.albumsRenderer = new AlbumsMenuRenderer(host);
         this.settingsRenderer = new SettingsMenuRenderer(host);
+    }
+
+    void loadMenuData() {
+        songsRenderer.loadSongs();
+        favoritesRenderer.loadFavorites();
+        playlistsRenderer.loadPlaylists();
     }
 
     void render() {
@@ -42,9 +52,18 @@ final class MainRenderer {
         if (host.tabIndex == 2) {
             return playlistsRenderer;
         }
+        if (host.tabIndex == 3) {
+            return genresRenderer;
+        }
+        if (host.tabIndex == 4) {
+            return artistsRenderer;
+        }
+        if (host.tabIndex == 5) {
+            return albumsRenderer;
+        }
         if (host.tabIndex == 6) {
             return settingsRenderer;
         }
-        return groupsRenderer;
+        return songsRenderer;
     }
 }

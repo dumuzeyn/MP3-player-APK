@@ -9,13 +9,13 @@ final class PlaylistManager {
     private PlaylistManager() {
     }
 
-    static ArrayList<MainActivity.Playlist> fromJson(String raw) {
-        ArrayList<MainActivity.Playlist> playlists = new ArrayList<>();
+    static ArrayList<Playlist> fromJson(String raw) {
+        ArrayList<Playlist> playlists = new ArrayList<>();
         try {
             JSONArray array = new JSONArray(raw == null ? "[]" : raw);
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.getJSONObject(i);
-                MainActivity.Playlist playlist = new MainActivity.Playlist(cleanName(object.optString("name", "Playlist")));
+                Playlist playlist = new Playlist(cleanName(object.optString("name", "Playlist")));
                 JSONArray songs = object.optJSONArray("songs");
                 if (songs != null) {
                     for (int songIndex = 0; songIndex < songs.length(); songIndex++) {
@@ -29,9 +29,9 @@ final class PlaylistManager {
         return playlists;
     }
 
-    static String toJson(ArrayList<MainActivity.Playlist> playlists) {
+    static String toJson(ArrayList<Playlist> playlists) {
         JSONArray array = new JSONArray();
-        for (MainActivity.Playlist playlist : playlists) {
+        for (Playlist playlist : playlists) {
             try {
                 JSONObject object = new JSONObject();
                 object.put("name", playlist.name);

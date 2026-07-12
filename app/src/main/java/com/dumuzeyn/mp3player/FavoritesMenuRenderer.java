@@ -7,6 +7,16 @@ final class FavoritesMenuRenderer implements MenuRenderer {
         this.host = host;
     }
 
+    void loadFavorites() {
+        LibraryDatabase database = new LibraryDatabase(host);
+        try {
+            host.favorites.clear();
+            host.favorites.addAll(database.loadFavorites());
+        } finally {
+            database.close();
+        }
+    }
+
     @Override
     public boolean needsMiniSpacer() {
         return false;

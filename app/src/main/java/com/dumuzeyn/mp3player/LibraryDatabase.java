@@ -132,15 +132,15 @@ final class LibraryDatabase extends SQLiteOpenHelper {
         }
     }
 
-    ArrayList<MainActivity.Playlist> loadPlaylists() {
-        ArrayList<MainActivity.Playlist> playlists = new ArrayList<>();
+    ArrayList<Playlist> loadPlaylists() {
+        ArrayList<Playlist> playlists = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor playlistsCursor = null;
         try {
             playlistsCursor = db.query("playlists", new String[]{"id", "name"}, null, null, null, null, "position ASC, id ASC");
             while (playlistsCursor.moveToNext()) {
                 long id = playlistsCursor.getLong(0);
-                MainActivity.Playlist playlist = new MainActivity.Playlist(playlistsCursor.getString(1));
+                Playlist playlist = new Playlist(playlistsCursor.getString(1));
                 Cursor songsCursor = null;
                 try {
                     songsCursor = db.query("playlist_tracks", new String[]{"uri"}, "playlist_id=?", new String[]{String.valueOf(id)}, null, null, "position ASC");
@@ -158,7 +158,7 @@ final class LibraryDatabase extends SQLiteOpenHelper {
         return playlists;
     }
 
-    void savePlaylists(List<MainActivity.Playlist> playlists) {
+    void savePlaylists(List<Playlist> playlists) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
@@ -192,11 +192,11 @@ final class LibraryDatabase extends SQLiteOpenHelper {
         }
     }
 
-    private static void savePlaylists(SQLiteDatabase db, List<MainActivity.Playlist> playlists) {
+    private static void savePlaylists(SQLiteDatabase db, List<Playlist> playlists) {
         db.delete("playlist_tracks", null, null);
         db.delete("playlists", null, null);
         for (int index = 0; index < playlists.size(); index++) {
-            MainActivity.Playlist playlist = playlists.get(index);
+            Playlist playlist = playlists.get(index);
             ContentValues values = new ContentValues();
             values.put("name", PlaylistManager.cleanName(playlist.name));
             values.put("position", index);
