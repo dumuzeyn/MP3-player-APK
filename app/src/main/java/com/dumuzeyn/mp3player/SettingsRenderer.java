@@ -23,6 +23,8 @@ final class SettingsRenderer {
                 view -> host.particleSettingsController.openDialog());
         addButton(host.tr("Gradient backgrounds", "Градиентные фоны"),
                 view -> host.gradientSettingsController.openDialog());
+        addButton(host.cardTransparencyController.settingLabel(),
+                view -> host.cardTransparencyController.openDialog());
         addButton(host.tr("Cover style: ", "Стиль обложек: ")
                         + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
                         host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),
@@ -83,8 +85,8 @@ final class SettingsRenderer {
             button.setTextColor(Color.rgb(190, 45, 45));
         }
         button.setOnClickListener(listener);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(58));
-        params.setMargins(0, host.dp(6), 0, host.dp(6));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(56));
+        params.setMargins(0, host.dp(2), 0, host.dp(2));
         host.list.addView(button, params);
     }
 }

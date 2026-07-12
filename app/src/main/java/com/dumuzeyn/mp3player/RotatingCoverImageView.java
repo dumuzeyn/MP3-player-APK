@@ -6,10 +6,14 @@ import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 final class RotatingCoverImageView extends ImageView {
     private final MainActivityCore host;
-    private String trackUri = "";
+    private final HashSet<String> trackUris = new HashSet<>();
+    private ArrayList<Track> sourceTracks = new ArrayList<>();
+    private boolean requireActiveQueue;
     private ValueAnimator rotationAnimator;
 
     RotatingCoverImageView(MainActivityCore host) {
@@ -29,7 +33,34 @@ final class RotatingCoverImageView extends ImageView {
     }
 
     void bindTrack(Track track) {
-        this.trackUri = track == null ? "" : track.uri;
+        this.trackUris.clear();
+        this.sourceTracks.clear();
+        this.requireActiveQueue = false;
+        if (track != null && track.uri != null) {
+            this.trackUris.add(track.uri);
+        }
+        updatePlaybackState();
+    }
+
+    void bindTracks(ArrayList<Track> tracks) {
+        bindSourceTracks(tracks, false);
+    }
+
+    void bindPlaylistTracks(ArrayList<Track> tracks) {
+        bindSourceTracks(tracks, true);
+    }
+
+    private void bindSourceTracks(ArrayList<Track> tracks, boolean requireActiveQueue) {
+        this.trackUris.clear();
+        this.sourceTracks = tracks == null ? new ArrayList<>() : new ArrayList<>(tracks);
+        this.requireActiveQueue = requireActiveQueue;
+        if (tracks != null) {
+            for (Track track : tracks) {
+                if (track != null && track.uri != null) {
+                    this.trackUris.add(track.uri);
+                }
+            }
+        }
         updatePlaybackState();
     }
 
@@ -37,7 +68,8 @@ final class RotatingCoverImageView extends ImageView {
         invalidateOutline();
         boolean shouldRotate = host.circularCovers && host.playing
                 && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
-                && host.tracks.get(host.currentIndex).uri.equals(this.trackUri);
+                && trackUris.contains(host.tracks.get(host.currentIndex).uri)
+                && (!requireActiveQueue || host.isCurrentCollection(sourceTracks));
         if (shouldRotate && isAttachedToWindow()) {
             startRotation();
         } else {

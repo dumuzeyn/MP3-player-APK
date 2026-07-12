@@ -34,6 +34,7 @@ class MainActivityCore extends AppState {
     private static final String PARTICLE_SIZE = "particleSize";
     private static final String PARTICLE_LIFETIME = "particleLifetime";
     private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
+    private static final String CARD_OPACITY = "cardOpacity";
     private static final String PARTICLES_ENABLED = "particlesEnabled";
     private static final String PLAYER_GRADIENT = "playerGradient";
     private static final String CIRCULAR_COVERS = "circularCovers";
@@ -102,6 +103,7 @@ class MainActivityCore extends AppState {
     final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
     final StableVolumeController stableVolumeController = new StableVolumeController(this);
     final PlaylistTickerSettingsController playlistTickerSettingsController = new PlaylistTickerSettingsController(this);
+    final CardTransparencyController cardTransparencyController = new CardTransparencyController(this);
     final GradientSettingsController gradientSettingsController = new GradientSettingsController(this);
     final LibraryListController libraryListController = new LibraryListController(this);
     final PlaylistController playlistController = new PlaylistController(this);
@@ -128,6 +130,7 @@ class MainActivityCore extends AppState {
         this.particleSize = clamp(this.prefs.getInt(PARTICLE_SIZE, 100), 60, 150);
         this.particleLifetime = clamp(this.prefs.getInt(PARTICLE_LIFETIME, 100), 50, 180);
         this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
+        this.cardOpacity = clamp(this.prefs.getInt(CARD_OPACITY, 82), 35, 100);
         this.particlesEnabled = this.prefs.getBoolean(PARTICLES_ENABLED, true);
         this.gradientPlayerBackground = this.prefs.getBoolean(PLAYER_GRADIENT, true);
         this.circularCovers = this.prefs.getBoolean(CIRCULAR_COVERS, false);
@@ -161,6 +164,20 @@ class MainActivityCore extends AppState {
     protected void onStop() {
         super.onStop();
         this.themeController.onHostStopped();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        this.coverLoader.trimMemory(level);
+    }
+
+    @Override
+    protected void onDestroy() {
+        this.uiHandler.removeCallbacksAndMessages(null);
+        this.playbackHandler.removeCallbacksAndMessages(null);
+        this.coverLoader.close();
+        super.onDestroy();
     }
 
     @Override
@@ -199,7 +216,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -533,6 +550,14 @@ class MainActivityCore extends AppState {
         return this.playbackController.isPlayingSource(arrayList);
     }
 
+    boolean isPlayingCollection(ArrayList<Track> tracks) {
+        return this.playbackController.isPlayingCollection(tracks);
+    }
+
+    boolean isCurrentCollection(ArrayList<Track> tracks) {
+        return this.playbackController.isCurrentCollection(tracks);
+    }
+
     int queueIndexOf(Track track) {
         return this.playbackController.queueIndexOf(track);
     }
@@ -647,6 +672,11 @@ class MainActivityCore extends AppState {
 
     void applyCardStyle(View view) {
         this.uiFactory.applyCardStyle(view);
+    }
+
+    int cardSurfaceColor(int color) {
+        return Color.argb(Math.round(255.0f * this.cardOpacity / 100.0f),
+                Color.red(color), Color.green(color), Color.blue(color));
     }
 
     void applyPrimaryButtonStyle(Button button) {

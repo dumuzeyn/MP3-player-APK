@@ -21,6 +21,7 @@ abstract class AppState extends Activity {
     int particleSize = 100;
     int particleLifetime = 100;
     int playlistTickerSpeed = 100;
+    int cardOpacity = 82;
     int resumePosition = 0;
     long sleepTimerEndsAt = 0L;
     boolean dark = false;

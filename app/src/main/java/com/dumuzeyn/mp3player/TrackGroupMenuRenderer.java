@@ -82,6 +82,9 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
             cover.setBackgroundColor(Color.rgb(fallback, fallback, fallback));
         } else {
             host.loadCover(cover, tracks.get(0), Color.rgb(fallback, fallback, fallback));
+            if (cover instanceof RotatingCoverImageView) {
+                ((RotatingCoverImageView) cover).bindTracks(tracks);
+            }
         }
         row.addView(cover, host.square(72));
 

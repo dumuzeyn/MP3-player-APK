@@ -3,6 +3,7 @@ package com.dumuzeyn.mp3player;
 import android.graphics.Color;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -53,6 +54,10 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         card.setPadding(host.dp(14), host.dp(12), host.dp(14), host.dp(12));
         host.setSurface(card, host.panel, false);
 
+        View marker = new View(host);
+        marker.setBackgroundColor(host.yellow);
+        marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
+
         LinearLayout header = host.row();
         LinearLayout titleColumn = new LinearLayout(host);
         titleColumn.setOrientation(LinearLayout.VERTICAL);
@@ -73,20 +78,24 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         rename.setOnClickListener(view -> host.renamePlaylistDialog(playlist));
         header.addView(rename, host.square(48));
 
-        Button play = host.icon(host.isPlayingSource(tracks) ? "Ⅱ" : "▶");
+        Button play = host.icon(host.isPlayingCollection(tracks) ? "Ⅱ" : "▶");
         host.applyPlainIconStyle(play, host.purple);
         play.setOnClickListener(view -> {
-            if (host.isPlayingSource(tracks)) {
+            if (host.isCurrentCollection(tracks)) {
                 host.toggleCurrent();
             } else {
                 host.playList(tracks, false);
             }
+            updatePlaybackState(play, marker, tracks);
         });
         header.addView(play, host.square(48));
 
         Button shuffle = host.shuffleButton();
         host.applyPlainIconStyle(shuffle);
-        shuffle.setOnClickListener(view -> host.playList(tracks, true));
+        shuffle.setOnClickListener(view -> {
+            host.playList(tracks, true);
+            updatePlaybackState(play, marker, tracks);
+        });
         header.addView(shuffle, host.square(48));
         card.addView(header);
 
@@ -103,6 +112,18 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         host.playlistController.bindRollingPreview(ticker, cover, tracks, host.songRenderGeneration);
 
         card.setOnClickListener(view -> host.openPlaylist(playlist));
-        return card;
+
+        FrameLayout container = new FrameLayout(host);
+        container.addView(card, new FrameLayout.LayoutParams(-1, -2));
+        FrameLayout.LayoutParams markerParams = new FrameLayout.LayoutParams(host.dp(4), -1);
+        markerParams.gravity = android.view.Gravity.START;
+        markerParams.setMargins(host.dp(2), host.dp(10), 0, host.dp(10));
+        container.addView(marker, markerParams);
+        return container;
+    }
+
+    private void updatePlaybackState(Button play, View marker, ArrayList<Track> tracks) {
+        marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
+        play.setText(host.isPlayingCollection(tracks) ? "Ⅱ" : "▶");
     }
 }

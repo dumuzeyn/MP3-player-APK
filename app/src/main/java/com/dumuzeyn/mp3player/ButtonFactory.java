@@ -57,7 +57,7 @@ final class ButtonFactory {
 
     void applySecondary(Button button) {
         button.setTextColor(host.primaryText);
-        GradientDrawable drawable = background(host.card, true);
+        GradientDrawable drawable = background(host.cardSurfaceColor(host.card), true);
         drawable.setStroke(host.dp(1), host.cardStroke);
         button.setBackground(drawable);
     }

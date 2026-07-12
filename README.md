@@ -1,7 +1,7 @@
 # MP3 Player
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android.yml">
+  <a href="../../actions/workflows/android.yml">
     <img src="https://img.shields.io/badge/Скачать_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
@@ -68,7 +68,9 @@ MP3 Player — Android-плеер для музыки, уже скачанной
 - Выбор любого цвета фона и текста пользовательской темы через цветовое колесо.
 - Отдельный градиент для основного интерфейса и большого плеера.
 - Независимый выбор двух цветов каждого градиента.
+- Настраиваемая прозрачность карточек песен, избранного, плейлистов, жанров, исполнителей, альбомов и настроек.
 - Скруглённые квадратные обложки или вращающиеся круглые обложки.
+- Вращение групповых обложек и обложек запущенных плейлистов во время воспроизведения.
 - Синхронизация формы обложки с системной медиапанелью.
 - Плавные свайпы между меню с предварительным отображением соседнего экрана.
 - История навигации для системной кнопки «Назад».
@@ -143,7 +145,7 @@ flowchart TB
 
 ## Ответственность файлов
 
-Основной код находится в `app/src/main/java/com/dumuzeyn/mp3player`.
+Основной код находится в пакете приложения внутри `app/src/main/java`.
 
 ### Точки входа и состояние
 
@@ -211,6 +213,7 @@ flowchart TB
 - `ThemeController.java` — применяет тему окна, пользовательские цвета и launcher alias.
 - `ThemeManager.java` — вычисляет контрастные цвета и смешивает оттенки.
 - `GradientSettingsController.java` — выбирает режим и цвета градиентов основного экрана и плеера.
+- `CardTransparencyController.java` — регулирует прозрачность фона карточек без изменения прозрачности текста и обложек.
 - `ThemeColorWheelView.java` — рисует полное цветовое колесо и выбирает оттенок/яркость.
 - `ParticleEffectsView.java` — рисует фоновые частицы и эффекты касания.
 - `ParticleSettingsController.java` — регулирует частоту, размер и время жизни частиц.
@@ -239,7 +242,7 @@ Release APK создаётся в `app/build/outputs/apk/release/`. Готовы
 
 ## Авторство
 
-MP3 Player создан и развивается Rasul / [dumuzeyn](https://github.com/dumuzeyn).
+Автор проекта Зейналов У. Р. о.
 
 ---
 
@@ -248,7 +251,7 @@ MP3 Player создан и развивается Rasul / [dumuzeyn](https://git
 # MP3 Player
 
 <p align="center">
-  <a href="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android.yml">
+  <a href="../../actions/workflows/android.yml">
     <img src="https://img.shields.io/badge/Download_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player">
@@ -315,7 +318,9 @@ MP3 Player is an Android player for music already downloaded to the phone. It op
 - Pick any custom background and text colors using a full color wheel.
 - Separate gradients for the main interface and full player.
 - Independently select both colors of each gradient.
+- Adjust card opacity for songs, favorites, playlists, genres, artists, albums, and settings.
 - Rounded-square artwork or spinning circular artwork.
+- Rotate group artwork and the artwork of an actively playing playlist.
 - Synchronize circular artwork with the system media panel.
 - Smooth menu swipes with a live preview of the adjacent screen.
 - Back-stack navigation for the phone's system Back button.
@@ -390,7 +395,7 @@ flowchart TB
 
 ## File responsibilities
 
-The main package is `app/src/main/java/com/dumuzeyn/mp3player`.
+The main package is located under `app/src/main/java`.
 
 ### Entry points and state
 
@@ -458,6 +463,7 @@ The main package is `app/src/main/java/com/dumuzeyn/mp3player`.
 - `ThemeController.java` — applies window themes, custom colors, and launcher aliases.
 - `ThemeManager.java` — calculates readable colors and blends shades.
 - `GradientSettingsController.java` — selects gradient modes and main/full-player colors.
+- `CardTransparencyController.java` — adjusts card background opacity without fading text or artwork.
 - `ThemeColorWheelView.java` — draws the complete hue/brightness color picker.
 - `ParticleEffectsView.java` — draws ambient and touch particles.
 - `ParticleSettingsController.java` — controls particle frequency, size, and lifetime.
@@ -486,4 +492,4 @@ The release APK is written to `app/build/outputs/apk/release/`. APK binaries are
 
 ## Authorship
 
-MP3 Player is created and maintained by Rasul / [dumuzeyn](https://github.com/dumuzeyn).
+Project author Zeynalov U. R. o.

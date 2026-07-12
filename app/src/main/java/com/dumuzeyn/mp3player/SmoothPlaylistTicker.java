@@ -2,6 +2,7 @@ package com.dumuzeyn.mp3player;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.view.View;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ final class SmoothPlaylistTicker extends View {
     private final MainActivityCore host;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final ArrayList<String> titles = new ArrayList<>();
+    private final Rect visibleBounds = new Rect();
     private float scrollOffset;
     private long lastFrameNanos;
     private int lineHeight;
@@ -62,7 +64,7 @@ final class SmoothPlaylistTicker extends View {
             return;
         }
         paint.setColor(host.primaryText);
-        boolean scrolling = titles.size() > VISIBLE_LINES && host.animations;
+        boolean scrolling = titles.size() > VISIBLE_LINES && host.animations && isVisibleToUser();
         if (scrolling) {
             advanceScroll();
         } else {
@@ -89,6 +91,11 @@ final class SmoothPlaylistTicker extends View {
         if (scrolling && isAttachedToWindow()) {
             postInvalidateOnAnimation();
         }
+    }
+
+    boolean isVisibleToUser() {
+        return isShown() && getGlobalVisibleRect(visibleBounds)
+                && visibleBounds.width() > 0 && visibleBounds.height() > 0;
     }
 
     private void advanceScroll() {

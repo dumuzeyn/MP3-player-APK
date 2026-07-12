@@ -96,6 +96,10 @@ public class PlayerService extends Service {
             return Math.max(1, value.getByteCount() / 1024);
         }
     };
+    private String styledCoverKey = "";
+    private Bitmap styledCover;
+    private Bitmap lightAppIcon;
+    private Bitmap darkAppIcon;
     private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -910,8 +914,7 @@ public class PlayerService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
         int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        Bitmap rawCover = coverFor(track);
-        Bitmap cover = circularCover ? circularBitmap(rawCover) : rawCover;
+        Bitmap cover = notificationCover(track, circularCover);
         Bitmap themedIcon = themedAppIcon(darkTheme);
         builder.setSmallIcon(getResources().getIdentifier("ic_notification_music", "drawable", getPackageName()))
                 .setContentTitle(track.title)
@@ -970,6 +973,20 @@ public class PlayerService extends Service {
         return cover;
     }
 
+    private Bitmap notificationCover(Track track, boolean circular) {
+        Bitmap rawCover = coverFor(track);
+        if (!circular || rawCover == null) {
+            return rawCover;
+        }
+        String key = track.uri + "#circle";
+        if (key.equals(this.styledCoverKey) && this.styledCover != null && !this.styledCover.isRecycled()) {
+            return this.styledCover;
+        }
+        this.styledCoverKey = key;
+        this.styledCover = circularBitmap(rawCover);
+        return this.styledCover;
+    }
+
     private Bitmap readCover(Track track) {
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try {
@@ -1016,6 +1033,10 @@ public class PlayerService extends Service {
     }
 
     private Bitmap themedAppIcon(boolean darkTheme) {
+        Bitmap cached = darkTheme ? this.darkAppIcon : this.lightAppIcon;
+        if (cached != null && !cached.isRecycled()) {
+            return cached;
+        }
         try {
             Drawable drawable = getResources().getDrawable(
                     darkTheme ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
@@ -1024,6 +1045,11 @@ public class PlayerService extends Service {
             Canvas canvas = new Canvas(bitmap);
             drawable.setBounds(0, 0, size, size);
             drawable.draw(canvas);
+            if (darkTheme) {
+                this.darkAppIcon = bitmap;
+            } else {
+                this.lightAppIcon = bitmap;
+            }
             return bitmap;
         } catch (RuntimeException error) {
             return null;
@@ -1194,6 +1220,10 @@ public class PlayerService extends Service {
         if (this.mediaSession != null) {
             this.mediaSession.release();
         }
+        this.coverCache.evictAll();
+        this.styledCover = null;
+        this.lightAppIcon = null;
+        this.darkAppIcon = null;
         instance = null;
         super.onDestroy();
     }

@@ -293,6 +293,25 @@ final class PlaybackController {
         return true;
     }
 
+    boolean isPlayingCollection(ArrayList<Track> source) {
+        return host.playing && isCurrentCollection(source);
+    }
+
+    boolean isCurrentCollection(ArrayList<Track> source) {
+        if (source == null || source.isEmpty() || host.playbackQueue.size() != source.size()) {
+            return false;
+        }
+        java.util.HashSet<String> expected = new java.util.HashSet<>();
+        java.util.HashSet<String> active = new java.util.HashSet<>();
+        for (Track track : source) {
+            expected.add(track.uri);
+        }
+        for (Track track : host.playbackQueue) {
+            active.add(track.uri);
+        }
+        return expected.size() == source.size() && expected.equals(active);
+    }
+
     int queueIndexOf(Track track) {
         ArrayList<Track> queue = activeQueue();
         for (int i = 0; i < queue.size(); i++) {

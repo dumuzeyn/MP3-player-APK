@@ -55,6 +55,7 @@ final class PlaylistController {
             return;
         }
         ticker.bindTracks(sortedTracks);
+        cover.bindPlaylistTracks(sortedTracks);
         cover.bindTrack(sortedTracks.get(0), generation);
         if (sortedTracks.size() <= 1) {
             return;
@@ -67,8 +68,10 @@ final class PlaylistController {
                 if (generation != host.songRenderGeneration || !ticker.isAttachedToWindow()) {
                     return;
                 }
-                cover.bindTrack(sortedTracks.get(index), generation);
-                index = (index + 1) % sortedTracks.size();
+                if (ticker.isVisibleToUser()) {
+                    cover.bindTrack(sortedTracks.get(index), generation);
+                    index = (index + 1) % sortedTracks.size();
+                }
                 host.uiHandler.postDelayed(this, 14500L);
             }
         }, 14500L);

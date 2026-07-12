@@ -68,7 +68,7 @@ final class UiFactory {
 
     GradientDrawable cardBackground() {
         GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(host.card);
+        drawable.setColor(host.cardSurfaceColor(host.card));
         drawable.setCornerRadius(host.dp(16));
         drawable.setStroke(host.dp(1), host.cardStroke);
         return drawable;
@@ -107,13 +107,16 @@ final class UiFactory {
 
     View spaced(View view) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.setMargins(0, host.dp(5), 0, host.dp(5));
+        params.setMargins(0, host.dp(2), 0, host.dp(2));
         view.setLayoutParams(params);
         return view;
     }
 
     void setSurface(View view, int color, boolean outlined) {
-        view.setBackground(rounded(color, outlined));
+        int surfaceColor = color == host.card || color == host.panel
+                ? host.cardSurfaceColor(color)
+                : color;
+        view.setBackground(rounded(surfaceColor, outlined));
     }
 
     View lineView() {

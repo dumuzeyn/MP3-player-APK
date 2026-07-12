@@ -6,6 +6,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaMetadataRetriever;
 import android.util.LruCache;
 import android.widget.ImageView;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -14,17 +15,17 @@ import java.util.concurrent.Executors;
 
 final class CoverLoader {
     private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
-    private static final int THUMB_SIZE = 256;
+    private static final int THUMB_SIZE = 160;
 
     private final MainActivityCore host;
     private final LruCache<String, Bitmap> cache;
-    private final Map<String, ArrayList<ImageView>> pendingTargets = new LinkedHashMap<>();
+    private final Map<String, ArrayList<WeakReference<ImageView>>> pendingTargets = new LinkedHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
     CoverLoader(MainActivityCore host) {
         this.host = host;
-        int maxKb = (int) Math.min(32L * 1024L,
-                Math.max(8L * 1024L, Runtime.getRuntime().maxMemory() / 1024L / 12L));
+        int maxKb = (int) Math.min(16L * 1024L,
+                Math.max(6L * 1024L, Runtime.getRuntime().maxMemory() / 1024L / 16L));
         cache = new LruCache<String, Bitmap>(maxKb) {
             @Override
             protected int sizeOf(String key, Bitmap bitmap) {
@@ -56,13 +57,13 @@ final class CoverLoader {
             view.setBackgroundColor(fallbackColor);
         }
         synchronized (pendingTargets) {
-            ArrayList<ImageView> waiting = pendingTargets.get(key);
+            ArrayList<WeakReference<ImageView>> waiting = pendingTargets.get(key);
             if (waiting != null) {
-                waiting.add(view);
+                waiting.add(new WeakReference<>(view));
                 return;
             }
             waiting = new ArrayList<>();
-            waiting.add(view);
+            waiting.add(new WeakReference<>(view));
             pendingTargets.put(key, waiting);
         }
         executor.execute(() -> {
@@ -73,7 +74,7 @@ final class CoverLoader {
                     cacheThumbnail(track, bitmap);
                 }
             }
-            final ArrayList<ImageView> targets;
+            final ArrayList<WeakReference<ImageView>> targets;
             synchronized (pendingTargets) {
                 targets = pendingTargets.remove(key);
             }
@@ -81,7 +82,8 @@ final class CoverLoader {
                 if (bitmap == null || targets == null) {
                     return;
                 }
-                for (ImageView target : targets) {
+                for (WeakReference<ImageView> reference : targets) {
+                    ImageView target = reference.get();
                     if (target != null && key.equals(target.getTag())) {
                         target.setImageBitmap(bitmap);
                     }
@@ -98,6 +100,24 @@ final class CoverLoader {
         if (bitmap != null && !bitmap.isRecycled()) {
             cache.put(key(track, THUMB_SIZE), bitmap);
         }
+    }
+
+    void trimMemory(int level) {
+        if (level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+                || level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            cache.evictAll();
+        } else if (level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+                || level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE) {
+            cache.trimToSize(Math.max(1, cache.maxSize() / 2));
+        }
+    }
+
+    void close() {
+        executor.shutdownNow();
+        synchronized (pendingTargets) {
+            pendingTargets.clear();
+        }
+        cache.evictAll();
     }
 
     private void cacheThumbnail(Track track, Bitmap fullCover) {

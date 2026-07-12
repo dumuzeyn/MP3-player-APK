@@ -2,6 +2,7 @@ package com.dumuzeyn.mp3player;
 
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import java.util.ArrayList;
 
 final class FrameLayoutCover extends FrameLayout {
     private final MainActivityCore host;
@@ -10,6 +11,7 @@ final class FrameLayoutCover extends FrameLayout {
     private boolean frontVisible = true;
     private String currentUri = "";
     private int fallback;
+    private ArrayList<Track> sourceTracks = new ArrayList<>();
 
     FrameLayoutCover(MainActivityCore host) {
         super(host);
@@ -27,6 +29,12 @@ final class FrameLayoutCover extends FrameLayout {
         this.back.setBackgroundColor(fallback);
     }
 
+    void bindPlaylistTracks(ArrayList<Track> tracks) {
+        this.sourceTracks = tracks == null ? new ArrayList<>() : new ArrayList<>(tracks);
+        applyPlaylistTracks(this.front);
+        applyPlaylistTracks(this.back);
+    }
+
     void bindTrack(Track track, int generation) {
         if (track == null || track.uri.equals(this.currentUri)) {
             return;
@@ -38,6 +46,7 @@ final class FrameLayoutCover extends FrameLayout {
         visible.animate().cancel();
         incoming.setAlpha(0.0f);
         host.loadCover(incoming, track, this.fallback);
+        applyPlaylistTracks(incoming);
         incoming.animate().alpha(1.0f).setDuration(host.animations ? 520L : 0L).withEndAction(new Runnable() {
             @Override
             public void run() {
@@ -45,5 +54,11 @@ final class FrameLayoutCover extends FrameLayout {
             }
         }).start();
         visible.animate().alpha(0.0f).setDuration(host.animations ? 520L : 0L).start();
+    }
+
+    private void applyPlaylistTracks(ImageView cover) {
+        if (cover instanceof RotatingCoverImageView) {
+            ((RotatingCoverImageView) cover).bindPlaylistTracks(this.sourceTracks);
+        }
     }
 }
