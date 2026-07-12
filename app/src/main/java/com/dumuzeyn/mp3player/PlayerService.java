@@ -19,6 +19,9 @@ import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.media.audiofx.DynamicsProcessing;
+import android.media.audiofx.Equalizer;
+import android.media.audiofx.LoudnessEnhancer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -40,6 +43,8 @@ public class PlayerService extends Service {
     public static final String ACTION_SEEK = "com.dumuzeyn.mp3player.SEEK";
     public static final String ACTION_STOP = "com.dumuzeyn.mp3player.STOP";
     public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
+    public static final String ACTION_AUDIO_EFFECTS = "com.dumuzeyn.mp3player.AUDIO_EFFECTS";
+    public static final String ACTION_UPDATE_QUEUE = "com.dumuzeyn.mp3player.UPDATE_QUEUE";
     public static final String EXTRA_INDEX = "index";
     public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_ONE_SHOT = "oneShot";
@@ -88,6 +93,10 @@ public class PlayerService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+                if (uninterruptedPlaybackEnabled()) {
+                    Log.i(TAG, "audio_becoming_noisy_ignored");
+                    return;
+                }
                 pausedByUser = true;
                 pausedByTransientFocusLoss = false;
                 pauseInternal("audio_becoming_noisy");
@@ -97,6 +106,11 @@ public class PlayerService extends Service {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
+            if (uninterruptedPlaybackEnabled()) {
+                Log.i(TAG, "audio_focus_change_ignored value=" + focusChange);
+                restoreFullVolume();
+                return;
+            }
             if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
                 Log.i(TAG, "audio_focus_loss");
                 pausedByTransientFocusLoss = false;
@@ -109,7 +123,9 @@ public class PlayerService extends Service {
                 pauseInternal("focus_loss_transient");
             } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
                 Log.i(TAG, "audio_focus_duck");
-                if (player != null) {
+                if (stableVolumeEnabled()) {
+                    restoreFullVolume();
+                } else if (player != null) {
                     player.setVolume(0.35f, 0.35f);
                     duckedByFocusLoss = true;
                 }
@@ -129,6 +145,9 @@ public class PlayerService extends Service {
 
     private MediaSession mediaSession;
     private MediaPlayer player;
+    private Equalizer equalizer;
+    private DynamicsProcessing dynamicsProcessing;
+    private LoudnessEnhancer loudnessEnhancer;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
     private boolean playerPreparing = false;
@@ -142,6 +161,7 @@ public class PlayerService extends Service {
     private boolean pausedByUser = false;
     private boolean pausedByTransientFocusLoss = false;
     private boolean duckedByFocusLoss = false;
+    private boolean customDynamicsUnsupported = false;
     private int loopOneErrorRetries = 0;
     private int consecutivePlaybackErrors = 0;
 
@@ -207,6 +227,28 @@ public class PlayerService extends Service {
             saveResumeState(true, true);
             logPlaybackState("loop_changed");
             startForeground(NOTIFICATION_ID, buildNotification());
+            return START_STICKY;
+        }
+        if (ACTION_AUDIO_EFFECTS.equals(action)) {
+            applyAudioEffects(this.player);
+            if (this.player == null) {
+                stopForeground(true);
+                stopSelf();
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification());
+            }
+            return START_STICKY;
+        }
+        if (ACTION_UPDATE_QUEUE.equals(action)) {
+            String playingUri = currentUri();
+            rebuildQueue(intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
+            for (int index = 0; index < this.queue.size(); index++) {
+                if (this.queue.get(index).uri.equals(playingUri)) {
+                    this.currentIndex = index;
+                    break;
+                }
+            }
+            saveResumeState(true, true);
             return START_STICKY;
         }
         if (ACTION_STOP.equals(action)) {
@@ -354,6 +396,7 @@ public class PlayerService extends Service {
         this.playerPreparing = false;
         try {
             this.consecutivePlaybackErrors = 0;
+            applyAudioEffects(preparedPlayer);
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
@@ -612,6 +655,7 @@ public class PlayerService extends Service {
     }
 
     private void releasePlayer() {
+        releaseAudioEffects();
         if (this.player == null) {
             return;
         }
@@ -629,6 +673,153 @@ public class PlayerService extends Service {
             Log.e(TAG, "release_failed", e);
         }
         this.player = null;
+    }
+
+    private void applyAudioEffects(MediaPlayer targetPlayer) {
+        releaseAudioEffects();
+        if (targetPlayer == null) {
+            return;
+        }
+        SharedPreferences preferences = getSharedPreferences(EqualizerController.PREFS, 0);
+        int audioSessionId;
+        try {
+            audioSessionId = targetPlayer.getAudioSessionId();
+        } catch (RuntimeException error) {
+            Log.w(DEBUG_TAG, "audio_effect_session_unavailable error=" + error.getMessage());
+            return;
+        }
+        if (preferences.getBoolean(EqualizerController.ENABLED, false)) {
+            applyEqualizer(preferences, audioSessionId);
+        }
+        if (preferences.getBoolean(VolumeLevelingController.ENABLED, false)) {
+            applyVolumeLeveling(audioSessionId);
+        }
+    }
+
+    private void applyEqualizer(SharedPreferences preferences, int audioSessionId) {
+        try {
+            Equalizer effect = new Equalizer(0, audioSessionId);
+            short[] levelRange = effect.getBandLevelRange();
+            short bandCount = effect.getNumberOfBands();
+            for (short band = 0; band < bandCount; band++) {
+                int profileIndex = bandCount <= 1
+                        ? 0
+                        : Math.round((band * (EqualizerController.BAND_COUNT - 1.0f)) / (bandCount - 1.0f));
+                int db = preferences.getInt(EqualizerController.BAND_PREFIX + profileIndex, 0);
+                short milliBel = (short) Math.max(levelRange[0], Math.min(levelRange[1], db * 100));
+                effect.setBandLevel(band, milliBel);
+            }
+            effect.setEnabled(true);
+            this.equalizer = effect;
+            Log.i(DEBUG_TAG, "equalizer_applied session=" + audioSessionId + " bands=" + bandCount);
+        } catch (RuntimeException error) {
+            Log.w(DEBUG_TAG, "equalizer_unavailable session=" + audioSessionId + " error=" + error.getMessage());
+        }
+    }
+
+    private void applyVolumeLeveling(int audioSessionId) {
+        if (Build.VERSION.SDK_INT < 28) {
+            Log.w(DEBUG_TAG, "volume_leveling_requires_api_28 sdk=" + Build.VERSION.SDK_INT);
+            return;
+        }
+        if (this.customDynamicsUnsupported) {
+            applyCompatibleVolumeLeveling(audioSessionId);
+            return;
+        }
+        try {
+            DynamicsProcessing.Mbc multibandCompressor = new DynamicsProcessing.Mbc(true, true, 1);
+            multibandCompressor.setBand(0, new DynamicsProcessing.MbcBand(
+                    true, 20000.0f, 12.0f, 250.0f, 4.0f, -18.0f, 6.0f,
+                    -80.0f, 1.0f, 0.0f, 5.0f));
+            DynamicsProcessing.Limiter limiter = new DynamicsProcessing.Limiter(
+                    true, true, 0, 2.0f, 120.0f, 10.0f, -1.0f, 0.0f);
+            DynamicsProcessing.Config config = new DynamicsProcessing.Config.Builder(
+                    DynamicsProcessing.VARIANT_FAVOR_TIME_RESOLUTION,
+                    2, false, 0, true, 1, false, 0, true)
+                    .setMbcAllChannelsTo(multibandCompressor)
+                    .setLimiterAllChannelsTo(limiter)
+                    .build();
+            DynamicsProcessing effect = new DynamicsProcessing(0, audioSessionId, config);
+            effect.setEnabled(true);
+            this.dynamicsProcessing = effect;
+            Log.i(DEBUG_TAG, "volume_leveling_applied session=" + audioSessionId);
+        } catch (RuntimeException customConfigError) {
+            this.customDynamicsUnsupported = true;
+            Log.w(DEBUG_TAG, "volume_leveling_custom_config_failed session=" + audioSessionId + " error=" + customConfigError.getMessage());
+            applyCompatibleVolumeLeveling(audioSessionId);
+        }
+    }
+
+    private void applyCompatibleVolumeLeveling(int audioSessionId) {
+        try {
+            DynamicsProcessing effect = new DynamicsProcessing(0, audioSessionId, null);
+            int channelCount = effect.getChannelCount();
+            for (int channel = 0; channel < channelCount; channel++) {
+                DynamicsProcessing.Mbc compressor = effect.getMbcByChannelIndex(channel);
+                for (int band = 0; band < compressor.getBandCount(); band++) {
+                    DynamicsProcessing.MbcBand settings = compressor.getBand(band);
+                    settings.setEnabled(true);
+                    settings.setAttackTime(12.0f);
+                    settings.setReleaseTime(250.0f);
+                    settings.setRatio(4.0f);
+                    settings.setThreshold(-18.0f);
+                    settings.setKneeWidth(6.0f);
+                    settings.setNoiseGateThreshold(-80.0f);
+                    settings.setExpanderRatio(1.0f);
+                    settings.setPostGain(5.0f);
+                    effect.setMbcBandByChannelIndex(channel, band, settings);
+                }
+                DynamicsProcessing.Limiter limiter = effect.getLimiterByChannelIndex(channel);
+                limiter.setEnabled(true);
+                limiter.setAttackTime(2.0f);
+                limiter.setReleaseTime(120.0f);
+                limiter.setRatio(10.0f);
+                limiter.setThreshold(-1.0f);
+                effect.setLimiterByChannelIndex(channel, limiter);
+            }
+            effect.setEnabled(true);
+            this.dynamicsProcessing = effect;
+            Log.i(DEBUG_TAG, "volume_leveling_applied_compatible session=" + audioSessionId + " channels=" + channelCount);
+        } catch (RuntimeException defaultConfigError) {
+            Log.w(DEBUG_TAG, "volume_leveling_default_config_failed session=" + audioSessionId + " error=" + defaultConfigError.getMessage());
+            applyLoudnessFallback(audioSessionId);
+        }
+    }
+
+    private void applyLoudnessFallback(int audioSessionId) {
+        try {
+            LoudnessEnhancer effect = new LoudnessEnhancer(audioSessionId);
+            effect.setTargetGain(350);
+            effect.setEnabled(true);
+            this.loudnessEnhancer = effect;
+            Log.i(DEBUG_TAG, "volume_leveling_loudness_fallback session=" + audioSessionId);
+        } catch (RuntimeException error) {
+            Log.w(DEBUG_TAG, "volume_leveling_unavailable session=" + audioSessionId + " error=" + error.getMessage());
+        }
+    }
+
+    private void releaseAudioEffects() {
+        if (this.equalizer != null) {
+            try {
+                this.equalizer.release();
+            } catch (RuntimeException ignored) {
+            }
+            this.equalizer = null;
+        }
+        if (this.dynamicsProcessing != null) {
+            try {
+                this.dynamicsProcessing.release();
+            } catch (RuntimeException ignored) {
+            }
+            this.dynamicsProcessing = null;
+        }
+        if (this.loudnessEnhancer != null) {
+            try {
+                this.loudnessEnhancer.release();
+            } catch (RuntimeException ignored) {
+            }
+            this.loudnessEnhancer = null;
+        }
     }
 
     private void updateState() {
@@ -830,6 +1021,9 @@ public class PlayerService extends Service {
     }
 
     private boolean requestAudioFocus() {
+        if (uninterruptedPlaybackEnabled()) {
+            return true;
+        }
         if (this.audioManager == null) {
             return true;
         }
@@ -846,6 +1040,26 @@ public class PlayerService extends Service {
             result = this.audioManager.requestAudioFocus(this.audioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         }
         return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+    }
+
+    private boolean uninterruptedPlaybackEnabled() {
+        return getSharedPreferences(UninterruptedPlaybackController.PREFS, 0)
+                .getBoolean(UninterruptedPlaybackController.ENABLED, false);
+    }
+
+    private boolean stableVolumeEnabled() {
+        return getSharedPreferences(UninterruptedPlaybackController.PREFS, 0)
+                .getBoolean(StableVolumeController.ENABLED, false);
+    }
+
+    private void restoreFullVolume() {
+        if (this.player != null) {
+            try {
+                this.player.setVolume(1.0f, 1.0f);
+            } catch (RuntimeException ignored) {
+            }
+        }
+        this.duckedByFocusLoss = false;
     }
 
     private void abandonAudioFocus() {

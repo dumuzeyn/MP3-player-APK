@@ -102,7 +102,7 @@ final class SleepTimerController {
 
     String buttonText() {
         if (host.sleepTimerEndsAt <= 0) {
-            return "◷";
+            return host.tr("Timer ◷", "Таймер ◷");
         }
         long remainingMs = Math.max(0L, host.sleepTimerEndsAt - System.currentTimeMillis());
         return host.formatSeconds((remainingMs + 999L) / 1000L);

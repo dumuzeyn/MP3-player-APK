@@ -18,9 +18,11 @@ import android.widget.TextView;
 
 final class UiFactory {
     private final MainActivityCore host;
+    private final ButtonFactory buttons;
 
     UiFactory(MainActivityCore host) {
         this.host = host;
+        this.buttons = new ButtonFactory(host);
     }
 
     LinearLayout row() {
@@ -51,55 +53,27 @@ final class UiFactory {
     }
 
     Button button(String label) {
-        Button button = new Button(host);
-        button.setText(label);
-        button.setTextColor(host.fg);
-        button.setTextSize(14.0f);
-        button.setAllCaps(false);
-        button.setGravity(17);
-        button.setIncludeFontPadding(true);
-        button.setPadding(0, 0, 0, 0);
-        button.setStateListAnimator(null);
-        button.setElevation(0.0f);
-        button.setTranslationZ(0.0f);
-        button.setMinWidth(0);
-        button.setMinHeight(0);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        return button;
+        return buttons.button(label);
     }
 
     Button icon(String symbol) {
-        Button button = button(symbol);
-        button.setTextSize(24.0f);
-        return button;
+        return buttons.icon(symbol);
     }
 
     Button shuffleButton() {
-        Button button = icon("⇄");
-        button.setTextSize(31.0f);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        return button;
+        return buttons.shuffleButton();
     }
 
     Button searchButton() {
-        Button button = icon("⌕");
-        button.setTextSize(31.0f);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        return button;
+        return buttons.searchButton();
     }
 
     void applyButtonColors(Button button, int background, int foreground) {
-        button.setTextColor(foreground);
-        GradientDrawable drawable = rounded(background, false);
-        drawable.setStroke(1, background);
-        button.setBackground(drawable);
+        buttons.applyColors(button, background, foreground);
     }
 
     void applyPlainIconStyle(Button button, int color) {
-        button.setTextColor(color);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        button.setElevation(0.0f);
-        button.setTranslationZ(0.0f);
+        buttons.applyPlainIcon(button, color);
     }
 
     GradientDrawable cardBackground() {
@@ -116,16 +90,15 @@ final class UiFactory {
     }
 
     void applyPrimaryButtonStyle(Button button) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(host.purple);
-        drawable.setCornerRadius(host.dp(16));
-        button.setTextColor(Color.WHITE);
-        button.setBackground(drawable);
+        buttons.applyPrimary(button);
     }
 
     void applySecondaryButtonStyle(Button button) {
-        button.setTextColor(host.primaryText);
-        button.setBackground(cardBackground());
+        buttons.applySecondary(button);
+    }
+
+    void applyPlayerToolStyle(Button button, boolean active) {
+        buttons.applyPlayerTool(button, active);
     }
 
     void applySeekBarColors(SeekBar seekBar) {

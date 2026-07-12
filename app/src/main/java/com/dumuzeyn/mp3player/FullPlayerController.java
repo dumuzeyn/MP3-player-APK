@@ -49,6 +49,7 @@ final class FullPlayerController {
         FrameLayout sheet = createSheet();
         this.currentSheet = sheet;
         sheet.setBackgroundColor(host.bg);
+        sheet.addView(new PlayerGradientBackground(host), new FrameLayout.LayoutParams(-1, -1));
 
         LinearLayout content = new LinearLayout(host);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -58,6 +59,7 @@ final class FullPlayerController {
         addHeader(content, sheet);
         addCoverAndTitle(content, track);
         addActionRow(content, sheet, track);
+        addAudioToolsRow(content);
         addSeekBar(content, sheet, track);
         content.addView(new View(host), new LinearLayout.LayoutParams(-1, 0, 1.0f));
         addTransportRow(content, sheet);
@@ -178,7 +180,10 @@ final class FullPlayerController {
         ImageView cover = host.coverView();
         this.coverView = cover;
         host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
-        LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(host.dp(280), host.dp(280));
+        float density = host.getResources().getDisplayMetrics().density;
+        int screenHeightDp = Math.round(host.getResources().getDisplayMetrics().heightPixels / density);
+        int coverSizeDp = screenHeightDp < 760 ? 225 : 260;
+        LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(host.dp(coverSizeDp), host.dp(coverSizeDp));
         coverParams.gravity = 1;
         content.addView(cover, coverParams);
 
@@ -198,25 +203,50 @@ final class FullPlayerController {
         Button timer = host.button(host.timerButtonText());
         this.timerButton = timer;
         styleTimerButton(timer);
+        host.applyPlayerToolStyle(timer, host.sleepTimerEndsAt > 0);
+        timer.setSingleLine(true);
         timer.setOnClickListener(view -> host.timerDialog());
-        row.addView(timer, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+        row.addView(timer, toolButtonParams());
 
-        Button like = host.button(host.tr3("♡ Like", host.favorites.contains(track.uri) ? "♥ Лайк" : "♡ Лайк", host.favorites.contains(track.uri) ? "♥" : "♡"));
+        Button like = host.button(saveButtonText(track));
         this.likeButton = like;
+        like.setSingleLine(true);
+        like.setTextSize(14.0f);
+        host.applyPlayerToolStyle(like, host.favorites.contains(track.uri));
         like.setOnClickListener(view -> {
-            host.toggleFavorite(track);
-            refreshFromState(false);
+            host.openSaveTrackDialog(track);
         });
-        row.addView(like, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+        row.addView(like, toolButtonParams());
 
         Button repeat = host.button(host.loopLabel());
         this.repeatButton = repeat;
         styleRepeatButton(repeat);
+        host.applyPlayerToolStyle(repeat, host.loopMode != 0);
+        repeat.setSingleLine(true);
         repeat.setOnClickListener(view -> {
             host.cycleLoopMode();
             refreshFromState(false);
         });
-        row.addView(repeat, new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
+        row.addView(repeat, toolButtonParams());
+        content.addView(row);
+    }
+
+    private LinearLayout.LayoutParams toolButtonParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, host.dp(52), 1.0f);
+        params.setMargins(host.dp(3), host.dp(3), host.dp(3), host.dp(3));
+        return params;
+    }
+
+    private void addAudioToolsRow(LinearLayout content) {
+        LinearLayout row = host.row();
+        Button equalizer = host.equalizerController.createPlayerButton();
+        Button leveling = host.volumeLevelingController.createPlayerButton();
+        LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, host.dp(52), 1.0f);
+        left.setMargins(0, host.dp(3), host.dp(4), host.dp(3));
+        LinearLayout.LayoutParams right = new LinearLayout.LayoutParams(0, host.dp(52), 1.0f);
+        right.setMargins(host.dp(4), host.dp(3), 0, host.dp(3));
+        row.addView(equalizer, left);
+        row.addView(leveling, right);
         content.addView(row);
     }
 
@@ -332,13 +362,16 @@ final class FullPlayerController {
         if (this.timerButton != null) {
             this.timerButton.setText(host.timerButtonText());
             styleTimerButton(this.timerButton);
+            host.applyPlayerToolStyle(this.timerButton, host.sleepTimerEndsAt > 0);
         }
         if (this.likeButton != null) {
-            this.likeButton.setText(host.tr3("♡ Like", host.favorites.contains(track.uri) ? "♥ Лайк" : "♡ Лайк", host.favorites.contains(track.uri) ? "♥" : "♡"));
+            this.likeButton.setText(saveButtonText(track));
+            host.applyPlayerToolStyle(this.likeButton, host.favorites.contains(track.uri));
         }
         if (this.repeatButton != null) {
             this.repeatButton.setText(host.loopLabel());
             styleRepeatButton(this.repeatButton);
+            host.applyPlayerToolStyle(this.repeatButton, host.loopMode != 0);
         }
         if (this.playButton != null) {
             this.playButton.setText(host.playing ? "Ⅱ" : "▶");
@@ -346,11 +379,17 @@ final class FullPlayerController {
     }
 
     private void styleTimerButton(Button button) {
-        button.setTextSize(host.sleepTimerEndsAt > 0 ? 18.0f : 28.0f);
+        button.setTextSize(host.sleepTimerEndsAt > 0 ? 18.0f : 14.0f);
     }
 
     private void styleRepeatButton(Button button) {
-        button.setTextSize(28.0f);
+        button.setTextSize(14.0f);
+    }
+
+    private String saveButtonText(Track track) {
+        return host.favorites.contains(track.uri)
+                ? host.tr("Saved ♥", "Добавлено ♥")
+                : host.tr("Save ♡", "Добавить ♡");
     }
 
     private final class ProgressUpdater implements Runnable {

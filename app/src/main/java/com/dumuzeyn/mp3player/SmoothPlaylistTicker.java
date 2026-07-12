@@ -95,7 +95,7 @@ final class SmoothPlaylistTicker extends View {
         long now = System.nanoTime();
         if (lastFrameNanos != 0L) {
             float seconds = Math.min(0.05f, (now - lastFrameNanos) / 1_000_000_000.0f);
-            scrollOffset += host.dp(13) * seconds;
+            scrollOffset += host.dp(13) * seconds * (host.playlistTickerSpeed / 100.0f);
             float loopHeight = lineHeight * titles.size();
             if (scrollOffset >= loopHeight) {
                 scrollOffset %= loopHeight;

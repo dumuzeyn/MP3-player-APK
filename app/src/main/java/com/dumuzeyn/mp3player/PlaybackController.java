@@ -205,14 +205,32 @@ final class PlaybackController {
         startService(intent);
     }
 
+    void addToQueue(Track track) {
+        if (track == null) {
+            return;
+        }
+        if (host.playbackQueue.isEmpty() && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()) {
+            host.playbackQueue.add(host.tracks.get(host.currentIndex));
+        }
+        if (!host.playbackQueue.contains(track)) {
+            host.playbackQueue.add(track);
+        }
+        if (host.currentIndex >= 0) {
+            Intent intent = new Intent(host, PlayerService.class);
+            intent.setAction(PlayerService.ACTION_UPDATE_QUEUE);
+            intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
+            startService(intent);
+        }
+    }
+
     String loopLabel() {
         if (host.loopMode == 1) {
-            return "↻♪";
+            return host.tr("Track ↻", "Песня ↻");
         }
         if (host.loopMode == 2) {
-            return "↻▤";
+            return host.tr("Queue ↻", "Очередь ↻");
         }
-        return "↻○";
+        return host.tr("Off ↻", "Выкл ↻");
     }
 
     void seekTo(int position) {

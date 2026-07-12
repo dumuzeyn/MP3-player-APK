@@ -93,18 +93,10 @@ final class OverlayController {
             } else {
                 openPlaylist(playlist);
             }
+        }, () -> {
+            host.overlayHost.removeView(shade);
+            openSongActions(track, playlist);
         }));
-        if (playlist != null) {
-            Button remove = host.button(host.tr("Remove from playlist", "Убрать из плейлиста"));
-            remove.setTextColor(Color.rgb(190, 45, 45));
-            remove.setOnClickListener(view -> {
-                playlist.uris.remove(track.uri);
-                host.saveState();
-                host.overlayHost.removeView(shade);
-                openPlaylist(playlist);
-            });
-            container.addView(remove, new LinearLayout.LayoutParams(-1, host.dp(42)));
-        }
         return container;
     }
 
@@ -258,6 +250,10 @@ final class OverlayController {
     }
 
     void openSongActions(Track track) {
+        openSongActions(track, null);
+    }
+
+    void openSongActions(Track track, Playlist sourcePlaylist) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.addView(host.text(track.title, 20, true), new LinearLayout.LayoutParams(-1, host.dp(52)));
@@ -272,6 +268,18 @@ final class OverlayController {
             host.overlayHost.removeView(shade);
             choosePlaylist(track);
         });
+        addPanelButton(panel, host.tr("Add to queue", "Добавить в очередь"), () -> {
+            host.addTrackToQueue(track);
+            close(shade);
+        });
+        if (sourcePlaylist != null) {
+            addPanelButton(panel, host.tr("Remove from playlist", "Убрать из плейлиста"), () -> {
+                sourcePlaylist.uris.remove(track.uri);
+                host.saveState();
+                host.overlayHost.removeView(shade);
+                openPlaylist(sourcePlaylist);
+            });
+        }
         addPanelButton(panel, host.tr("Remove from app", "Удалить из приложения"), () -> {
             host.overlayHost.removeView(shade);
             confirmDeleteTrack(track);
@@ -283,18 +291,42 @@ final class OverlayController {
     }
 
     private void choosePlaylist(Track track) {
+        openCollectionChooser(track, false);
+    }
+
+    void chooseCollection(Track track) {
+        openCollectionChooser(track, true);
+    }
+
+    private void openCollectionChooser(Track track, boolean includeFavorites) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
-        panel.addView(host.text(host.tr("Add to playlist", "Добавить в плейлист"), 22, true),
+        panel.addView(host.text(includeFavorites
+                        ? host.tr("Save track", "Сохранить песню")
+                        : host.tr("Add to playlist", "Добавить в плейлист"), 22, true),
                 new LinearLayout.LayoutParams(-1, host.dp(48)));
         ScrollView scroll = new ScrollView(host);
         LinearLayout rows = new LinearLayout(host);
         rows.setOrientation(LinearLayout.VERTICAL);
+        if (includeFavorites) {
+            addPanelButton(rows, host.favorites.contains(track.uri)
+                    ? host.tr("Remove from favorites", "Убрать из избранного")
+                    : host.tr("Add to favorites", "Добавить в избранное"), () -> {
+                host.toggleFavorite(track);
+                close(shade);
+                host.render();
+                host.playerUiController.syncPlaybackUi();
+            });
+        }
         for (Playlist playlist : host.playlists) {
-            addPanelButton(rows, playlist.name, () -> {
+            boolean alreadyAdded = playlist.uris.contains(track.uri);
+            addPanelButton(rows, alreadyAdded
+                    ? playlist.name + " " + host.tr("(added)", "(добавлено)")
+                    : playlist.name, () -> {
                 host.playlistController.addTrackToPlaylist(playlist, track);
                 close(shade);
                 host.render();
+                host.playerUiController.syncPlaybackUi();
             });
         }
         addPanelButton(rows, host.tr("Create new", "Создать новый"), () -> {

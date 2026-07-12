@@ -35,7 +35,7 @@ final class ParticleEffectsView extends View {
             if (host.animations && getWidth() > 0 && getHeight() > 0) {
                 addParticle(random.nextFloat() * getWidth(), random.nextFloat() * getHeight(), false);
             }
-            postDelayed(this, 700L + random.nextInt(701));
+            postDelayed(this, ambientDelayMs());
         }
     };
 
@@ -74,6 +74,11 @@ final class ParticleEffectsView extends View {
                 emitBurst(x, y, 2);
             }
         }
+    }
+
+    void settingsChanged() {
+        updateEmitter();
+        invalidate();
     }
 
     @Override
@@ -155,14 +160,17 @@ final class ParticleEffectsView extends View {
         Particle particle = new Particle();
         particle.x = x;
         particle.y = y;
-        particle.size = host.dp(touchParticle ? 10 + random.nextInt(9) : 8 + random.nextInt(11));
+        float sizeScale = host.particleSize / 100.0f;
+        particle.size = host.dp(touchParticle ? 10 + random.nextInt(9) : 8 + random.nextInt(11)) * sizeScale;
         float speed = host.dp(touchParticle ? 22 + random.nextInt(38) : 8 + random.nextInt(18));
         float angle = (float) (random.nextDouble() * Math.PI * 2.0);
         particle.velocityX = (float) Math.cos(angle) * speed;
         particle.velocityY = (float) Math.sin(angle) * speed - host.dp(touchParticle ? 12 : 5);
         particle.rotation = random.nextInt(360);
         particle.rotationSpeed = signedRandom(38.0f);
-        particle.lifeMs = touchParticle ? 1200L + random.nextInt(801) : 2600L + random.nextInt(1801);
+        float lifetimeScale = host.particleLifetime / 100.0f;
+        long baseLifetime = touchParticle ? 1200L + random.nextInt(801) : 2600L + random.nextInt(1801);
+        particle.lifeMs = Math.round(baseLifetime * lifetimeScale);
         particle.color = random.nextBoolean() ? host.purple : host.yellow;
         particle.maxAlpha = touchParticle ? 145 + random.nextInt(56) : 55 + random.nextInt(41);
         particle.lightning = random.nextBoolean();
@@ -213,6 +221,12 @@ final class ParticleEffectsView extends View {
 
     private float signedRandom(float maximum) {
         return (random.nextFloat() * 2.0f - 1.0f) * maximum;
+    }
+
+    private long ambientDelayMs() {
+        int frequency = Math.max(10, Math.min(100, host.particleFrequency));
+        long base = 2600L - frequency * 22L;
+        return Math.max(350L, base + random.nextInt(301));
     }
 
     private static final class Particle {

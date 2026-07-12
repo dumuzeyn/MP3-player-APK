@@ -164,6 +164,11 @@ final class SongsRenderer {
     }
 
     View songRow(final Track track, boolean showActions, boolean showFavoriteAction, final Runnable afterPlay) {
+        return songRow(track, showActions, showFavoriteAction, afterPlay, null);
+    }
+
+    View songRow(final Track track, boolean showActions, boolean showFavoriteAction, final Runnable afterPlay,
+            final Runnable actionOverride) {
         LinearLayout row = new LinearLayout(host);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
@@ -235,7 +240,11 @@ final class SongsRenderer {
             actions.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    host.openSongActions(track);
+                    if (actionOverride != null) {
+                        actionOverride.run();
+                    } else {
+                        host.openSongActions(track);
+                    }
                 }
             });
             row.addView(actions, host.square(48));

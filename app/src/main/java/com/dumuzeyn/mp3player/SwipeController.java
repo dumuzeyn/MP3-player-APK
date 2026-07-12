@@ -22,6 +22,7 @@ final class SwipeController {
     private int targetIndex = -1;
     private int direction;
     private int width;
+    private int transitionDistance;
     private ValueAnimator transitionAnimator;
     private boolean recordHistory = true;
     private String targetSearch = "";
@@ -102,7 +103,7 @@ final class SwipeController {
             return true;
         }
         if (commit) {
-            animateOffset(currentOffset, -direction * width, true);
+            animateOffset(currentOffset, -direction * transitionDistance, true);
         } else {
             animateOffset(currentOffset, 0.0f, false);
         }
@@ -124,7 +125,7 @@ final class SwipeController {
         }
         prepareTransition(target, requestedDirection, saveHistory, search);
         updateOffset(0.0f);
-        animateOffset(0.0f, -direction * width, true);
+        animateOffset(0.0f, -direction * transitionDistance, true);
     }
 
     private void prepareAdjacentTransition(int requestedDirection) {
@@ -138,12 +139,13 @@ final class SwipeController {
         recordHistory = saveHistory;
         targetSearch = search == null ? "" : search;
         width = Math.max(1, host.contentHost.getWidth());
+        transitionDistance = width + host.dp(12);
         LinearLayout previewList = new LinearLayout(host);
         previewList.setOrientation(LinearLayout.VERTICAL);
         host.renderTabPreview(previewList, targetIndex, targetSearch);
         previewScroll = new ScrollView(host);
         previewScroll.addView(previewList, new FrameLayout.LayoutParams(-1, -2));
-        previewScroll.setTranslationX(direction * width);
+        previewScroll.setTranslationX(direction * transitionDistance);
         host.contentHost.addView(previewScroll, 0, new FrameLayout.LayoutParams(-1, -1));
         host.tabAnimating = true;
         host.tabsController.beginTransition(host.tabIndex, targetIndex, direction);
@@ -155,9 +157,9 @@ final class SwipeController {
             host.contentScroll.setTranslationX(offset);
         }
         if (previewScroll != null) {
-            previewScroll.setTranslationX(offset + (direction * width));
+            previewScroll.setTranslationX(offset + (direction * transitionDistance));
         }
-        host.tabsController.setTransitionProgress(Math.min(1.0f, Math.abs(offset) / Math.max(1.0f, width)));
+        host.tabsController.setTransitionProgress(Math.min(1.0f, Math.abs(offset) / Math.max(1.0f, transitionDistance)));
     }
 
     private void animateOffset(float from, float to, boolean commit) {
@@ -227,7 +229,7 @@ final class SwipeController {
     }
 
     private float clampOffset(float value) {
-        return Math.max(-width * 0.96f, Math.min(width * 0.96f, value));
+        return Math.max(-transitionDistance * 0.96f, Math.min(transitionDistance * 0.96f, value));
     }
 
     private int adjacentIndex(int requestedDirection) {

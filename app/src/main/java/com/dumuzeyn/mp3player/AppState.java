@@ -17,6 +17,10 @@ abstract class AppState extends Activity {
     int loopMode = 0;
     int customTimerMinutes = 10;
     int resumeWindowMinutes = 120;
+    int particleFrequency = 45;
+    int particleSize = 100;
+    int particleLifetime = 100;
+    int playlistTickerSpeed = 100;
     int resumePosition = 0;
     long sleepTimerEndsAt = 0L;
     boolean dark = false;

@@ -24,21 +24,21 @@ final class HeaderController {
                 "ic_music_vector_user", "drawable", host.getPackageName()));
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         icon.setContentDescription("MP3 Player");
-        LinearLayout.LayoutParams iconParams = host.square(40);
+        LinearLayout.LayoutParams iconParams = host.square(36);
         iconParams.setMargins(0, 0, host.dp(8), 0);
         row.addView(icon, iconParams);
         TextView title = host.text("MP3 Player", 20, true);
         title.setTextColor(host.primaryText);
-        row.addView(title, new LinearLayout.LayoutParams(0, host.dp(60), 1.0f));
+        row.addView(title, new LinearLayout.LayoutParams(0, host.dp(52), 1.0f));
         TriangleDecorView artwork = new TriangleDecorView(host);
         artwork.setMode(TriangleDecorView.HEADER);
         artwork.setColors(host.purple, host.yellow);
         artwork.setDecorAlpha(host.dark ? 0.78f : 0.9f);
         artwork.setStrokeWidth(host.dp(2));
-        row.addView(artwork, new LinearLayout.LayoutParams(host.dp(76), host.dp(52)));
+        row.addView(artwork, new LinearLayout.LayoutParams(host.dp(68), host.dp(46)));
         header.addView(row, new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(70));
-        params.setMargins(0, 0, 0, host.dp(10));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(60));
+        params.setMargins(0, 0, 0, host.dp(8));
         host.page.addView(header, params);
     }
 

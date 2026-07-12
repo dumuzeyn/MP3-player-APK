@@ -31,6 +31,10 @@ class MainActivityCore extends AppState {
     static final int COVER_FULL_SIZE = 1024;
     private static final String PREFS = "mp3_player_ui";
     private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
+    private static final String PARTICLE_FREQUENCY = "particleFrequency";
+    private static final String PARTICLE_SIZE = "particleSize";
+    private static final String PARTICLE_LIFETIME = "particleLifetime";
+    private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
     static final int TAB_CYCLES = 21;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
@@ -85,6 +89,12 @@ class MainActivityCore extends AppState {
     final ThemeController themeController = new ThemeController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
     final SleepTimerController sleepTimerController = new SleepTimerController(this);
+    final EqualizerController equalizerController = new EqualizerController(this);
+    final VolumeLevelingController volumeLevelingController = new VolumeLevelingController(this);
+    final ParticleSettingsController particleSettingsController = new ParticleSettingsController(this);
+    final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
+    final StableVolumeController stableVolumeController = new StableVolumeController(this);
+    final PlaylistTickerSettingsController playlistTickerSettingsController = new PlaylistTickerSettingsController(this);
     final LibraryListController libraryListController = new LibraryListController(this);
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
@@ -106,6 +116,10 @@ class MainActivityCore extends AppState {
         }
         this.customTimerMinutes = this.prefs.getInt(CUSTOM_TIMER, 10);
         this.resumeWindowMinutes = Math.max(0, this.prefs.getInt(RESUME_WINDOW_MINUTES, 120));
+        this.particleFrequency = clamp(this.prefs.getInt(PARTICLE_FREQUENCY, 45), 10, 100);
+        this.particleSize = clamp(this.prefs.getInt(PARTICLE_SIZE, 100), 60, 150);
+        this.particleLifetime = clamp(this.prefs.getInt(PARTICLE_LIFETIME, 100), 50, 180);
+        this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
         }
@@ -169,7 +183,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -395,6 +409,10 @@ class MainActivityCore extends AppState {
         this.overlayController.openSongActions(track);
     }
 
+    void addTrackToQueue(Track track) {
+        this.playbackController.addToQueue(track);
+    }
+
     void confirmDeletePlaylist(Playlist playlist) {
         this.overlayController.confirmDeletePlaylist(playlist);
     }
@@ -451,6 +469,16 @@ class MainActivityCore extends AppState {
 
     void timerDialog() {
         this.sleepTimerController.openDialog();
+    }
+
+    void openSaveTrackDialog(Track track) {
+        this.overlayController.chooseCollection(track);
+    }
+
+    void refreshParticleSettings() {
+        if (this.particleEffectsView != null) {
+            this.particleEffectsView.settingsChanged();
+        }
     }
 
     void customTimerDialog() {
@@ -583,6 +611,10 @@ class MainActivityCore extends AppState {
         return null;
     }
 
+    private static int clamp(int value, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
     void loadCover(ImageView view, Track track, int fallbackColor) {
         this.coverLoader.load(view, track, fallbackColor);
     }
@@ -671,6 +703,10 @@ class MainActivityCore extends AppState {
 
     void applySecondaryButtonStyle(Button button) {
         this.uiFactory.applySecondaryButtonStyle(button);
+    }
+
+    void applyPlayerToolStyle(Button button, boolean active) {
+        this.uiFactory.applyPlayerToolStyle(button, active);
     }
 
     void applySeekBarColors(SeekBar seekBar) {

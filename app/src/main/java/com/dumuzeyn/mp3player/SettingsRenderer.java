@@ -17,6 +17,14 @@ final class SettingsRenderer {
         addButton(host.tr("Theme: ", "Тема: ") + host.themeName(), view -> host.openThemeDialog());
         addButton(host.tr(host.animations ? "Turn animations off" : "Turn animations on",
                 host.animations ? "Отключить анимации" : "Включить анимации"), view -> toggleAnimations());
+        addButton(host.tr("Particle effects", "Эффекты частиц"),
+                view -> host.particleSettingsController.openDialog());
+        addButton(host.playlistTickerSettingsController.settingLabel(),
+                view -> host.playlistTickerSettingsController.openDialog());
+        addButton(host.uninterruptedPlaybackController.settingLabel(),
+                view -> host.uninterruptedPlaybackController.toggle());
+        addButton(host.stableVolumeController.settingLabel(),
+                view -> host.stableVolumeController.toggle());
         addButton(host.tr("Language: ", "Язык: ") + host.languageName(),
                 view -> host.settingsController.openLanguageDialog());
         addButton(host.tr("Mini-player memory: ", "Память мини-плеера: ")
