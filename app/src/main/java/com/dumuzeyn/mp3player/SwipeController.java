@@ -1,25 +1,37 @@
 package com.dumuzeyn.mp3player;
 
+import android.animation.ValueAnimator;
 import android.view.MotionEvent;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 
 final class SwipeController {
-    private static final int SWIPE_START_DP = 21;
+    private static final int SWIPE_START_DP = 18;
     private static final int SWIPE_COMMIT_DP = 52;
 
     private final MainActivityCore host;
     private float startX;
     private float startY;
+    private float currentOffset;
     private boolean startedOnTabs;
     private boolean startedOnMiniPlayer;
     private boolean consuming;
+    private ScrollView previewScroll;
+    private int targetIndex = -1;
+    private int direction;
+    private int width;
+    private ValueAnimator transitionAnimator;
+    private boolean recordHistory = true;
+    private String targetSearch = "";
 
     SwipeController(MainActivityCore host) {
         this.host = host;
     }
 
     boolean handle(MotionEvent event) {
-        if (host.tabs == null || host.tabs.length == 0) {
+        if (host.tabs == null || host.tabs.length == 0 || (host.tabAnimating && !consuming)) {
             return false;
         }
         if (host.overlayHost != null && host.overlayHost.getChildCount() > 0) {
@@ -32,6 +44,7 @@ final class SwipeController {
             consuming = false;
             startX = event.getX();
             startY = event.getY();
+            currentOffset = 0.0f;
             host.tabsController.cancelScrollAnimation();
             return false;
         }
@@ -41,21 +54,28 @@ final class SwipeController {
             }
             float deltaX = event.getX() - startX;
             float deltaY = event.getY() - startY;
-            if (!consuming && Math.abs(deltaX) > host.dp(SWIPE_START_DP) && Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (!consuming && Math.abs(deltaX) > host.dp(SWIPE_START_DP)
+                    && Math.abs(deltaX) > Math.abs(deltaY)) {
                 consuming = true;
                 if (host.root != null && host.root.getParent() != null) {
                     host.root.getParent().requestDisallowInterceptTouchEvent(true);
                 }
+                if (host.animations) {
+                    prepareAdjacentTransition(deltaX < 0.0f ? 1 : -1);
+                }
             }
-            if (consuming && host.animations && host.list != null) {
-                float width = host.root == null || host.root.getWidth() <= 0
-                        ? host.getResources().getDisplayMetrics().widthPixels
-                        : host.root.getWidth();
-                float drag = Math.max(-width * 0.82f, Math.min(width * 0.82f, deltaX));
-                host.list.setTranslationX(drag);
-                host.list.setAlpha(Math.max(0.72f, 1.0f - (Math.abs(drag) / width) * 0.24f));
+            if (!consuming) {
+                return false;
             }
-            return consuming;
+            if (host.animations) {
+                int requestedDirection = deltaX < 0.0f ? 1 : -1;
+                if (requestedDirection != direction && Math.abs(deltaX) > host.dp(SWIPE_START_DP)) {
+                    cleanupPreview();
+                    prepareAdjacentTransition(requestedDirection);
+                }
+                updateOffset(clampOffset(deltaX));
+            }
+            return true;
         }
         if (action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) {
             return false;
@@ -63,37 +83,157 @@ final class SwipeController {
         if (startedOnTabs || startedOnMiniPlayer) {
             startedOnTabs = false;
             startedOnMiniPlayer = false;
-            consuming = false;
             return false;
         }
+        if (!consuming) {
+            return false;
+        }
+        consuming = false;
         float deltaX = event.getX() - startX;
         float deltaY = event.getY() - startY;
-        boolean wasConsuming = consuming;
-        consuming = false;
-        if (action == MotionEvent.ACTION_UP
+        boolean commit = action == MotionEvent.ACTION_UP
                 && Math.abs(deltaX) > host.dp(SWIPE_COMMIT_DP)
-                && Math.abs(deltaX) > Math.abs(deltaY)) {
-            int length = host.tabs.length;
-            int target = deltaX < 0.0f
-                    ? (host.tabIndex + 1) % length
-                    : (host.tabIndex - 1 + length) % length;
-            host.switchTabAnimated(target, deltaX < 0.0f ? 1 : -1);
+                && Math.abs(deltaX) > Math.abs(deltaY);
+        if (!host.animations) {
+            if (commit) {
+                int target = adjacentIndex(deltaX < 0.0f ? 1 : -1);
+                host.completeTabTransition(target, deltaX < 0.0f ? 1 : -1, true, "");
+            }
             return true;
         }
-        resetListPosition(wasConsuming);
-        return wasConsuming;
+        if (commit) {
+            animateOffset(currentOffset, -direction * width, true);
+        } else {
+            animateOffset(currentOffset, 0.0f, false);
+        }
+        return true;
     }
 
-    private void resetListPosition(boolean wasConsuming) {
-        if (!wasConsuming || host.list == null) {
+    void animateToTab(int target, int requestedDirection, boolean saveHistory, String search) {
+        if (host.tabs == null || target < 0 || target >= host.tabs.length) {
             return;
         }
-        if (host.animations) {
-            host.list.animate().translationX(0.0f).alpha(1.0f).setDuration(90L)
-                    .setInterpolator(new DecelerateInterpolator()).start();
-        } else {
-            host.list.setTranslationX(0.0f);
-            host.list.setAlpha(1.0f);
+        if (target == host.tabIndex) {
+            host.search = search == null ? "" : search;
+            host.render();
+            return;
         }
+        if (!host.animations || host.contentHost == null || host.contentHost.getWidth() <= 0) {
+            host.completeTabTransition(target, requestedDirection, saveHistory, search);
+            return;
+        }
+        prepareTransition(target, requestedDirection, saveHistory, search);
+        updateOffset(0.0f);
+        animateOffset(0.0f, -direction * width, true);
+    }
+
+    private void prepareAdjacentTransition(int requestedDirection) {
+        prepareTransition(adjacentIndex(requestedDirection), requestedDirection, true, "");
+    }
+
+    private void prepareTransition(int target, int requestedDirection, boolean saveHistory, String search) {
+        cleanupPreview();
+        direction = requestedDirection >= 0 ? 1 : -1;
+        targetIndex = target;
+        recordHistory = saveHistory;
+        targetSearch = search == null ? "" : search;
+        width = Math.max(1, host.contentHost.getWidth());
+        LinearLayout previewList = new LinearLayout(host);
+        previewList.setOrientation(LinearLayout.VERTICAL);
+        host.renderTabPreview(previewList, targetIndex, targetSearch);
+        previewScroll = new ScrollView(host);
+        previewScroll.addView(previewList, new FrameLayout.LayoutParams(-1, -2));
+        previewScroll.setTranslationX(direction * width);
+        host.contentHost.addView(previewScroll, 0, new FrameLayout.LayoutParams(-1, -1));
+        host.tabAnimating = true;
+        host.tabsController.beginTransition(host.tabIndex, targetIndex, direction);
+    }
+
+    private void updateOffset(float offset) {
+        currentOffset = offset;
+        if (host.contentScroll != null) {
+            host.contentScroll.setTranslationX(offset);
+        }
+        if (previewScroll != null) {
+            previewScroll.setTranslationX(offset + (direction * width));
+        }
+        host.tabsController.setTransitionProgress(Math.min(1.0f, Math.abs(offset) / Math.max(1.0f, width)));
+    }
+
+    private void animateOffset(float from, float to, boolean commit) {
+        if (transitionAnimator != null) {
+            transitionAnimator.cancel();
+        }
+        float distance = Math.abs(to - from);
+        long duration = Math.max(90L, Math.min(280L, (long) (260L * distance / Math.max(1, width))));
+        transitionAnimator = ValueAnimator.ofFloat(from, to);
+        transitionAnimator.setDuration(duration);
+        transitionAnimator.setInterpolator(new DecelerateInterpolator());
+        transitionAnimator.addUpdateListener(animator -> updateOffset((Float) animator.getAnimatedValue()));
+        transitionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            private boolean cancelled;
+
+            @Override
+            public void onAnimationCancel(android.animation.Animator animation) {
+                cancelled = true;
+            }
+
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                if (cancelled) {
+                    return;
+                }
+                if (commit) {
+                    finishCommittedTransition();
+                } else {
+                    finishCancelledTransition();
+                }
+            }
+        });
+        transitionAnimator.start();
+    }
+
+    private void finishCommittedTransition() {
+        int completedTarget = targetIndex;
+        int completedDirection = direction;
+        boolean shouldRecord = recordHistory;
+        String completedSearch = targetSearch;
+        cleanupPreview();
+        resetCurrentContent();
+        host.completeTabTransition(completedTarget, completedDirection, shouldRecord, completedSearch);
+    }
+
+    private void finishCancelledTransition() {
+        cleanupPreview();
+        resetCurrentContent();
+        host.tabAnimating = false;
+        host.tabsController.cancelTransition();
+    }
+
+    private void cleanupPreview() {
+        if (previewScroll != null && previewScroll.getParent() == host.contentHost) {
+            host.contentHost.removeView(previewScroll);
+        }
+        previewScroll = null;
+        targetIndex = -1;
+    }
+
+    private void resetCurrentContent() {
+        currentOffset = 0.0f;
+        if (host.contentScroll != null) {
+            host.contentScroll.setTranslationX(0.0f);
+            host.contentScroll.setAlpha(1.0f);
+        }
+    }
+
+    private float clampOffset(float value) {
+        return Math.max(-width * 0.96f, Math.min(width * 0.96f, value));
+    }
+
+    private int adjacentIndex(int requestedDirection) {
+        int count = host.tabs.length;
+        return requestedDirection > 0
+                ? (host.tabIndex + 1) % count
+                : (host.tabIndex - 1 + count) % count;
     }
 }

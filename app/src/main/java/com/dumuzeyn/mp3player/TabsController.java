@@ -7,12 +7,19 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
 final class TabsController {
     private final MainActivityCore host;
     private ValueAnimator scrollAnimator;
+    private FrameLayout tabTrack;
+    private View indicator;
+    private Button transitionFrom;
+    private Button transitionTo;
+    private float transitionFromX;
+    private float transitionToX;
 
     TabsController(MainActivityCore host) {
         this.host = host;
@@ -27,9 +34,17 @@ final class TabsController {
         host.tabsScroll = scrollView;
         scrollView.setHorizontalScrollBarEnabled(false);
 
+        tabTrack = new FrameLayout(host);
         host.tabRow = new LinearLayout(host);
         host.tabRow.setOrientation(LinearLayout.HORIZONTAL);
-        scrollView.addView(host.tabRow);
+        indicator = new View(host);
+        GradientDrawable indicatorBackground = new GradientDrawable();
+        indicatorBackground.setColor(host.purple);
+        indicatorBackground.setCornerRadius(host.dp(14));
+        indicator.setBackground(indicatorBackground);
+        tabTrack.addView(indicator, new FrameLayout.LayoutParams(host.dp(132), host.dp(48)));
+        tabTrack.addView(host.tabRow, new FrameLayout.LayoutParams(-2, host.dp(48)));
+        scrollView.addView(tabTrack, new HorizontalScrollView.LayoutParams(-2, host.dp(48)));
         container.addView(scrollView, new LinearLayout.LayoutParams(-1, host.dp(48)));
         container.addView(host.lineView(), new LinearLayout.LayoutParams(-1, 1));
         host.page.addView(container, new LinearLayout.LayoutParams(-1, host.dp(50)));
@@ -39,6 +54,7 @@ final class TabsController {
             @Override
             public void run() {
                 attachInfiniteScrollLoop();
+                positionIndicatorToActive();
             }
         });
     }
@@ -53,6 +69,47 @@ final class TabsController {
                 styleTab((Button) child, ((Integer) child.getTag()).intValue());
             }
         }
+        if (transitionFrom == null) {
+            positionIndicatorToActive();
+        }
+    }
+
+    void beginTransition(int fromIndex, int targetIndex, int direction) {
+        transitionFrom = findNearestButton(fromIndex);
+        transitionTo = findDirectionalButton(targetIndex, transitionFrom, direction);
+        if (transitionFrom == null || transitionTo == null || indicator == null) {
+            return;
+        }
+        transitionFromX = transitionFrom.getLeft();
+        transitionToX = transitionTo.getLeft();
+        indicator.setTranslationX(transitionFromX);
+        setTransitionProgress(0.0f);
+    }
+
+    void setTransitionProgress(float progress) {
+        float bounded = Math.max(0.0f, Math.min(1.0f, progress));
+        if (indicator != null && transitionFrom != null && transitionTo != null) {
+            indicator.setTranslationX(transitionFromX + ((transitionToX - transitionFromX) * bounded));
+            transitionFrom.setTextColor(ThemeManager.mixColor(host.secondaryText, Color.WHITE, bounded));
+            transitionTo.setTextColor(ThemeManager.mixColor(Color.WHITE, host.secondaryText, bounded));
+        }
+    }
+
+    void finishTransition(int targetIndex) {
+        transitionFrom = null;
+        transitionTo = null;
+        refreshTabs();
+        scrollToActive(true, targetIndex);
+        if (host.tabsScroll != null) {
+            host.tabsScroll.post(this::positionIndicatorToActive);
+        }
+    }
+
+    void cancelTransition() {
+        setTransitionProgress(0.0f);
+        transitionFrom = null;
+        transitionTo = null;
+        refreshTabs();
     }
 
     int directionTo(int targetIndex) {
@@ -119,11 +176,15 @@ final class TabsController {
 
     private void attachInfiniteScrollLoop() {
         int cycleWidth = Math.max(1, host.tabRow.getWidth() / MainActivityCore.TAB_CYCLES);
-        host.scrollTabsToActive(false);
+        scrollToActiveNow(false, host.tabIndex);
+        positionIndicatorToActive();
         host.tabsScroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
             @Override
             public void onScrollChange(View view, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
                 keepScrollInsideMiddleCycles(cycleWidth, scrollX);
+                if (transitionFrom == null) {
+                    positionIndicatorToActive();
+                }
             }
         });
     }
@@ -143,14 +204,61 @@ final class TabsController {
         button.setGravity(17);
         button.setPadding(host.dp(14), 0, host.dp(14), 0);
 
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(index == host.tabIndex ? host.purple : 0);
-        background.setCornerRadius(host.dp(14));
-        if (index != host.tabIndex) {
-            background.setStroke(1, host.cardStroke);
-        }
-        button.setBackground(background);
+        button.setBackgroundColor(Color.TRANSPARENT);
         button.setTextColor(index == host.tabIndex ? Color.WHITE : host.secondaryText);
+    }
+
+    private void positionIndicatorToActive() {
+        Button active = findNearestButton(host.tabIndex);
+        if (active != null && indicator != null) {
+            indicator.setTranslationX(active.getLeft());
+        }
+    }
+
+    private Button findNearestButton(int tabIndex) {
+        if (host.tabsScroll == null || host.tabRow == null) {
+            return null;
+        }
+        int center = host.tabsScroll.getScrollX() + (host.tabsScroll.getWidth() / 2);
+        Button closest = null;
+        int distance = Integer.MAX_VALUE;
+        for (int i = 0; i < host.tabRow.getChildCount(); i++) {
+            View child = host.tabRow.getChildAt(i);
+            if (!(child instanceof Button) || !(child.getTag() instanceof Integer)
+                    || ((Integer) child.getTag()).intValue() != tabIndex) {
+                continue;
+            }
+            int candidateDistance = Math.abs((child.getLeft() + child.getWidth() / 2) - center);
+            if (candidateDistance < distance) {
+                distance = candidateDistance;
+                closest = (Button) child;
+            }
+        }
+        return closest;
+    }
+
+    private Button findDirectionalButton(int tabIndex, Button from, int direction) {
+        if (from == null) {
+            return findNearestButton(tabIndex);
+        }
+        Button closest = null;
+        int distance = Integer.MAX_VALUE;
+        for (int i = 0; i < host.tabRow.getChildCount(); i++) {
+            View child = host.tabRow.getChildAt(i);
+            if (!(child instanceof Button) || !(child.getTag() instanceof Integer)
+                    || ((Integer) child.getTag()).intValue() != tabIndex) {
+                continue;
+            }
+            int delta = child.getLeft() - from.getLeft();
+            if ((direction > 0 && delta <= 0) || (direction < 0 && delta >= 0)) {
+                continue;
+            }
+            if (Math.abs(delta) < distance) {
+                distance = Math.abs(delta);
+                closest = (Button) child;
+            }
+        }
+        return closest == null ? findNearestButton(tabIndex) : closest;
     }
 
     private void scrollToActiveNow(boolean smooth, int targetIndex) {

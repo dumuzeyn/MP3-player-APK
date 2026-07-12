@@ -30,6 +30,7 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
     @Override
     public void render() {
         String query = host.search.trim().toLowerCase(Locale.ROOT);
+        int rendered = 0;
         for (Map.Entry<String, ArrayList<Track>> entry : groupedTracks().entrySet()) {
             if (!query.isEmpty()
                     && !host.containsSearch(entry.getKey(), query)
@@ -37,6 +38,10 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
                 continue;
             }
             host.list.addView(host.spaced(groupCard(entry.getKey(), entry.getValue())));
+            rendered++;
+            if (host.renderingTabPreview && rendered >= 5) {
+                break;
+            }
         }
     }
 

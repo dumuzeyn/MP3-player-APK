@@ -11,7 +11,6 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -63,6 +62,9 @@ class MainActivityCore extends AppState {
     LinearLayout tabRow;
     String[] tabs;
     HorizontalScrollView tabsScroll;
+    FrameLayout contentHost;
+    ScrollView contentScroll;
+    private ParticleEffectsView particleEffectsView;
     private final CoverLoader coverLoader = new CoverLoader(this);
     final Handler uiHandler = new Handler(Looper.getMainLooper());
     final Handler playbackHandler = new Handler(Looper.getMainLooper());
@@ -79,6 +81,7 @@ class MainActivityCore extends AppState {
     private final HeaderController headerController = new HeaderController(this);
     private final OverlayController overlayController = new OverlayController(this);
     private final DialogController dialogController = new DialogController(this);
+    private final BackNavigationController backNavigationController = new BackNavigationController(this);
     final ThemeController themeController = new ThemeController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
     final SleepTimerController sleepTimerController = new SleepTimerController(this);
@@ -115,6 +118,9 @@ class MainActivityCore extends AppState {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent motionEvent) {
+        if (this.particleEffectsView != null) {
+            this.particleEffectsView.observeTouch(motionEvent);
+        }
         if (this.swipeController.handle(motionEvent)) {
             return true;
         }
@@ -125,6 +131,18 @@ class MainActivityCore extends AppState {
     protected void onStop() {
         super.onStop();
         this.themeController.onHostStopped();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (!this.backNavigationController.handleBack()) {
+            super.onBackPressed();
+        }
+    }
+
+    void restoreTabFromBack(int targetIndex, String previousSearch) {
+        int direction = this.tabsController.directionTo(targetIndex);
+        this.swipeController.animateToTab(targetIndex, direction, false, previousSearch);
     }
 
     private boolean english() {
@@ -214,14 +232,19 @@ class MainActivityCore extends AppState {
         this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
         buildHeader();
         this.tabsController.buildTabs();
+        this.contentHost = new FrameLayout(this);
         ScrollView scrollView = new ScrollView(this);
+        this.contentScroll = scrollView;
         this.list = new LinearLayout(this);
         this.list.setOrientation(1);
         scrollView.addView(this.list, new FrameLayout.LayoutParams(-1, -2));
-        this.page.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+        this.contentHost.addView(scrollView, new FrameLayout.LayoutParams(-1, -1));
+        this.page.addView(this.contentHost, new LinearLayout.LayoutParams(-1, 0, 1.0f));
         this.overlayHost = new FrameLayout(this);
         this.root.addView(this.overlayHost, new FrameLayout.LayoutParams(-1, -1));
         buildMiniPlayer();
+        this.particleEffectsView = new ParticleEffectsView(this);
+        this.root.addView(this.particleEffectsView, new FrameLayout.LayoutParams(-1, -1));
         setContentView(this.root);
         render();
     }
@@ -251,51 +274,19 @@ class MainActivityCore extends AppState {
             return;
         }
         this.preferredTabDirection = i2;
-        if (!this.animations) {
-            this.tabIndex = i;
-            this.search = "";
-            scrollTabsToActive(false, i);
-            render();
-            return;
-        }
-        this.tabAnimating = true;
-        int width = (this.root == null || this.root.getWidth() <= 0) ? getResources().getDisplayMetrics().widthPixels : this.root.getWidth();
-        if (this.list == null) {
-            this.tabIndex = i;
-            this.search = "";
-            render();
-            this.tabAnimating = false;
-            return;
-        }
-        scrollTabsToActive(true, i);
-        this.list.animate().translationX(i2 < 0 ? width : -width).alpha(0.0f).setDuration(48L).setInterpolator(new DecelerateInterpolator()).withEndAction(new UiAction4(this, i, i2, width)).start();
+        this.swipeController.animateToTab(i, i2, true, "");
     }
 
-    class UiAction4 implements Runnable {
-        final MainActivityCore this$0;
-        final int val$direction;
-        final int val$nextIndex;
-        final int val$width;
-
-        UiAction4(MainActivityCore mainActivity, int i, int i2, int i3) {
-            this.val$nextIndex = i;
-            this.val$direction = i2;
-            this.val$width = i3;
-            this.this$0 = mainActivity;
+    void completeTabTransition(int targetIndex, int direction, boolean recordHistory, String targetSearch) {
+        if (recordHistory) {
+            this.backNavigationController.recordTabState(this.tabIndex, this.search);
         }
-
-        @Override
-        public void run() {
-            this.this$0.tabIndex = this.val$nextIndex;
-            this.this$0.search = "";
-            this.this$0.render();
-            this.this$0.list.setTranslationX(this.val$direction < 0 ? -this.val$width : this.val$width);
-            this.this$0.list.setAlpha(0.0f);
-            this.this$0.list.animate().translationX(0.0f).alpha(1.0f).setDuration(92L)
-                    .setInterpolator(new DecelerateInterpolator())
-                    .withEndAction(() -> this.this$0.tabAnimating = false)
-                    .start();
-        }
+        this.preferredTabDirection = direction;
+        this.tabIndex = targetIndex;
+        this.search = targetSearch == null ? "" : targetSearch;
+        this.tabAnimating = false;
+        render();
+        this.tabsController.finishTransition(targetIndex);
     }
 
     void scrollTabsToActive(boolean z) {
@@ -316,6 +307,10 @@ class MainActivityCore extends AppState {
 
     void render() {
         this.mainRenderer.render();
+    }
+
+    void renderTabPreview(LinearLayout target, int targetIndex, String targetSearch) {
+        this.mainRenderer.renderPreview(target, targetIndex, targetSearch);
     }
 
     void renderSectionHeader() {

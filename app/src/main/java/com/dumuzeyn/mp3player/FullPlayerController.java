@@ -79,6 +79,14 @@ final class FullPlayerController {
         return this.currentSheet != null && this.currentSheet.getParent() != null;
     }
 
+    boolean closeIfTop(View top) {
+        if (top != this.currentSheet || !isOpen()) {
+            return false;
+        }
+        close(this.currentSheet, true);
+        return true;
+    }
+
     private FrameLayout createSheet() {
         return new FrameLayout(host) {
             private boolean draggingDown = false;

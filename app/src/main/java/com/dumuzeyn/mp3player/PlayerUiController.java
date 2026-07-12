@@ -1,6 +1,7 @@
 package com.dumuzeyn.mp3player;
 
 import android.view.MotionEvent;
+import android.view.View;
 
 final class PlayerUiController {
     private final MainActivityCore host;
@@ -46,5 +47,9 @@ final class PlayerUiController {
 
     boolean isInsideMiniPlayer(MotionEvent event) {
         return miniPlayerController.isInsideMiniPlayer(event);
+    }
+
+    boolean closeFullPlayerIfTop(View top) {
+        return fullPlayerController.closeIfTop(top);
     }
 }

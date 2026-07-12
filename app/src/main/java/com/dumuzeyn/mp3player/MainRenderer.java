@@ -42,28 +42,64 @@ final class MainRenderer {
         host.updateMini();
     }
 
+    void renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {
+        android.widget.LinearLayout previousList = host.list;
+        ButtonState previousButton = new ButtonState(host.sourcePlayButton);
+        int previousTab = host.tabIndex;
+        String previousSearch = host.search;
+        boolean previousPreview = host.renderingTabPreview;
+        try {
+            host.list = target;
+            host.tabIndex = targetIndex;
+            host.search = targetSearch == null ? "" : targetSearch;
+            host.renderingTabPreview = true;
+            host.sourcePlayButton = null;
+            target.removeAllViews();
+            host.renderSectionHeader();
+            rendererForTab(targetIndex).render();
+        } finally {
+            host.list = previousList;
+            host.tabIndex = previousTab;
+            host.search = previousSearch;
+            host.renderingTabPreview = previousPreview;
+            host.sourcePlayButton = previousButton.button;
+        }
+    }
+
     private MenuRenderer rendererForTab() {
-        if (host.tabIndex == 0) {
+        return rendererForTab(host.tabIndex);
+    }
+
+    private MenuRenderer rendererForTab(int tabIndex) {
+        if (tabIndex == 0) {
             return songsRenderer;
         }
-        if (host.tabIndex == 1) {
+        if (tabIndex == 1) {
             return favoritesRenderer;
         }
-        if (host.tabIndex == 2) {
+        if (tabIndex == 2) {
             return playlistsRenderer;
         }
-        if (host.tabIndex == 3) {
+        if (tabIndex == 3) {
             return genresRenderer;
         }
-        if (host.tabIndex == 4) {
+        if (tabIndex == 4) {
             return artistsRenderer;
         }
-        if (host.tabIndex == 5) {
+        if (tabIndex == 5) {
             return albumsRenderer;
         }
-        if (host.tabIndex == 6) {
+        if (tabIndex == 6) {
             return settingsRenderer;
         }
         return songsRenderer;
+    }
+
+    private static final class ButtonState {
+        final android.widget.Button button;
+
+        ButtonState(android.widget.Button button) {
+            this.button = button;
+        }
     }
 }

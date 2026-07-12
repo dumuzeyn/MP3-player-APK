@@ -39,7 +39,9 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
             host.list.addView(empty);
             return;
         }
-        for (Playlist playlist : playlists) {
+        int limit = host.renderingTabPreview ? Math.min(3, playlists.size()) : playlists.size();
+        for (int index = 0; index < limit; index++) {
+            Playlist playlist = playlists.get(index);
             host.list.addView(host.spaced(playlistCard(playlist)));
         }
     }
@@ -96,7 +98,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
 
         SmoothPlaylistTicker ticker = new SmoothPlaylistTicker(host);
         ticker.setPadding(host.dp(12), 0, 0, 0);
-        body.addView(ticker, new LinearLayout.LayoutParams(0, host.dp(66), 1.0f));
+        body.addView(ticker, new LinearLayout.LayoutParams(0, host.dp(72), 1.0f));
         card.addView(body);
         host.playlistController.bindRollingPreview(ticker, cover, tracks, host.songRenderGeneration);
 

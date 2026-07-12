@@ -31,4 +31,5 @@ abstract class AppState extends Activity {
     String search = "";
     boolean fullPlayerOpening = false;
     int songRenderGeneration = 0;
+    boolean renderingTabPreview = false;
 }

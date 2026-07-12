@@ -1,110 +1,129 @@
 package com.dumuzeyn.mp3player;
 
-import android.text.TextUtils;
-import android.view.Gravity;
-import android.widget.FrameLayout;
-import android.widget.TextView;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.view.View;
 import java.util.ArrayList;
 
-final class SmoothPlaylistTicker extends FrameLayout {
+final class SmoothPlaylistTicker extends View {
+    private static final int VISIBLE_LINES = 3;
+
     private final MainActivityCore host;
-    private final TextView textView;
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final ArrayList<String> titles = new ArrayList<>();
+    private float scrollOffset;
+    private long lastFrameNanos;
+    private int lineHeight;
     private String contentKey = "";
 
     SmoothPlaylistTicker(MainActivityCore host) {
         super(host);
         this.host = host;
-        setClipChildren(true);
-        setClipToPadding(true);
-        this.textView = host.text("", 16, true);
-        this.textView.setSingleLine(false);
-        this.textView.setLineSpacing(0.0f, 1.0f);
-        this.textView.setEllipsize(TextUtils.TruncateAt.END);
-        this.textView.setGravity(Gravity.START);
-        addView(this.textView, new FrameLayout.LayoutParams(-1, -2));
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        int lineHeight = Math.max(1, this.textView.getLineHeight());
-        setMeasuredDimension(getMeasuredWidth(), (lineHeight * 3) + host.dp(4));
+        paint.setTypeface(Typeface.DEFAULT_BOLD);
+        paint.setTextSize(sp(16));
+        paint.setColor(host.primaryText);
     }
 
     void bindTracks(ArrayList<Track> tracks) {
         String key = buildKey(tracks);
-        if (key.equals(this.contentKey)) {
+        if (key.equals(contentKey)) {
             return;
         }
-        this.contentKey = key;
-        this.textView.animate().cancel();
-        this.textView.setTranslationY(0.0f);
-        this.textView.setText(buildCreditsText(tracks));
-        if (tracks.size() <= 3) {
+        contentKey = key;
+        titles.clear();
+        for (Track track : tracks) {
+            titles.add(track.title == null || track.title.trim().isEmpty()
+                    ? host.tr("Unknown track", "Неизвестная песня")
+                    : track.title.trim());
+        }
+        if (titles.isEmpty()) {
+            titles.add(host.tr("No songs in this playlist yet.", "В плейлисте пока нет песен."));
+        }
+        scrollOffset = 0.0f;
+        lastFrameNanos = 0L;
+        requestLayout();
+        invalidate();
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        Paint.FontMetricsInt metrics = paint.getFontMetricsInt();
+        lineHeight = Math.max(1, (metrics.descent - metrics.ascent) + host.dp(3));
+        int desiredHeight = (lineHeight * VISIBLE_LINES) + getPaddingTop() + getPaddingBottom();
+        setMeasuredDimension(resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec),
+                resolveSize(desiredHeight, heightMeasureSpec));
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (titles.isEmpty() || lineHeight <= 0) {
             return;
         }
-        post(new Runnable() {
-            @Override
-            public void run() {
-                startCredits(tracks.size());
+        paint.setColor(host.primaryText);
+        boolean scrolling = titles.size() > VISIBLE_LINES && host.animations;
+        if (scrolling) {
+            advanceScroll();
+        } else {
+            lastFrameNanos = 0L;
+            scrollOffset = 0.0f;
+        }
+
+        int firstLine = scrolling ? (int) (scrollOffset / lineHeight) : 0;
+        float remainder = scrolling ? scrollOffset % lineHeight : 0.0f;
+        float top = getPaddingTop() - remainder;
+        Paint.FontMetrics metrics = paint.getFontMetrics();
+        int linesToDraw = VISIBLE_LINES + (scrolling ? 2 : 0);
+        for (int line = 0; line < linesToDraw; line++) {
+            if (top >= getHeight() - getPaddingBottom()) {
+                break;
             }
-        });
-    }
-
-    private void startCredits(final int trackCount) {
-        if (getHeight() <= 0 || textView.getLineHeight() <= 0) {
-            postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    startCredits(trackCount);
-                }
-            }, 400L);
-            return;
-        }
-        float travel = Math.max(1.0f, (float) (textView.getLineHeight() * (trackCount + 1)));
-        long duration = Math.max(16000L, trackCount * 4200L);
-        textView.setTranslationY(0.0f);
-        textView.animate()
-                .translationY(-travel)
-                .setDuration(host.animations ? duration : 0L)
-                .withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (getParent() != null) {
-                            startCredits(trackCount);
-                        }
-                    }
-                })
-                .start();
-    }
-
-    private String buildCreditsText(ArrayList<Track> tracks) {
-        if (tracks.isEmpty()) {
-            return host.tr3("No songs in this playlist yet.", "В плейлисте пока нет песен.", "∅ ♪");
-        }
-        StringBuilder builder = new StringBuilder();
-        appendTitles(builder, tracks);
-        if (tracks.size() > 3) {
-            builder.append("\n");
-            appendTitles(builder, tracks);
-        }
-        return builder.toString();
-    }
-
-    private void appendTitles(StringBuilder builder, ArrayList<Track> tracks) {
-        for (int i = 0; i < tracks.size(); i++) {
-            if (builder.length() > 0) {
-                builder.append("\n");
+            int index = (firstLine + line) % titles.size();
+            float baseline = top - metrics.ascent;
+            if (baseline + metrics.descent > 0.0f) {
+                canvas.drawText(ellipsize(titles.get(index)), getPaddingLeft(), baseline, paint);
             }
-            builder.append(tracks.get(i).title);
+            top += lineHeight;
         }
+        if (scrolling && isAttachedToWindow()) {
+            postInvalidateOnAnimation();
+        }
+    }
+
+    private void advanceScroll() {
+        long now = System.nanoTime();
+        if (lastFrameNanos != 0L) {
+            float seconds = Math.min(0.05f, (now - lastFrameNanos) / 1_000_000_000.0f);
+            scrollOffset += host.dp(13) * seconds;
+            float loopHeight = lineHeight * titles.size();
+            if (scrollOffset >= loopHeight) {
+                scrollOffset %= loopHeight;
+            }
+        }
+        lastFrameNanos = now;
+    }
+
+    private String ellipsize(String value) {
+        float available = Math.max(1.0f, getWidth() - getPaddingLeft() - getPaddingRight());
+        if (paint.measureText(value) <= available) {
+            return value;
+        }
+        String suffix = "…";
+        float suffixWidth = paint.measureText(suffix);
+        int count = paint.breakText(value, true, Math.max(1.0f, available - suffixWidth), null);
+        return value.substring(0, Math.max(0, count)).trim() + suffix;
     }
 
     private String buildKey(ArrayList<Track> tracks) {
         StringBuilder builder = new StringBuilder();
         for (Track track : tracks) {
-            builder.append(track.uri).append('|');
+            builder.append(track.uri).append('|').append(track.title).append(';');
         }
         return builder.toString();
+    }
+
+    private float sp(int value) {
+        return value * getResources().getDisplayMetrics().scaledDensity;
     }
 }

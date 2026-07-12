@@ -64,7 +64,7 @@ final class PlaylistController {
 
             @Override
             public void run() {
-                if (generation != host.songRenderGeneration || ticker.getParent() == null) {
+                if (generation != host.songRenderGeneration || !ticker.isAttachedToWindow()) {
                     return;
                 }
                 cover.bindTrack(sortedTracks.get(index), generation);

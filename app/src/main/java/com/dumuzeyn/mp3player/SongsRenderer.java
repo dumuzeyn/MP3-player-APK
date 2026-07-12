@@ -141,11 +141,12 @@ final class SongsRenderer {
         if (generation != host.songRenderGeneration || host.tabIndex > 1) {
             return;
         }
-        int end = Math.min(tracksToRender.size(), start + 24);
+        int batchSize = host.renderingTabPreview ? 5 : 24;
+        int end = Math.min(tracksToRender.size(), start + batchSize);
         for (int i = start; i < end; i++) {
             host.list.addView(songRow(tracksToRender.get(i), true, true));
         }
-        if (end < tracksToRender.size()) {
+        if (!host.renderingTabPreview && end < tracksToRender.size()) {
             final int nextStart = end;
             host.uiHandler.post(new Runnable() {
                 @Override
@@ -172,7 +173,9 @@ final class SongsRenderer {
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);
         marker.setVisibility(host.isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        host.songRows.registerCurrentMarker(track.uri, marker);
+        if (!host.renderingTabPreview) {
+            host.songRows.registerCurrentMarker(track.uri, marker);
+        }
         LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(host.dp(4), host.dp(58));
         markerParams.setMargins(0, 0, host.dp(6), 0);
         row.addView(marker, markerParams);
@@ -203,7 +206,9 @@ final class SongsRenderer {
         metaRow.setOrientation(LinearLayout.HORIZONTAL);
         metaRow.setGravity(16);
         WaveformView waveform = host.wave(track, host.isCurrent(track));
-        host.songRows.registerWaveform(track.uri, waveform);
+        if (!host.renderingTabPreview) {
+            host.songRows.registerWaveform(track.uri, waveform);
+        }
         metaRow.addView(waveform, new LinearLayout.LayoutParams(0, host.dp(30), 1.0f));
         TextView duration = host.text(host.formatTrackDuration(track), 12, false);
         duration.setGravity(17);
@@ -251,7 +256,9 @@ final class SongsRenderer {
                 }
             }
         });
-        host.songRows.registerPlayButton(track.uri, play);
+        if (!host.renderingTabPreview) {
+            host.songRows.registerPlayButton(track.uri, play);
+        }
         row.addView(play, host.square(48));
         return host.spaced(row);
     }
