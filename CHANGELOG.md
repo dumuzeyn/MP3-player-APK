@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4 - Continuous compatibility checks
+
+- Run Android 8 and Android 16 instrumentation tests for every pull request.
+- Keep the complete Android 8–16 emulator matrix on the weekly schedule and manual dispatch.
+- Updated GitHub Actions to Node.js 24-compatible major versions.
+- Added a reproducible physical-device checklist for Samsung, Xiaomi/Redmi, Pixel, and aggressive battery-saving firmware.
+- Release tags, source code, release notes, and the signed APK now advance together as version 2.4.
+
 ## 2.3 - Controller redistribution
 
 - Added Android instrumentation tests for application configuration, local crash reports, and background playback with a generated WAV.

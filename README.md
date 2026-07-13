@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.3-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -262,6 +262,8 @@ flowchart TB
 
 Полная матрица выполнена на Android Emulator без физического телефона. [Запуск Android Compatibility #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) завершён успешно для коммита `1f47f6f`.
 
+Каждый pull request обязан пройти сокращённую матрицу Android 8 и Android 16. Полная матрица Android 8–16 запускается еженедельно и вручную. Слияние pull request должно быть разрешено только после успешных проверок `Android 8 (API 26)`, `Android 16 (API 36)` и обычного `Android Build`.
+
 ```mermaid
 flowchart LR
     PUSH["Изменение кода"] --> JVM["Unit-тесты + lint"]
@@ -298,6 +300,8 @@ flowchart LR
 
 На каждой версии проверяются конфигурация приложения, foreground media service, реальное воспроизведение тестового WAV, сохранение проигрывания после закрытия Activity, продвижение позиции, пауза и обезличивание отчётов о сбоях. Для каждой версии опубликован отдельный artifact с JUnit HTML/XML, полным logcat, crash buffer, DropBox, `dumpsys media_session` и состоянием `PlayerService`; срок хранения CI-отчётов — 14 дней.
 
+Эмуляторы не воспроизводят особенности One UI, HyperOS, Bluetooth-стеков и агрессивного энергосбережения производителей. Ручные проверки и их фактический статус вынесены в [DEVICE_TESTING.md](DEVICE_TESTING.md); неподтверждённые устройства не отмечаются как пройденные.
+
 ## Сборка
 
 Требуются Android SDK и JDK 17.
@@ -308,7 +312,7 @@ flowchart LR
 
 При запущенном Android Emulator instrumentation-тесты выполняются командой `./gradlew connectedDebugAndroidTest`.
 
-Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets: ручной запуск `workflow_dispatch` собирает подписанный `MP3-Player.apk` и прикрепляет его к выбранному существующему релизу. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
+Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets: ручной запуск `workflow_dispatch` собирает подписанный `MP3-Player.apk` и создаёт либо обновляет релиз с указанным тегом. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
 
 ## Авторство
 
@@ -322,7 +326,7 @@ flowchart LR
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.3-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.4-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player">
     <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -582,6 +586,8 @@ The main package is located under `app/src/main/java`.
 
 The complete matrix ran on Android Emulator without a physical phone. [Android Compatibility run #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) completed successfully for commit `1f47f6f`.
 
+Every pull request must pass the reduced Android 8 and Android 16 matrix. The complete Android 8–16 matrix runs weekly and on manual dispatch. Pull requests should only be merged after `Android 8 (API 26)`, `Android 16 (API 36)`, and the regular `Android Build` checks succeed.
+
 ```mermaid
 flowchart LR
     PUSH["Code change"] --> JVM["Unit tests + lint"]
@@ -618,6 +624,8 @@ flowchart LR
 
 Every version verifies application configuration, the foreground media service, real playback of a generated WAV, playback continuity after the Activity closes, position progress, pause behavior, and crash-report redaction. Each version publishes a separate artifact containing JUnit HTML/XML, full logcat, crash buffer, DropBox, `dumpsys media_session`, and `PlayerService` state; CI reports are retained for 14 days.
 
+Emulators cannot reproduce One UI, HyperOS, vendor Bluetooth stacks, or aggressive battery-saving firmware. Manual procedures and their actual status are tracked in [DEVICE_TESTING.md](DEVICE_TESTING.md); unverified devices are never marked as passed.
+
 ## Build
 
 Android SDK and JDK 17 are required.
@@ -628,7 +636,7 @@ Android SDK and JDK 17 are required.
 
 With an Android Emulator running, execute instrumentation tests with `./gradlew connectedDebugAndroidTest`.
 
-Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets: a manual `workflow_dispatch` run builds the signed `MP3-Player.apk` and attaches it to the selected existing release. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
+Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets: a manual `workflow_dispatch` run builds the signed `MP3-Player.apk` and creates or updates the release for the selected tag. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
 
 ## Authorship
 
