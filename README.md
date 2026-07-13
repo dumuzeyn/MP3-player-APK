@@ -260,7 +260,7 @@ flowchart TB
 
 ## Проверка Android 8–16
 
-Полная матрица выполнена на Android Emulator без физического телефона. [Запуск Android Compatibility #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) завершён успешно для коммита `1f47f6f`.
+Полная матрица выполнена на Android Emulator без физического телефона. [Запуск Android Compatibility #2](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29262747087) завершён успешно для релизного коммита 2.4 `b393b96`.
 
 Каждый pull request обязан пройти сокращённую матрицу Android 8 и Android 16. Полная матрица Android 8–16 запускается еженедельно и вручную. Слияние pull request должно быть разрешено только после успешных проверок `Android 8 (API 26)`, `Android 16 (API 36)` и обычного `Android Build`.
 
@@ -584,7 +584,7 @@ The main package is located under `app/src/main/java`.
 
 ## Android 8–16 verification
 
-The complete matrix ran on Android Emulator without a physical phone. [Android Compatibility run #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) completed successfully for commit `1f47f6f`.
+The complete matrix ran on Android Emulator without a physical phone. [Android Compatibility run #2](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29262747087) completed successfully for the 2.4 release commit `b393b96`.
 
 Every pull request must pass the reduced Android 8 and Android 16 matrix. The complete Android 8–16 matrix runs weekly and on manual dispatch. Pull requests should only be merged after `Android 8 (API 26)`, `Android 16 (API 36)`, and the regular `Android Build` checks succeed.
 
