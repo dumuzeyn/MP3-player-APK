@@ -2,6 +2,10 @@
 
 ## 2.3 - Controller redistribution
 
+- Added Android instrumentation tests for application configuration, local crash reports, and background playback with a generated WAV.
+- Verified the same test suite on Android 8 through Android 16 (API 26, 28–31, and 33–36) using a GitHub Actions emulator matrix.
+- Added per-version JUnit, logcat, crash buffer, DropBox, MediaSession, and PlayerService diagnostic artifacts.
+- Added a privacy-preserving local crash store that retains five reports and redacts music URI and storage paths.
 - Moved playback queue commands, service start logic, and playback watcher behavior into `PlaybackController`.
 - Moved mini-player state rendering into `PlayerUiController`.
 - Moved settings screen rendering into `SettingsRenderer`.

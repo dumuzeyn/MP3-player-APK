@@ -9,6 +9,12 @@
   </a>
 </p>
 
+<p align="center">
+  <a href="../../actions/workflows/android-compatibility.yml">
+    <img src="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android-compatibility.yml/badge.svg" alt="Android 8–16">
+  </a>
+</p>
+
 MP3 Player — Android-плеер для музыки, уже скачанной на телефон. Он открывает локальные аудиофайлы через системный выбор Android, сохраняет доступ к ним и воспроизводит музыку в приложении, в фоне и через системную медиапанель.
 
 ## Возможности
@@ -79,6 +85,7 @@ MP3 Player — Android-плеер для музыки, уже скачанной
 - Настройка частоты, размера и времени жизни частиц в безопасных пределах.
 - Русский и английский интерфейс.
 - Тематические vector/adaptive launcher icons и отдельные splash-ресурсы.
+- Локальные обезличенные отчёты о последних сбоях с просмотром количества и очисткой из настроек.
 
 ## Скриншоты
 
@@ -157,6 +164,8 @@ flowchart TB
 
 - `MainActivity.java` — светлая точка входа приложения.
 - `DarkMainActivity.java` — точка входа с тёмной системной темой окна.
+- `Mp3PlayerApplication.java` — инициализирует общие process-level компоненты до запуска Activity.
+- `CrashReportStore.java` — хранит до пяти локальных отчётов, удаляет URI/пути и передаёт исключение системному обработчику Android.
 - `MainActivityCore.java` — создаёт корневой UI, соединяет контроллеры, обрабатывает lifecycle и хранит только общие делегаты.
 - `AppState.java` — единое состояние: текущий трек, очередь, вкладка, поиск, тема, язык, таймер и визуальные настройки.
 
@@ -239,18 +248,65 @@ flowchart TB
 - `app/build.gradle` — Android-конфигурация, версия, подпись и release-настройки R8.
 - `app/proguard-rules.pro` — правила сохранения необходимых классов при minify.
 - `.github/workflows/android.yml` — unit-тесты и lint для каждого изменения; подписанный release собирается вручную из encrypted Secrets.
+- `.github/workflows/android-compatibility.yml` — отдельная матрица instrumentation-тестов Android 8–16 на эмуляторах.
+- `.github/scripts/run-instrumentation-tests.sh` — запускает тесты и всегда собирает JUnit, logcat, crash buffer, DropBox, MediaSession и состояние сервиса.
 - `TrackStoreTest.java` — тесты сортировки и миграции данных песен.
 - `PlaylistManagerTest.java` — тесты сохранения плейлистов и очистки названий.
 - `PlaybackQueueNavigatorTest.java` — переходы очереди, repeat-one, repeat-all, one-shot и обработка ошибок.
 - `PlaybackQueueManagerTest.java` — порядок очереди, пропуск удалённых треков и границы индексов.
+- `CompatibilityInstrumentedTest.java` — проверяет Application, manifest и тип foreground media service.
+- `BackgroundPlaybackInstrumentedTest.java` — воспроизводит сгенерированный WAV, закрывает Activity и проверяет продолжение фонового проигрывания и паузу.
+- `CrashReportStoreInstrumentedTest.java` — проверяет локальную запись и удаление URI/путей из crash report.
+
+## Проверка Android 8–16
+
+Полная матрица выполнена на Android Emulator без физического телефона. [Запуск Android Compatibility #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) завершён успешно для коммита `1f47f6f`.
+
+```mermaid
+flowchart LR
+    PUSH["Изменение кода"] --> JVM["Unit-тесты + lint"]
+    PUSH --> TEST_APK["Сборка instrumentation APK"]
+    TEST_APK --> MATRIX["Эмуляторы Android 8–16"]
+    MATRIX --> CONFIG["Manifest и foreground service"]
+    MATRIX --> PLAY["WAV · закрытие Activity<br/>позиция · пауза"]
+    MATRIX --> CRASH["Crash store<br/>обезличивание URI и путей"]
+    CONFIG --> REPORTS["JUnit · logcat · DropBox<br/>MediaSession · PlayerService"]
+    PLAY --> REPORTS
+    CRASH --> REPORTS
+    JVM --> RELEASE["Подписанный release APK"]
+    REPORTS --> RELEASE
+
+    classDef source fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
+    classDef check fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
+    classDef result fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
+    class PUSH source;
+    class JVM,TEST_APK,MATRIX,CONFIG,PLAY,CRASH check;
+    class REPORTS,RELEASE result;
+```
+
+| Android | API | Результат |
+|---|---:|---|
+| 8 | 26 | Пройден |
+| 9 | 28 | Пройден |
+| 10 | 29 | Пройден |
+| 11 | 30 | Пройден |
+| 12 | 31 | Пройден |
+| 13 | 33 | Пройден |
+| 14 | 34 | Пройден |
+| 15 | 35 | Пройден |
+| 16 | 36 | Пройден |
+
+На каждой версии проверяются конфигурация приложения, foreground media service, реальное воспроизведение тестового WAV, сохранение проигрывания после закрытия Activity, продвижение позиции, пауза и обезличивание отчётов о сбоях. Для каждой версии опубликован отдельный artifact с JUnit HTML/XML, полным logcat, crash buffer, DropBox, `dumpsys media_session` и состоянием `PlayerService`; срок хранения CI-отчётов — 14 дней.
 
 ## Сборка
 
 Требуются Android SDK и JDK 17.
 
 ```bash
-./gradlew clean testDebugUnitTest lintDebug
+./gradlew clean testDebugUnitTest lintDebug assembleDebugAndroidTest
 ```
+
+При запущенном Android Emulator instrumentation-тесты выполняются командой `./gradlew connectedDebugAndroidTest`.
 
 Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets: ручной запуск `workflow_dispatch` собирает подписанный `MP3-Player.apk` и прикрепляет его к выбранному существующему релизу. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
 
@@ -270,6 +326,12 @@ flowchart TB
   </a>
   <a href="#mp3-player">
     <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
+  </a>
+</p>
+
+<p align="center">
+  <a href="../../actions/workflows/android-compatibility.yml">
+    <img src="https://github.com/dumuzeyn/MP3-player-APK/actions/workflows/android-compatibility.yml/badge.svg" alt="Android 8–16">
   </a>
 </p>
 
@@ -343,6 +405,7 @@ MP3 Player is an Android player for music already downloaded to the phone. It op
 - Bounded particle frequency, size, and lifetime controls.
 - Russian and English interface.
 - Theme-aware vector/adaptive launcher icons and dedicated splash resources.
+- Private local reports for recent crashes, with report count and cleanup available in settings.
 
 ## Screenshots
 
@@ -421,6 +484,8 @@ The main package is located under `app/src/main/java`.
 
 - `MainActivity.java` — light-system-theme application entry point.
 - `DarkMainActivity.java` — dark-system-theme application entry point.
+- `Mp3PlayerApplication.java` — initializes process-level components before any Activity starts.
+- `CrashReportStore.java` — retains up to five local reports, removes URIs/paths, and delegates the exception to Android's system handler.
 - `MainActivityCore.java` — composes the root UI, connects controllers, handles lifecycle, and keeps shared delegates only.
 - `AppState.java` — shared track, queue, tab, search, theme, language, timer, and visual state.
 
@@ -503,18 +568,65 @@ The main package is located under `app/src/main/java`.
 - `app/build.gradle` — Android configuration, version, signing, and release R8 settings.
 - `app/proguard-rules.pro` — keeps required classes during minification.
 - `.github/workflows/android.yml` — unit tests and lint for every change; signed releases are built manually from encrypted Secrets.
+- `.github/workflows/android-compatibility.yml` — independent Android 8–16 emulator matrix for instrumentation tests.
+- `.github/scripts/run-instrumentation-tests.sh` — runs tests and always collects JUnit, logcat, crash buffer, DropBox, MediaSession, and service state.
 - `TrackStoreTest.java` — track sorting and migration tests.
 - `PlaylistManagerTest.java` — playlist persistence and name-cleanup tests.
 - `PlaybackQueueNavigatorTest.java` — queue transitions, repeat-one, repeat-all, one-shot, and error handling.
 - `PlaybackQueueManagerTest.java` — queue order, missing-track filtering, and index boundaries.
+- `CompatibilityInstrumentedTest.java` — verifies the Application, manifest, and foreground media-service type.
+- `BackgroundPlaybackInstrumentedTest.java` — plays a generated WAV, closes the Activity, and verifies background playback and pause behavior.
+- `CrashReportStoreInstrumentedTest.java` — verifies local persistence and URI/path redaction in crash reports.
+
+## Android 8–16 verification
+
+The complete matrix ran on Android Emulator without a physical phone. [Android Compatibility run #1](https://github.com/dumuzeyn/MP3-player-APK/actions/runs/29256170782) completed successfully for commit `1f47f6f`.
+
+```mermaid
+flowchart LR
+    PUSH["Code change"] --> JVM["Unit tests + lint"]
+    PUSH --> TEST_APK["Build instrumentation APK"]
+    TEST_APK --> MATRIX["Android 8–16 emulators"]
+    MATRIX --> CONFIG["Manifest and foreground service"]
+    MATRIX --> PLAY["WAV · close Activity<br/>position · pause"]
+    MATRIX --> CRASH["Crash store<br/>URI and path redaction"]
+    CONFIG --> REPORTS["JUnit · logcat · DropBox<br/>MediaSession · PlayerService"]
+    PLAY --> REPORTS
+    CRASH --> REPORTS
+    JVM --> RELEASE["Signed release APK"]
+    REPORTS --> RELEASE
+
+    classDef source fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
+    classDef check fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
+    classDef result fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
+    class PUSH source;
+    class JVM,TEST_APK,MATRIX,CONFIG,PLAY,CRASH check;
+    class REPORTS,RELEASE result;
+```
+
+| Android | API | Result |
+|---|---:|---|
+| 8 | 26 | Passed |
+| 9 | 28 | Passed |
+| 10 | 29 | Passed |
+| 11 | 30 | Passed |
+| 12 | 31 | Passed |
+| 13 | 33 | Passed |
+| 14 | 34 | Passed |
+| 15 | 35 | Passed |
+| 16 | 36 | Passed |
+
+Every version verifies application configuration, the foreground media service, real playback of a generated WAV, playback continuity after the Activity closes, position progress, pause behavior, and crash-report redaction. Each version publishes a separate artifact containing JUnit HTML/XML, full logcat, crash buffer, DropBox, `dumpsys media_session`, and `PlayerService` state; CI reports are retained for 14 days.
 
 ## Build
 
 Android SDK and JDK 17 are required.
 
 ```bash
-./gradlew clean testDebugUnitTest lintDebug
+./gradlew clean testDebugUnitTest lintDebug assembleDebugAndroidTest
 ```
+
+With an Android Emulator running, execute instrumentation tests with `./gradlew connectedDebugAndroidTest`.
 
 Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets: a manual `workflow_dispatch` run builds the signed `MP3-Player.apk` and attaches it to the selected existing release. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
 
