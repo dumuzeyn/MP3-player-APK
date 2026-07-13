@@ -66,7 +66,6 @@ $Aapt2 = Join-Path $SdkRoot "build-tools\$BuildTools\aapt2.exe"
 $D8 = Join-Path $SdkRoot "build-tools\$BuildTools\d8.bat"
 $ZipAlign = Join-Path $SdkRoot "build-tools\$BuildTools\zipalign.exe"
 $ApkSigner = Join-Path $SdkRoot "build-tools\$BuildTools\apksigner.bat"
-$SigningMode = if ($env:MP3_SIGNING_MODE) { $env:MP3_SIGNING_MODE.ToLowerInvariant() } else { "release" }
 
 function Require-Env($Name) {
     $Value = [Environment]::GetEnvironmentVariable($Name)
@@ -132,18 +131,12 @@ Invoke-Checked { & $D8 --min-api 23 --classpath $AndroidJar --output $DexDir $Cl
 
 Invoke-Checked { & jar uf $UnsignedApk -C $DexDir classes.dex }
 
-if ($SigningMode -eq "release") {
-    $KeyStore = Require-Env "MP3_RELEASE_KEYSTORE"
-    $KeyAlias = Require-Env "MP3_RELEASE_KEY_ALIAS"
-    $StorePass = Require-Env "MP3_RELEASE_STORE_PASS"
-    $KeyPass = Require-Env "MP3_RELEASE_KEY_PASS"
-    if (-not (Test-Path -LiteralPath $KeyStore)) {
-        throw "Release keystore not found: $KeyStore"
-    }
-} elseif ($SigningMode -eq "debug") {
-    throw "Use '.\gradlew.bat assembleDebug' for debug builds with the separate .debug package ID."
-} else {
-    throw "Unknown MP3_SIGNING_MODE '$SigningMode'. Use 'debug' or 'release'."
+$KeyStore = Require-Env "MP3_RELEASE_KEYSTORE"
+$KeyAlias = Require-Env "MP3_RELEASE_KEY_ALIAS"
+$StorePass = Require-Env "MP3_RELEASE_STORE_PASS"
+$KeyPass = Require-Env "MP3_RELEASE_KEY_PASS"
+if (-not (Test-Path -LiteralPath $KeyStore)) {
+    throw "Release keystore not found: $KeyStore"
 }
 
 $AlignedApk = Join-Path $BuildDir "mp3-player-aligned.apk"

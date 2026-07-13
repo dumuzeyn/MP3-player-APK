@@ -1,41 +1,18 @@
 package com.dumuzeyn.mp3player;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.Shader;
-import android.graphics.drawable.Drawable;
 import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
-import android.media.AudioManager;
-import android.media.MediaMetadata;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
-import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
-import android.util.LruCache;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class PlayerService extends Service {
     public static final String ACTION_LOOP = "com.dumuzeyn.mp3player.LOOP";
@@ -53,7 +30,6 @@ public class PlayerService extends Service {
     public static final String EXTRA_POSITION = "position";
     public static final String EXTRA_QUEUE_URIS = "queueUris";
     public static final String EXTRA_SHUFFLE = "shuffle";
-    private static final String CHANNEL_ID = "playback";
     private static final String TAG = "MP3PlayerService";
     private static final String DEBUG_TAG = "MP3PlayerDebug";
     private static final int NOTIFICATION_ID = 7;
@@ -66,85 +42,12 @@ public class PlayerService extends Service {
     public static int lastLoopMode = 0;
     public static String lastUri = "";
 
-    private final ArrayList<Track> queue = new ArrayList<>();
-    private final LruCache<String, Bitmap> coverCache = new LruCache<String, Bitmap>(8 * 1024) {
-        @Override
-        protected int sizeOf(String key, Bitmap value) {
-            return Math.max(1, value.getByteCount() / 1024);
-        }
-    };
-    private String styledCoverKey = "";
-    private Bitmap styledCover;
-    private Bitmap lightAppIcon;
-    private Bitmap darkAppIcon;
-    private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
-                if (uninterruptedPlaybackEnabled()) {
-                    Log.i(TAG, "audio_becoming_noisy_ignored");
-                    return;
-                }
-                pausedByUser = true;
-                pausedByTransientFocusLoss = false;
-                pauseInternal("audio_becoming_noisy");
-            }
-        }
-    };
-    private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
-        @Override
-        public void onAudioFocusChange(int focusChange) {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS
-                    || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-                hasAudioFocus = false;
-            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
-                hasAudioFocus = true;
-            }
-            if (uninterruptedPlaybackEnabled()) {
-                Log.i(TAG, "audio_focus_change_ignored value=" + focusChange);
-                restoreFullVolume();
-                return;
-            }
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
-                Log.i(TAG, "audio_focus_loss");
-                pausedByTransientFocusLoss = false;
-                duckedByFocusLoss = false;
-                pauseInternal("focus_loss");
-            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-                Log.i(TAG, "audio_focus_loss_transient");
-                pausedByTransientFocusLoss = player != null && safeIsPlaying() && !pausedByUser;
-                duckedByFocusLoss = false;
-                pauseInternal("focus_loss_transient");
-            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-                Log.i(TAG, "audio_focus_duck");
-                if (stableVolumeEnabled()) {
-                    restoreFullVolume();
-                } else if (player != null) {
-                    player.setVolume(0.35f, 0.35f);
-                    duckedByFocusLoss = true;
-                }
-            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
-                Log.i(TAG, "audio_focus_gain");
-                if (player != null) {
-                    player.setVolume(1.0f, 1.0f);
-                }
-                duckedByFocusLoss = false;
-                if (pausedByTransientFocusLoss && !pausedByUser) {
-                    pausedByTransientFocusLoss = false;
-                    play();
-                }
-            }
-        }
-    };
-
-    private MediaSession mediaSession;
+    private final PlaybackQueueManager queueManager = new PlaybackQueueManager();
     private MediaPlayer player;
     private AudioEffectsManager audioEffectsManager;
-    private AudioManager audioManager;
-    private AudioFocusRequest audioFocusRequest;
-    private boolean hasAudioFocus = false;
+    private AudioFocusController audioFocusController;
+    private MediaNotificationController notificationController;
     private boolean playerPreparing = false;
-    private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
     private PlaybackStateRepository playbackStateRepository;
     private int currentIndex = -1;
@@ -152,8 +55,6 @@ public class PlayerService extends Service {
     private boolean shuffle = false;
     private int loopMode = 0;
     private boolean pausedByUser = false;
-    private boolean pausedByTransientFocusLoss = false;
-    private boolean duckedByFocusLoss = false;
     private int loopOneErrorRetries = 0;
     private int consecutivePlaybackErrors = 0;
 
@@ -162,19 +63,16 @@ public class PlayerService extends Service {
         super.onCreate();
         instance = this;
         this.audioEffectsManager = new AudioEffectsManager(this);
+        this.audioFocusController = new AudioFocusController(this, new AudioFocusCallback());
         this.playbackStateRepository = new PlaybackStateRepository(this);
-        this.audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        createChannel();
-        this.mediaSession = new MediaSession(this, "MP3 Player");
-        this.mediaSession.setCallback(new SessionCallback());
-        this.mediaSession.setActive(true);
-        this.queue.addAll(TrackStore.load(this));
+        this.notificationController = new MediaNotificationController(this, new SessionCallback());
+        this.queueManager.replace(TrackStore.load(this));
         Log.i(TAG, "service_created");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, buildNotification());
+        startForeground(NOTIFICATION_ID, currentNotification());
         if (intent == null) {
             restorePlaybackAfterProcessDeath();
             return START_STICKY;
@@ -186,14 +84,13 @@ public class PlayerService extends Service {
             this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
             lastLoopMode = this.loopMode;
             this.pausedByUser = false;
-            this.pausedByTransientFocusLoss = false;
-            this.duckedByFocusLoss = false;
+            this.audioFocusController.resetInterruptionState();
             saveResumeState(true, true);
             playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS), intent.getIntExtra(EXTRA_POSITION, 0), 0);
             return START_STICKY;
         }
         if (ACTION_TOGGLE.equals(action)) {
-            if (this.player == null || this.currentIndex < 0 || this.queue.isEmpty()) {
+            if (this.player == null || this.currentIndex < 0 || this.queueManager.isEmpty()) {
                 prepareToggleQueue(intent);
             }
             toggle();
@@ -220,7 +117,7 @@ public class PlayerService extends Service {
             lastLoopMode = this.loopMode;
             saveResumeState(true, true);
             logPlaybackState("loop_changed");
-            startForeground(NOTIFICATION_ID, buildNotification());
+            startForeground(NOTIFICATION_ID, currentNotification());
             return START_STICKY;
         }
         if (ACTION_AUDIO_EFFECTS.equals(action)) {
@@ -229,18 +126,16 @@ public class PlayerService extends Service {
                 stopForeground(true);
                 stopSelf();
             } else {
-                startForeground(NOTIFICATION_ID, buildNotification());
+                startForeground(NOTIFICATION_ID, currentNotification());
             }
             return START_STICKY;
         }
         if (ACTION_UPDATE_QUEUE.equals(action)) {
             String playingUri = currentUri();
             rebuildQueue(intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
-            for (int index = 0; index < this.queue.size(); index++) {
-                if (this.queue.get(index).uri.equals(playingUri)) {
-                    this.currentIndex = index;
-                    break;
-                }
+            int updatedIndex = this.queueManager.indexOfUri(playingUri);
+            if (updatedIndex >= 0) {
+                this.currentIndex = updatedIndex;
             }
             saveResumeState(true, true);
             return START_STICKY;
@@ -266,29 +161,31 @@ public class PlayerService extends Service {
     private void playIndex(int index, ArrayList<String> queueUris, int startPosition, int attempts) {
         if (queueUris != null) {
             rebuildQueue(queueUris);
-        } else if (this.queue.isEmpty()) {
-            this.queue.addAll(TrackStore.load(this));
+        } else if (this.queueManager.isEmpty()) {
+            this.queueManager.replace(TrackStore.load(this));
         }
-        if (this.queue.isEmpty()) {
+        if (this.queueManager.isEmpty()) {
             Log.w(TAG, "empty_queue");
             stopPlayback(false);
             stopSelf();
             return;
         }
-        if (attempts >= this.queue.size() || this.consecutivePlaybackErrors >= this.queue.size()) {
-            Log.e(DEBUG_TAG, "all_queue_items_failed errors=" + this.consecutivePlaybackErrors + " queue=" + this.queue.size());
+        if (attempts >= this.queueManager.size()
+                || this.consecutivePlaybackErrors >= this.queueManager.size()) {
+            Log.e(DEBUG_TAG, "all_queue_items_failed errors=" + this.consecutivePlaybackErrors
+                    + " queue=" + this.queueManager.size());
             stopPlayback(false);
             stopSelf();
             return;
         }
         this.currentIndex = normalizeIndex(index);
-        Track track = this.queue.get(this.currentIndex);
+        Track track = this.queueManager.get(this.currentIndex);
         boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
         Log.i(DEBUG_TAG, "start_track index=" + this.currentIndex + " title=" + track.title + " uri=" + track.uri + " canOpen=" + canOpen + " attempt=" + attempts);
         if (!canOpen) {
             this.consecutivePlaybackErrors++;
             Log.e(DEBUG_TAG, "start_track_unavailable uri=" + track.uri + " errors=" + this.consecutivePlaybackErrors);
-            if (this.consecutivePlaybackErrors >= this.queue.size()) {
+            if (this.consecutivePlaybackErrors >= this.queueManager.size()) {
                 stopPlayback(false);
                 stopSelf();
             } else {
@@ -317,7 +214,7 @@ public class PlayerService extends Service {
                     playerPreparing = false;
                     consecutivePlaybackErrors++;
                     Log.e(DEBUG_TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex + " uri=" + currentUri() + " errors=" + consecutivePlaybackErrors);
-                    if (consecutivePlaybackErrors >= queue.size()) {
+                    if (consecutivePlaybackErrors >= queueManager.size()) {
                         stopPlayback(false);
                         stopSelf();
                     } else {
@@ -335,15 +232,15 @@ public class PlayerService extends Service {
             this.playerPreparing = true;
             updateState();
             saveResumeState(true, true);
-            updateNoisyReceiver();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            this.audioFocusController.updateNoisyReceiver(safeIsPlaying());
+            startForeground(NOTIFICATION_ID, currentNotification());
             this.player.prepareAsync();
             logPlaybackState("track_preparing");
         } catch (Exception e) {
             this.playerPreparing = false;
             this.consecutivePlaybackErrors++;
             Log.e(DEBUG_TAG, "prepare_failed index=" + this.currentIndex + " uri=" + track.uri + " error=" + e.getMessage(), e);
-            if (this.consecutivePlaybackErrors >= this.queue.size()) {
+            if (this.consecutivePlaybackErrors >= this.queueManager.size()) {
                 stopPlayback(false);
                 stopSelf();
             } else {
@@ -394,19 +291,19 @@ public class PlayerService extends Service {
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
-            if (!requestAudioFocus()) {
+            if (!this.audioFocusController.requestFocus()) {
                 Log.w(TAG, "audio_focus_denied");
                 stopPlayback(false);
                 return;
             }
             preparedPlayer.start();
-            preparedPlayer.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
+            this.audioFocusController.applyPlaybackVolume();
             this.loopOneErrorRetries = 0;
             updateState();
             TrackStore.updateDuration(this, currentUri(), safeDuration());
             saveResumeState(true, true);
-            updateNoisyReceiver();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            this.audioFocusController.updateNoisyReceiver(safeIsPlaying());
+            startForeground(NOTIFICATION_ID, currentNotification());
             logPlaybackState("track_started");
         } catch (Exception e) {
             this.consecutivePlaybackErrors++;
@@ -416,19 +313,9 @@ public class PlayerService extends Service {
     }
 
     private void rebuildQueue(ArrayList<String> queueUris) {
-        this.queue.clear();
-        ArrayList<Track> allTracks = TrackStore.load(this);
-        Map<String, Track> tracksByUri = new HashMap<>();
-        for (Track track : allTracks) {
-            tracksByUri.put(track.uri, track);
-        }
-        for (String uri : queueUris) {
-            Track track = tracksByUri.get(uri);
-            if (track != null) {
-                this.queue.add(track);
-            }
-        }
-        Log.i(TAG, "queue_loaded size=" + this.queue.size() + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle);
+        this.queueManager.rebuild(TrackStore.load(this), queueUris);
+        Log.i(TAG, "queue_loaded size=" + this.queueManager.size() + " loopMode=" + this.loopMode
+                + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle);
     }
 
     private void prepareToggleQueue(Intent intent) {
@@ -438,7 +325,7 @@ public class PlayerService extends Service {
         ArrayList<String> queueUris = intent.getStringArrayListExtra(EXTRA_QUEUE_URIS);
         if (queueUris != null && !queueUris.isEmpty()) {
             rebuildQueue(queueUris);
-        } else if (this.queue.isEmpty()) {
+        } else if (this.queueManager.isEmpty()) {
             restoreQueueForToggle();
         }
         if (intent.hasExtra(EXTRA_INDEX)) {
@@ -460,14 +347,14 @@ public class PlayerService extends Service {
         if (!uris.isEmpty()) {
             rebuildQueue(uris);
         }
-        if (this.queue.isEmpty()) {
-            this.queue.addAll(TrackStore.load(this));
+        if (this.queueManager.isEmpty()) {
+            this.queueManager.replace(TrackStore.load(this));
         }
     }
 
     private void advanceQueue(PlaybackQueueNavigator.Reason reason, int attempts) {
         PlaybackQueueNavigator.Decision decision = PlaybackQueueNavigator.decide(
-                this.queue.size(), this.currentIndex, this.loopMode, this.oneShot,
+                this.queueManager.size(), this.currentIndex, this.loopMode, this.oneShot,
                 reason, this.loopOneErrorRetries);
         this.loopOneErrorRetries = decision.loopOneErrorRetries;
         if (decision.stop) {
@@ -475,7 +362,7 @@ public class PlayerService extends Service {
             stopSelf();
             return;
         }
-        if (this.currentIndex == this.queue.size() - 1 && decision.nextIndex == 0) {
+        if (this.currentIndex == this.queueManager.size() - 1 && decision.nextIndex == 0) {
             Log.i(TAG, "wrap_last_to_first");
         }
         Log.i(TAG, "advance reason=" + reason + " nextIndex=" + decision.nextIndex + " attempts=" + attempts);
@@ -483,10 +370,7 @@ public class PlayerService extends Service {
     }
 
     private int normalizeIndex(int index) {
-        if (this.queue.isEmpty()) {
-            return -1;
-        }
-        return Math.max(0, Math.min(index, this.queue.size() - 1));
+        return this.queueManager.normalizeIndex(index);
     }
 
     private void restorePlaybackAfterProcessDeath() {
@@ -521,7 +405,7 @@ public class PlayerService extends Service {
         }
         if (safeIsPlaying()) {
             this.pausedByUser = true;
-            this.pausedByTransientFocusLoss = false;
+            this.audioFocusController.onUserPause();
             pauseInternal("toggle_pause");
         } else {
             this.pausedByUser = false;
@@ -538,16 +422,16 @@ public class PlayerService extends Service {
             return;
         }
         if (!safeIsPlaying()) {
-            if (!requestAudioFocus()) {
+            if (!this.audioFocusController.requestFocus()) {
                 return;
             }
             try {
                 this.player.start();
-                this.player.setVolume(duckedByFocusLoss ? 0.35f : 1.0f, duckedByFocusLoss ? 0.35f : 1.0f);
+                this.audioFocusController.applyPlaybackVolume();
                 updateState();
                 saveResumeState(true, false);
-                updateNoisyReceiver();
-                startForeground(NOTIFICATION_ID, buildNotification());
+                this.audioFocusController.updateNoisyReceiver(safeIsPlaying());
+                startForeground(NOTIFICATION_ID, currentNotification());
                 logPlaybackState("play");
             } catch (Exception e) {
                 Log.e(TAG, "start_failed", e);
@@ -565,8 +449,8 @@ public class PlayerService extends Service {
             }
             updateState();
             saveResumeState(true, false);
-            updateNoisyReceiver();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            this.audioFocusController.updateNoisyReceiver(safeIsPlaying());
+            startForeground(NOTIFICATION_ID, currentNotification());
             logPlaybackState(reason);
         }
     }
@@ -579,7 +463,7 @@ public class PlayerService extends Service {
             this.player.seekTo(Math.max(0, Math.min(position, safeDuration())));
             updateState();
             saveResumeState(true, false);
-            startForeground(NOTIFICATION_ID, buildNotification());
+            startForeground(NOTIFICATION_ID, currentNotification());
         } catch (Exception e) {
             Log.e(TAG, "seek_failed", e);
             advanceQueue(PlaybackQueueNavigator.Reason.ERROR, 1);
@@ -600,8 +484,7 @@ public class PlayerService extends Service {
             saveResumeState(true, true);
         }
         lastPlaying = false;
-        unregisterNoisyReceiver();
-        abandonAudioFocus();
+        this.audioFocusController.stop();
         stopForeground(true);
         logPlaybackState(explicit ? "stop_explicit" : "stop_queue_end");
     }
@@ -635,8 +518,9 @@ public class PlayerService extends Service {
         lastIndex = this.currentIndex;
         lastPlaying = this.player != null && safeIsPlaying();
         int currentDuration = safeDuration();
-        if (currentDuration <= 0 && this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
-            currentDuration = Math.max(0, this.queue.get(this.currentIndex).durationMs);
+        if (currentDuration <= 0 && this.currentIndex >= 0
+                && this.currentIndex < this.queueManager.size()) {
+            currentDuration = Math.max(0, this.queueManager.get(this.currentIndex).durationMs);
         }
         lastDuration = currentDuration;
         lastPosition = safePosition();
@@ -648,16 +532,17 @@ public class PlayerService extends Service {
     }
 
     private String currentUri() {
-        return (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) ? "" : this.queue.get(this.currentIndex).uri;
+        return this.queueManager.uriAt(this.currentIndex);
     }
 
     private void saveResumeState(boolean forcePosition, boolean includeQueue) {
-        if (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) {
+        if (this.currentIndex < 0 || this.currentIndex >= this.queueManager.size()) {
             return;
         }
         this.playbackStateRepository.save(new PlaybackStateRepository.Snapshot(
-                this.queue.get(this.currentIndex).uri, lastPosition, lastDuration, this.currentIndex,
-                this.loopMode, lastPlaying, this.shuffle, this.queue), includeQueue);
+                this.queueManager.get(this.currentIndex).uri, lastPosition, lastDuration,
+                this.currentIndex, this.loopMode, lastPlaying, this.shuffle,
+                this.queueManager.tracks()), includeQueue);
         if (forcePosition || lastPlaying) {
             this.lastResumePositionSavedAt = System.currentTimeMillis();
         }
@@ -682,179 +567,16 @@ public class PlayerService extends Service {
 
     public static void refreshAppearance() {
         if (instance != null && instance.player != null) {
-            instance.startForeground(NOTIFICATION_ID, instance.buildNotification());
+            instance.startForeground(NOTIFICATION_ID, instance.currentNotification());
         }
     }
 
-    private Notification buildNotification() {
-        Track track = (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) ? this.queue.get(this.currentIndex) : new Track("", "MP3 Player", "Музыка готова");
-        SharedPreferences uiPrefs = getSharedPreferences("mp3_player_ui", 0);
-        String theme = uiPrefs.getString("theme", "light");
-        int customBackground = uiPrefs.getInt("customBg", 0xffffffff);
-        boolean darkTheme = "dark".equals(theme)
-                || ("custom".equals(theme) && ThemeManager.isDarkColor(customBackground));
-        boolean circularCover = uiPrefs.getBoolean("circularCovers", false);
-        int accentColor = "custom".equals(theme)
-                ? uiPrefs.getInt("customFg", 0xff7c32e8)
-                : darkTheme ? 0xffa35cff : 0xff7c32e8;
-        ComponentName launcher = LauncherComponents.forTheme(this, darkTheme);
-        Intent launchIntent = new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LAUNCHER)
-                .setComponent(launcher);
-        PendingIntent activity = PendingIntent.getActivity(this, 1, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-        int playPauseIcon = safeIsPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        Bitmap cover = notificationCover(track, circularCover);
-        Bitmap themedIcon = themedAppIcon(darkTheme);
-        builder.setSmallIcon(getResources().getIdentifier("ic_notification_music", "drawable", getPackageName()))
-                .setContentTitle(track.title)
-                .setContentText(track.artist)
-                .setLargeIcon(cover)
-                .setContentIntent(activity)
-                .setOngoing(this.player != null && safeIsPlaying())
-                .setCategory(Notification.CATEGORY_TRANSPORT)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setColor(accentColor)
-                .addAction(android.R.drawable.ic_media_previous, "Назад", serviceIntent(ACTION_PREV, 2))
-                .addAction(playPauseIcon, safeIsPlaying() ? "Пауза" : "Играть", serviceIntent(ACTION_TOGGLE, 3))
-                .addAction(android.R.drawable.ic_media_next, "Дальше", serviceIntent(ACTION_NEXT, 4));
-        if (Build.VERSION.SDK_INT >= 26) {
-            builder.setColorized(true);
-        }
-        this.mediaSession.setSessionActivity(activity);
-        updateMediaSession(track, cover, themedIcon);
-        builder.setStyle(new Notification.MediaStyle().setMediaSession(this.mediaSession.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
-        return builder.build();
-    }
-
-    private void updateMediaSession(Track track, Bitmap cover, Bitmap themedIcon) {
-        long currentPosition = safePosition();
-        long duration = safeDuration();
-        int state = safeIsPlaying() ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
-        MediaMetadata.Builder metadata = new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, track.title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, track.artist)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, track.album)
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration);
-        if (cover != null) {
-            metadata.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, cover);
-            metadata.putBitmap(MediaMetadata.METADATA_KEY_ART, cover);
-        }
-        if (themedIcon != null) {
-            metadata.putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, themedIcon);
-        }
-        this.mediaSession.setMetadata(metadata.build());
-        this.mediaSession.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_SEEK_TO | PlaybackState.ACTION_STOP).setState(state, currentPosition, 1.0f).build());
-    }
-
-    private Bitmap coverFor(Track track) {
-        if (track == null || track.uri == null || track.uri.isEmpty()) {
-            return null;
-        }
-        Bitmap cached = this.coverCache.get(track.uri);
-        if (cached != null) {
-            return cached;
-        }
-        Bitmap cover = readCover(track);
-        if (cover != null) {
-            this.coverCache.put(track.uri, cover);
-        }
-        return cover;
-    }
-
-    private Bitmap notificationCover(Track track, boolean circular) {
-        Bitmap rawCover = coverFor(track);
-        if (!circular || rawCover == null) {
-            return rawCover;
-        }
-        String key = track.uri + "#circle";
-        if (key.equals(this.styledCoverKey) && this.styledCover != null && !this.styledCover.isRecycled()) {
-            return this.styledCover;
-        }
-        this.styledCoverKey = key;
-        this.styledCover = circularBitmap(rawCover);
-        return this.styledCover;
-    }
-
-    private Bitmap readCover(Track track) {
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            retriever.setDataSource(this, track.asUri());
-            byte[] data = retriever.getEmbeddedPicture();
-            if (data == null || data.length == 0) {
-                return null;
-            }
-            BitmapFactory.Options bounds = new BitmapFactory.Options();
-            bounds.inJustDecodeBounds = true;
-            BitmapFactory.decodeByteArray(data, 0, data.length, bounds);
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = coverSampleSize(bounds, 512);
-            return BitmapFactory.decodeByteArray(data, 0, data.length, options);
-        } catch (Exception e) {
-            Log.w(DEBUG_TAG, "service_cover_failed uri=" + track.uri + " error=" + e.getMessage());
-            return null;
-        } finally {
-            try {
-                retriever.release();
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    private Bitmap circularBitmap(Bitmap source) {
-        if (source == null || source.isRecycled()) {
-            return source;
-        }
-        int size = Math.max(1, Math.min(source.getWidth(), source.getHeight()));
-        Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(output);
-        BitmapShader shader = new BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        float scale = Math.max((float) size / source.getWidth(), (float) size / source.getHeight());
-        Matrix matrix = new Matrix();
-        matrix.setScale(scale, scale);
-        matrix.postTranslate((size - source.getWidth() * scale) * 0.5f,
-                (size - source.getHeight() * scale) * 0.5f);
-        shader.setLocalMatrix(matrix);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        paint.setShader(shader);
-        canvas.drawCircle(size * 0.5f, size * 0.5f, size * 0.5f, paint);
-        return output;
-    }
-
-    private Bitmap themedAppIcon(boolean darkTheme) {
-        Bitmap cached = darkTheme ? this.darkAppIcon : this.lightAppIcon;
-        if (cached != null && !cached.isRecycled()) {
-            return cached;
-        }
-        try {
-            Drawable drawable = getResources().getDrawable(
-                    darkTheme ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
-            int size = 128;
-            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            drawable.setBounds(0, 0, size, size);
-            drawable.draw(canvas);
-            if (darkTheme) {
-                this.darkAppIcon = bitmap;
-            } else {
-                this.lightAppIcon = bitmap;
-            }
-            return bitmap;
-        } catch (RuntimeException error) {
-            return null;
-        }
-    }
-
-    private int coverSampleSize(BitmapFactory.Options options, int maxSize) {
-        int sampleSize = 1;
-        int width = options.outWidth;
-        int height = options.outHeight;
-        while (width / sampleSize > maxSize * 2 || height / sampleSize > maxSize * 2) {
-            sampleSize *= 2;
-        }
-        return Math.max(1, sampleSize);
+    private Notification currentNotification() {
+        Track track = (this.currentIndex >= 0 && this.currentIndex < this.queueManager.size())
+                ? this.queueManager.get(this.currentIndex)
+                : new Track("", "MP3 Player", "Музыка готова");
+        return this.notificationController.build(
+                track, this.player != null, safeIsPlaying(), safePosition(), safeDuration());
     }
 
     private int safeDuration() {
@@ -895,116 +617,16 @@ public class PlayerService extends Service {
     }
 
     private int currentTrackDurationFallback() {
-        if (this.currentIndex >= 0 && this.currentIndex < this.queue.size()) {
-            return Math.max(0, this.queue.get(this.currentIndex).durationMs);
+        if (this.currentIndex >= 0 && this.currentIndex < this.queueManager.size()) {
+            return Math.max(0, this.queueManager.get(this.currentIndex).durationMs);
         }
         return Math.max(0, lastDuration);
     }
 
-    private PendingIntent serviceIntent(String action, int requestCode) {
-        Intent intent = new Intent(this, PlayerService.class);
-        intent.setAction(action);
-        return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private boolean requestAudioFocus() {
-        if (uninterruptedPlaybackEnabled()) {
-            return true;
-        }
-        if (this.hasAudioFocus) {
-            return true;
-        }
-        if (this.audioManager == null) {
-            return true;
-        }
-        int result;
-        if (Build.VERSION.SDK_INT >= 26) {
-            if (this.audioFocusRequest == null) {
-                this.audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                        .setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build())
-                        .setOnAudioFocusChangeListener(this.audioFocusChangeListener)
-                        .build();
-            }
-            result = this.audioManager.requestAudioFocus(this.audioFocusRequest);
-        } else {
-            result = this.audioManager.requestAudioFocus(this.audioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-        }
-        this.hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-        return this.hasAudioFocus;
-    }
-
-    private boolean uninterruptedPlaybackEnabled() {
-        return getSharedPreferences(UninterruptedPlaybackController.PREFS, 0)
-                .getBoolean(UninterruptedPlaybackController.ENABLED, false);
-    }
-
-    private boolean stableVolumeEnabled() {
-        return getSharedPreferences(UninterruptedPlaybackController.PREFS, 0)
-                .getBoolean(StableVolumeController.ENABLED, false);
-    }
-
-    private void restoreFullVolume() {
-        if (this.player != null) {
-            try {
-                this.player.setVolume(1.0f, 1.0f);
-            } catch (RuntimeException ignored) {
-            }
-        }
-        this.duckedByFocusLoss = false;
-    }
-
-    private void abandonAudioFocus() {
-        if (this.audioManager == null) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= 26 && this.audioFocusRequest != null) {
-            this.audioManager.abandonAudioFocusRequest(this.audioFocusRequest);
-        } else {
-            this.audioManager.abandonAudioFocus(this.audioFocusChangeListener);
-        }
-        this.hasAudioFocus = false;
-    }
-
-    private void updateNoisyReceiver() {
-        if (this.player != null && safeIsPlaying()) {
-            registerNoisyReceiver();
-        } else {
-            unregisterNoisyReceiver();
-        }
-    }
-
-    private void registerNoisyReceiver() {
-        if (this.noisyReceiverRegistered) {
-            return;
-        }
-        registerReceiver(this.noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
-        this.noisyReceiverRegistered = true;
-    }
-
-    private void unregisterNoisyReceiver() {
-        if (!this.noisyReceiverRegistered) {
-            return;
-        }
-        try {
-            unregisterReceiver(this.noisyReceiver);
-        } catch (Exception e) {
-        }
-        this.noisyReceiverRegistered = false;
-    }
-
-    private void createChannel() {
-        if (Build.VERSION.SDK_INT < 26) {
-            return;
-        }
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Музыка", NotificationManager.IMPORTANCE_LOW);
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NotificationManager.class);
-        if (notificationManager != null) {
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-
     private void logPlaybackState(String event) {
-        Log.i(TAG, event + " index=" + this.currentIndex + " queue=" + this.queue.size() + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle + " player=" + (this.player != null) + " playing=" + safeIsPlaying());
+        Log.i(TAG, event + " index=" + this.currentIndex + " queue=" + this.queueManager.size()
+                + " loopMode=" + this.loopMode + " oneShot=" + this.oneShot + " shuffle="
+                + this.shuffle + " player=" + (this.player != null) + " playing=" + safeIsPlaying());
     }
 
     @Override
@@ -1015,15 +637,8 @@ public class PlayerService extends Service {
             saveResumeState(true, true);
         }
         releasePlayer();
-        unregisterNoisyReceiver();
-        abandonAudioFocus();
-        if (this.mediaSession != null) {
-            this.mediaSession.release();
-        }
-        this.coverCache.evictAll();
-        this.styledCover = null;
-        this.lightAppIcon = null;
-        this.darkAppIcon = null;
+        this.audioFocusController.stop();
+        this.notificationController.release();
         instance = null;
         super.onDestroy();
     }
@@ -1036,9 +651,48 @@ public class PlayerService extends Service {
             saveResumeState(true, true);
         }
         if (this.player != null && safeIsPlaying()) {
-            startForeground(NOTIFICATION_ID, buildNotification());
+            startForeground(NOTIFICATION_ID, currentNotification());
         }
         super.onTaskRemoved(intent);
+    }
+
+    private final class AudioFocusCallback implements AudioFocusController.Callback {
+        @Override
+        public boolean isPlaying() {
+            return safeIsPlaying();
+        }
+
+        @Override
+        public boolean isPausedByUser() {
+            return pausedByUser;
+        }
+
+        @Override
+        public void pauseForInterruption(String reason) {
+            pauseInternal(reason);
+        }
+
+        @Override
+        public void pauseForDisconnectedOutput() {
+            pausedByUser = true;
+            pauseInternal("audio_becoming_noisy");
+        }
+
+        @Override
+        public void resumeAfterInterruption() {
+            play();
+        }
+
+        @Override
+        public void setPlayerVolume(float volume) {
+            if (player == null) {
+                return;
+            }
+            try {
+                player.setVolume(volume, volume);
+            } catch (RuntimeException ignored) {
+            }
+        }
     }
 
     private class SessionCallback extends MediaSession.Callback {
@@ -1051,7 +705,7 @@ public class PlayerService extends Service {
         @Override
         public void onPause() {
             pausedByUser = true;
-            pausedByTransientFocusLoss = false;
+            audioFocusController.onUserPause();
             pauseInternal("media_session_pause");
         }
 

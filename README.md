@@ -1,8 +1,8 @@
 # MP3 Player
 
 <p align="center">
-  <a href="../../actions/workflows/android.yml">
-    <img src="https://img.shields.io/badge/Скачать_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Скачать APK">
+  <a href="../../releases/latest/download/MP3-Player.apk">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.3-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -92,56 +92,62 @@ MP3 Player — Android-плеер для музыки, уже скачанной
 
 ```mermaid
 flowchart TB
-    A["MainActivity / DarkMainActivity<br/>точки входа"] --> B["MainActivityCore<br/>сборка экрана и координация"]
-    B --> S["AppState<br/>состояние интерфейса"]
+    A["MainActivity / DarkMainActivity<br/>точки входа"] --> CORE["MainActivityCore<br/>жизненный цикл и координация"]
+    CORE --> STATE["AppState<br/>состояние интерфейса"]
 
     subgraph UI["Интерфейс"]
-        MR["MainRenderer"] --> MENUS["Рендереры меню<br/>песни · избранное · плейлисты<br/>жанры · исполнители · альбомы · настройки"]
-        PU["PlayerUiController"] --> MINI["MiniPlayerController"]
-        PU --> FULL["FullPlayerController"]
-        NAV["TabsController + SwipeController<br/>+ BackNavigationController"]
-        STYLE["ThemeController + UiFactory<br/>градиенты · частицы · кнопки"]
+        RENDER["MainRenderer + рендереры меню"]
+        PLAYER_UI["PlayerUiController"] --> MINI["MiniPlayerController"]
+        PLAYER_UI --> FULL["FullPlayerController"]
+        NAV["TabsController · SwipeController<br/>BackNavigationController"]
+        STYLE["ThemeController · UiFactory<br/>градиенты · частицы · кнопки"]
     end
 
-    B --> MR
-    B --> PU
-    B --> NAV
-    B --> STYLE
+    CORE --> RENDER
+    CORE --> PLAYER_UI
+    CORE --> NAV
+    CORE --> STYLE
 
     subgraph DATA["Музыка и данные"]
         IMPORT["AudioImportController"] --> STORE["TrackStore<br/>URI и метаданные"]
         STORE --> DB["LibraryDatabase<br/>SQLite"]
-        DB --> LISTS["Песни · избранное · плейлисты"]
         PL["PlaylistController"] --> DB
-        COVERS["CoverLoader"] --> CACHE["Кеш обложек"]
+        DB --> LIBRARY["Песни · избранное · плейлисты"]
+        COVERS["CoverLoader<br/>кеш обложек"]
     end
 
-    B --> IMPORT
-    MR --> LISTS
-    MR --> COVERS
+    CORE --> IMPORT
+    RENDER --> LIBRARY
+    RENDER --> COVERS
 
     subgraph AUDIO["Воспроизведение"]
-        PC["PlaybackController"] --> PS["PlayerService"]
-        PS --> MP["MediaPlayer"]
-        PS --> NOTIFY["Foreground notification<br/>и MediaSession"]
-        PS --> FX["Эквалайзер · единая громкость<br/>аудиофокус"]
-        TIMER["SleepTimerController"] --> PS
+        PC["PlaybackController"] --> SERVICE["PlayerService<br/>координатор Android-сервиса"]
+        SERVICE --> QUEUE["PlaybackQueueManager<br/>+ PlaybackQueueNavigator"]
+        SERVICE --> RESUME["PlaybackStateRepository<br/>очередь · позиция · repeat · shuffle"]
+        SERVICE --> ENGINE["MediaPlayer"]
+        SERVICE --> FOCUS["AudioFocusController"]
+        SERVICE --> EFFECTS["AudioEffectsManager"]
+        SERVICE --> MEDIA["MediaNotificationController<br/>MediaSession · уведомление · обложка"]
+        TIMER["SleepTimerController"] --> SERVICE
     end
 
-    PU --> PC
-    MENUS --> PC
-    PC --> S
-    PS --> S
+    PLAYER_UI --> PC
+    RENDER --> PC
+    QUEUE --> STORE
+    PC --> STATE
+    SERVICE --> STATE
 
     classDef entry fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
     classDef data fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
     classDef audio fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
-    class A,B entry;
-    class IMPORT,STORE,DB,LISTS,PL,COVERS,CACHE data;
-    class PC,PS,MP,NOTIFY,FX,TIMER audio;
+    class A,CORE entry;
+    class IMPORT,STORE,DB,LIBRARY,PL,COVERS data;
+    class PC,SERVICE,QUEUE,RESUME,ENGINE,FOCUS,EFFECTS,MEDIA,TIMER audio;
 ```
 
-`MainActivityCore` создаёт общую структуру экрана и связывает специализированные компоненты. Рендереры получают данные из состояния и базы, а команды воспроизведения отправляют через `PlaybackController` в `PlayerService`. Сервис владеет `MediaPlayer`, обновляет `MediaSession` и возвращает актуальное состояние в интерфейс. Импорт идёт отдельно: системный picker передаёт URI в `AudioImportController`, затем `TrackStore` проверяет файл и метаданные, а `LibraryDatabase` сохраняет библиотеку.
+`MainActivityCore` теперь отвечает за жизненный цикл и связывание компонентов, а не за реализацию отдельных экранов. Рендереры читают библиотеку и `AppState`, а команды плеера отправляют через `PlaybackController` в `PlayerService`. Сам сервис остался Android-точкой входа фонового воспроизведения, но очередь, переходы, сохранение состояния, аудиофокус, эффекты и медиапанель вынесены в отдельные классы. Это позволяет менять уведомление или правила очереди без вмешательства в `MediaPlayer` и интерфейс.
+
+Путь данных при импорте не пересекается с воспроизведением: системный picker передаёт URI в `AudioImportController`, `TrackStore` проверяет чтение и метаданные, а `LibraryDatabase` сохраняет библиотеку. При запуске песни `PlaybackQueueManager` восстанавливает только доступные URI, `PlaybackStateRepository` возвращает позицию и режимы, после чего `PlayerService` асинхронно готовит `MediaPlayer`. `MediaNotificationController` получает уже готовое состояние и синхронизирует системную медиапанель с темой и формой обложки.
 
 ## Ответственность файлов
 
@@ -179,8 +185,11 @@ flowchart TB
 - `PlaybackController.java` — формирует очередь, восстанавливает сессию и отправляет команды сервису.
 - `PlayerService.java` — владеет `MediaPlayer`, audio focus, wake lock, MediaSession и уведомлением.
 - `AudioEffectsManager.java` — применяет и освобождает эквалайзер, выравнивание громкости и API-совместимые аудиоэффекты.
+- `AudioFocusController.java` — управляет audio focus, ducking, отключением наушников и режимом непрерывного воспроизведения.
+- `PlaybackQueueManager.java` — владеет текущей очередью, восстанавливает порядок URI и безопасно вычисляет индексы.
 - `PlaybackQueueNavigator.java` — независимо вычисляет следующий трек, остановку и поведение режимов повтора.
 - `PlaybackStateRepository.java` — единообразно сохраняет и восстанавливает очередь, позицию, repeat и shuffle между сервисом и UI.
+- `MediaNotificationController.java` — строит системное уведомление, обновляет MediaSession и кеширует обложки для системного плеера.
 - `SleepTimerController.java` — запускает, отображает и отменяет таймер сна.
 - `EqualizerController.java` — хранит настройки эквалайзера и управляет его интерфейсом.
 - `VolumeLevelingController.java` — включает и отображает режим выравнивания громкости.
@@ -229,22 +238,21 @@ flowchart TB
 - `app/src/main/AndroidManifest.xml` — разрешения, activity aliases и foreground service.
 - `app/build.gradle` — Android-конфигурация, версия, подпись и release-настройки R8.
 - `app/proguard-rules.pro` — правила сохранения необходимых классов при minify.
-- `.github/workflows/android.yml` — unit-тесты, lint и debug artifact для push/PR; подписанный release запускается вручную.
+- `.github/workflows/android.yml` — unit-тесты и lint для каждого изменения; подписанный release собирается вручную из encrypted Secrets.
 - `TrackStoreTest.java` — тесты сортировки и миграции данных песен.
 - `PlaylistManagerTest.java` — тесты сохранения плейлистов и очистки названий.
 - `PlaybackQueueNavigatorTest.java` — переходы очереди, repeat-one, repeat-all, one-shot и обработка ошибок.
+- `PlaybackQueueManagerTest.java` — порядок очереди, пропуск удалённых треков и границы индексов.
 
 ## Сборка
 
 Требуются Android SDK и JDK 17.
 
 ```bash
-./gradlew clean testDebugUnitTest lintDebug assembleDebug
+./gradlew clean testDebugUnitTest lintDebug
 ```
 
-Debug APK создаётся в `app/build/outputs/apk/debug/` и устанавливается как отдельное приложение с package ID `com.dumuzeyn.mp3player.debug`.
-
-Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets, а подписанный release запускается вручную через `workflow_dispatch`. Готовые APK не хранятся в git.
+Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets, а подписанная сборка запускается вручную через `workflow_dispatch`. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
 
 ## Авторство
 
@@ -257,8 +265,8 @@ Debug APK создаётся в `app/build/outputs/apk/debug/` и устанав
 # MP3 Player
 
 <p align="center">
-  <a href="../../actions/workflows/android.yml">
-    <img src="https://img.shields.io/badge/Download_APK-GitHub_Actions-9b4dff?style=for-the-badge" alt="Download APK">
+  <a href="../../releases/latest/download/MP3-Player.apk">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.3-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player">
     <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -348,56 +356,62 @@ MP3 Player is an Android player for music already downloaded to the phone. It op
 
 ```mermaid
 flowchart TB
-    A["MainActivity / DarkMainActivity<br/>entry points"] --> B["MainActivityCore<br/>screen composition and coordination"]
-    B --> S["AppState<br/>shared UI state"]
+    A["MainActivity / DarkMainActivity<br/>entry points"] --> CORE["MainActivityCore<br/>lifecycle and coordination"]
+    CORE --> STATE["AppState<br/>shared UI state"]
 
     subgraph UI["User interface"]
-        MR["MainRenderer"] --> MENUS["Menu renderers<br/>songs · favorites · playlists<br/>genres · artists · albums · settings"]
-        PU["PlayerUiController"] --> MINI["MiniPlayerController"]
-        PU --> FULL["FullPlayerController"]
-        NAV["TabsController + SwipeController<br/>+ BackNavigationController"]
-        STYLE["ThemeController + UiFactory<br/>gradients · particles · buttons"]
+        RENDER["MainRenderer + menu renderers"]
+        PLAYER_UI["PlayerUiController"] --> MINI["MiniPlayerController"]
+        PLAYER_UI --> FULL["FullPlayerController"]
+        NAV["TabsController · SwipeController<br/>BackNavigationController"]
+        STYLE["ThemeController · UiFactory<br/>gradients · particles · buttons"]
     end
 
-    B --> MR
-    B --> PU
-    B --> NAV
-    B --> STYLE
+    CORE --> RENDER
+    CORE --> PLAYER_UI
+    CORE --> NAV
+    CORE --> STYLE
 
     subgraph DATA["Music and data"]
         IMPORT["AudioImportController"] --> STORE["TrackStore<br/>URI and metadata"]
         STORE --> DB["LibraryDatabase<br/>SQLite"]
-        DB --> LISTS["Songs · favorites · playlists"]
         PL["PlaylistController"] --> DB
-        COVERS["CoverLoader"] --> CACHE["Artwork cache"]
+        DB --> LIBRARY["Songs · favorites · playlists"]
+        COVERS["CoverLoader<br/>artwork cache"]
     end
 
-    B --> IMPORT
-    MR --> LISTS
-    MR --> COVERS
+    CORE --> IMPORT
+    RENDER --> LIBRARY
+    RENDER --> COVERS
 
     subgraph AUDIO["Playback"]
-        PC["PlaybackController"] --> PS["PlayerService"]
-        PS --> MP["MediaPlayer"]
-        PS --> NOTIFY["Foreground notification<br/>and MediaSession"]
-        PS --> FX["Equalizer · volume leveling<br/>audio focus"]
-        TIMER["SleepTimerController"] --> PS
+        PC["PlaybackController"] --> SERVICE["PlayerService<br/>Android service coordinator"]
+        SERVICE --> QUEUE["PlaybackQueueManager<br/>+ PlaybackQueueNavigator"]
+        SERVICE --> RESUME["PlaybackStateRepository<br/>queue · position · repeat · shuffle"]
+        SERVICE --> ENGINE["MediaPlayer"]
+        SERVICE --> FOCUS["AudioFocusController"]
+        SERVICE --> EFFECTS["AudioEffectsManager"]
+        SERVICE --> MEDIA["MediaNotificationController<br/>MediaSession · notification · artwork"]
+        TIMER["SleepTimerController"] --> SERVICE
     end
 
-    PU --> PC
-    MENUS --> PC
-    PC --> S
-    PS --> S
+    PLAYER_UI --> PC
+    RENDER --> PC
+    QUEUE --> STORE
+    PC --> STATE
+    SERVICE --> STATE
 
     classDef entry fill:#9b4dff,color:#fff,stroke:#d3aaff,stroke-width:2px;
     classDef data fill:#33250a,color:#fff,stroke:#ffd12f,stroke-width:2px;
     classDef audio fill:#17151d,color:#fff,stroke:#9b4dff,stroke-width:2px;
-    class A,B entry;
-    class IMPORT,STORE,DB,LISTS,PL,COVERS,CACHE data;
-    class PC,PS,MP,NOTIFY,FX,TIMER audio;
+    class A,CORE entry;
+    class IMPORT,STORE,DB,LIBRARY,PL,COVERS data;
+    class PC,SERVICE,QUEUE,RESUME,ENGINE,FOCUS,EFFECTS,MEDIA,TIMER audio;
 ```
 
-`MainActivityCore` builds the shared screen structure and connects specialized components. Renderers read state and database data, while playback commands travel through `PlaybackController` to `PlayerService`. The service owns `MediaPlayer`, updates `MediaSession`, and exposes current playback state to the UI. Import follows a separate path: Android's picker returns a URI to `AudioImportController`, `TrackStore` validates the file and metadata, and `LibraryDatabase` persists the library.
+`MainActivityCore` now owns lifecycle and component wiring rather than individual screen implementations. Renderers read the library and `AppState`, while playback commands travel through `PlaybackController` to `PlayerService`. The service remains Android's background-playback entry point, but queue ownership, navigation, persistence, audio focus, effects, and media controls live in dedicated classes. Notification or queue rules can therefore change without modifying `MediaPlayer` or UI code.
+
+Import and playback use separate data paths: Android's picker sends a URI to `AudioImportController`, `TrackStore` validates readability and metadata, and `LibraryDatabase` persists the library. When playback starts, `PlaybackQueueManager` restores only available URIs, `PlaybackStateRepository` restores position and modes, and `PlayerService` prepares `MediaPlayer` asynchronously. `MediaNotificationController` receives the resulting state and keeps the system media panel synchronized with the selected theme and artwork shape.
 
 ## File responsibilities
 
@@ -435,8 +449,11 @@ The main package is located under `app/src/main/java`.
 - `PlaybackController.java` — builds queues, restores sessions, and sends service commands.
 - `PlayerService.java` — owns `MediaPlayer`, audio focus, wake lock, MediaSession, and notification.
 - `AudioEffectsManager.java` — applies and releases the equalizer, volume leveling, and API-compatible audio effects.
+- `AudioFocusController.java` — manages audio focus, ducking, disconnected outputs, and uninterrupted playback.
+- `PlaybackQueueManager.java` — owns the active queue, restores URI order, and safely resolves indexes.
 - `PlaybackQueueNavigator.java` — independently decides the next track, stopping, and repeat-mode behavior.
 - `PlaybackStateRepository.java` — consistently persists and restores the queue, position, repeat, and shuffle for both the service and UI.
+- `MediaNotificationController.java` — builds the system notification, updates MediaSession, and caches artwork for system playback controls.
 - `SleepTimerController.java` — starts, displays, and cancels the sleep timer.
 - `EqualizerController.java` — stores equalizer settings and controls its interface.
 - `VolumeLevelingController.java` — enables and displays perceived-volume leveling.
@@ -485,22 +502,21 @@ The main package is located under `app/src/main/java`.
 - `app/src/main/AndroidManifest.xml` — permissions, activity aliases, and foreground service.
 - `app/build.gradle` — Android configuration, version, signing, and release R8 settings.
 - `app/proguard-rules.pro` — keeps required classes during minification.
-- `.github/workflows/android.yml` — unit tests, lint, and a debug artifact for push/PR; signed releases run manually.
+- `.github/workflows/android.yml` — unit tests and lint for every change; signed releases are built manually from encrypted Secrets.
 - `TrackStoreTest.java` — track sorting and migration tests.
 - `PlaylistManagerTest.java` — playlist persistence and name-cleanup tests.
 - `PlaybackQueueNavigatorTest.java` — queue transitions, repeat-one, repeat-all, one-shot, and error handling.
+- `PlaybackQueueManagerTest.java` — queue order, missing-track filtering, and index boundaries.
 
 ## Build
 
 Android SDK and JDK 17 are required.
 
 ```bash
-./gradlew clean testDebugUnitTest lintDebug assembleDebug
+./gradlew clean testDebugUnitTest lintDebug
 ```
 
-The debug APK is written to `app/build/outputs/apk/debug/` and installs as a separate app with package ID `com.dumuzeyn.mp3player.debug`.
-
-Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets, and the signed release runs manually through `workflow_dispatch`. APK binaries are not tracked in git.
+Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets, and the signed build runs manually through `workflow_dispatch`. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
 
 ## Authorship
 
