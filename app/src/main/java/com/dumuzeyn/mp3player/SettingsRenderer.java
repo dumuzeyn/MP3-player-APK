@@ -41,6 +41,8 @@ final class SettingsRenderer {
                         + host.settingsController.resumeWindowText(),
                 view -> host.settingsController.openResumeWindowDialog());
         addButton(host.tr("Check songs", "Проверить песни"), view -> host.openSongDiagnostics());
+        addButton(host.tr("Crash reports: ", "Отчёты о сбоях: ") + CrashReportStore.count(host),
+                view -> host.settingsController.openCrashReports());
         addButton(host.tr("Delete all songs from app", "Удалить все песни из приложения"),
                 view -> host.settingsController.confirmDeleteAllSongs());
         addButton(host.tr("Delete all playlists", "Удалить все плейлисты"),

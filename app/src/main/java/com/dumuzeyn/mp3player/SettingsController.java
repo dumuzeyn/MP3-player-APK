@@ -75,6 +75,32 @@ final class SettingsController {
         }
     }
 
+    void openCrashReports() {
+        int count = CrashReportStore.count(host);
+        if (count == 0) {
+            host.showConfirmPanel(
+                    host.tr("Crash reports", "Отчёты о сбоях"),
+                    host.tr("No local crash reports have been recorded.",
+                            "Локальных отчётов о сбоях нет."),
+                    () -> {
+                    });
+            return;
+        }
+        String latest = CrashReportStore.latestSummary(host);
+        String message = host.tr("Saved reports: ", "Сохранено отчётов: ") + count
+                + "\n" + host.tr("Latest: ", "Последний: ") + latest
+                + "\n\n" + host.tr(
+                        "Reports stay only on this device and do not contain music URIs. Clear them?",
+                        "Отчёты хранятся только на устройстве и не содержат URI музыки. Очистить их?");
+        host.showConfirmPanel(
+                host.tr("Crash reports", "Отчёты о сбоях"),
+                message,
+                () -> {
+                    CrashReportStore.clear(host);
+                    host.render();
+                });
+    }
+
     void confirmDeleteAllSongs() {
         host.showConfirmPanel(
                 host.tr("Delete all songs?", "Удалить все песни?"),

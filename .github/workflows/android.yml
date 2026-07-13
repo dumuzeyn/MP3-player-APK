@@ -38,6 +38,20 @@ jobs:
       - name: Run Android lint
         run: ./gradlew lintDebug
 
+      - name: Compile instrumentation tests
+        run: ./gradlew assembleDebugAndroidTest
+
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            app/build/reports/tests/**
+            app/build/reports/lint-results-*
+
   release:
     if: github.event_name == 'workflow_dispatch'
     needs: verify
