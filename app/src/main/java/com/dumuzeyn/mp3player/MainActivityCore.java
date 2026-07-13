@@ -1,6 +1,7 @@
 package com.dumuzeyn.mp3player;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -139,7 +140,8 @@ class MainActivityCore extends AppState {
         this.mainGradientEnd = this.prefs.getInt(MAIN_GRADIENT_END, 0xff3a3013);
         this.playerGradientStart = this.prefs.getInt(PLAYER_GRADIENT_START, 0xff351b5d);
         this.playerGradientEnd = this.prefs.getInt(PLAYER_GRADIENT_END, 0xff3a3013);
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
         }
         this.mainRenderer.loadMenuData();
@@ -282,7 +284,7 @@ class MainActivityCore extends AppState {
                     new FrameLayout.LayoutParams(-1, -1));
         }
         this.page = new LinearLayout(this);
-        this.page.setOrientation(1);
+        this.page.setOrientation(LinearLayout.VERTICAL);
         this.page.setPadding(dp(8), dp(14), dp(8), dp(8));
         this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
         buildHeader();
@@ -291,7 +293,7 @@ class MainActivityCore extends AppState {
         ScrollView scrollView = new ScrollView(this);
         this.contentScroll = scrollView;
         this.list = new LinearLayout(this);
-        this.list.setOrientation(1);
+        this.list.setOrientation(LinearLayout.VERTICAL);
         scrollView.addView(this.list, new FrameLayout.LayoutParams(-1, -2));
         this.contentHost.addView(scrollView, new FrameLayout.LayoutParams(-1, -1));
         this.page.addView(this.contentHost, new LinearLayout.LayoutParams(-1, 0, 1.0f));

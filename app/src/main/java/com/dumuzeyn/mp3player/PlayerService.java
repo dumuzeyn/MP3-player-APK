@@ -26,9 +26,6 @@ import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
-import android.media.audiofx.DynamicsProcessing;
-import android.media.audiofx.Equalizer;
-import android.media.audiofx.LoudnessEnhancer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -81,13 +78,6 @@ public class PlayerService extends Service {
     public static int lastPosition = 0;
     public static int lastLoopMode = 0;
     public static String lastUri = "";
-
-    private enum AdvanceReason {
-        FINISHED,
-        MANUAL_NEXT,
-        MANUAL_PREVIOUS,
-        ERROR
-    }
 
     private final ArrayList<Track> queue = new ArrayList<>();
     private final LruCache<String, Bitmap> coverCache = new LruCache<String, Bitmap>(8 * 1024) {
@@ -162,9 +152,7 @@ public class PlayerService extends Service {
 
     private MediaSession mediaSession;
     private MediaPlayer player;
-    private Equalizer equalizer;
-    private DynamicsProcessing dynamicsProcessing;
-    private LoudnessEnhancer loudnessEnhancer;
+    private AudioEffectsManager audioEffectsManager;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
     private boolean hasAudioFocus = false;
@@ -179,7 +167,6 @@ public class PlayerService extends Service {
     private boolean pausedByUser = false;
     private boolean pausedByTransientFocusLoss = false;
     private boolean duckedByFocusLoss = false;
-    private boolean customDynamicsUnsupported = false;
     private int loopOneErrorRetries = 0;
     private int consecutivePlaybackErrors = 0;
 
@@ -187,6 +174,7 @@ public class PlayerService extends Service {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        this.audioEffectsManager = new AudioEffectsManager(this);
         this.audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         createChannel();
         this.mediaSession = new MediaSession(this, "MP3 Player");
@@ -226,13 +214,13 @@ public class PlayerService extends Service {
         if (ACTION_NEXT.equals(action)) {
             this.oneShot = false;
             this.pausedByUser = false;
-            advanceQueue(AdvanceReason.MANUAL_NEXT, 0);
+            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_NEXT, 0);
             return START_STICKY;
         }
         if (ACTION_PREV.equals(action)) {
             this.oneShot = false;
             this.pausedByUser = false;
-            advanceQueue(AdvanceReason.MANUAL_PREVIOUS, 0);
+            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0);
             return START_STICKY;
         }
         if (ACTION_SEEK.equals(action)) {
@@ -316,7 +304,7 @@ public class PlayerService extends Service {
                 stopPlayback(false);
                 stopSelf();
             } else {
-                advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
+                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
             }
             return;
         }
@@ -332,7 +320,7 @@ public class PlayerService extends Service {
                 public void onCompletion(MediaPlayer mediaPlayer) {
                     consecutivePlaybackErrors = 0;
                     logPlaybackState("track_finished");
-                    advanceQueue(AdvanceReason.FINISHED, 0);
+                    advanceQueue(PlaybackQueueNavigator.Reason.FINISHED, 0);
                 }
             });
             this.player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
@@ -345,7 +333,7 @@ public class PlayerService extends Service {
                         stopPlayback(false);
                         stopSelf();
                     } else {
-                        advanceQueue(AdvanceReason.ERROR, consecutivePlaybackErrors);
+                        advanceQueue(PlaybackQueueNavigator.Reason.ERROR, consecutivePlaybackErrors);
                     }
                     return true;
                 }
@@ -371,7 +359,7 @@ public class PlayerService extends Service {
                 stopPlayback(false);
                 stopSelf();
             } else {
-                advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
+                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
             }
         }
     }
@@ -435,7 +423,7 @@ public class PlayerService extends Service {
         } catch (Exception e) {
             this.consecutivePlaybackErrors++;
             Log.e(DEBUG_TAG, "start_prepared_failed index=" + this.currentIndex + " uri=" + currentUri() + " error=" + e.getMessage(), e);
-            advanceQueue(AdvanceReason.ERROR, this.consecutivePlaybackErrors);
+            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
         }
     }
 
@@ -499,44 +487,21 @@ public class PlayerService extends Service {
         }
     }
 
-    private void advanceQueue(AdvanceReason reason, int attempts) {
-        if (this.queue.isEmpty()) {
+    private void advanceQueue(PlaybackQueueNavigator.Reason reason, int attempts) {
+        PlaybackQueueNavigator.Decision decision = PlaybackQueueNavigator.decide(
+                this.queue.size(), this.currentIndex, this.loopMode, this.oneShot,
+                reason, this.loopOneErrorRetries);
+        this.loopOneErrorRetries = decision.loopOneErrorRetries;
+        if (decision.stop) {
             stopPlayback(false);
             stopSelf();
             return;
         }
-        int nextIndex;
-        if (reason == AdvanceReason.MANUAL_PREVIOUS) {
-            nextIndex = this.currentIndex <= 0 ? this.queue.size() - 1 : this.currentIndex - 1;
-            playIndex(nextIndex, null, 0, attempts);
-            return;
-        }
-        if (reason == AdvanceReason.FINISHED && this.loopMode == 1) {
-            playIndex(this.currentIndex, null, 0, attempts);
-            return;
-        }
-        if (reason == AdvanceReason.ERROR && this.loopMode == 1 && this.loopOneErrorRetries == 0) {
-            this.loopOneErrorRetries++;
-            playIndex(this.currentIndex, null, 0, attempts);
-            return;
-        }
-        this.loopOneErrorRetries = 0;
-        if (this.oneShot && reason == AdvanceReason.FINISHED) {
-            stopPlayback(false);
-            stopSelf();
-            return;
-        }
-        if (this.loopMode == 0 && reason == AdvanceReason.FINISHED && this.currentIndex >= this.queue.size() - 1) {
-            stopPlayback(false);
-            stopSelf();
-            return;
-        }
-        nextIndex = this.currentIndex < 0 ? 0 : (this.currentIndex + 1) % this.queue.size();
-        if (this.currentIndex == this.queue.size() - 1 && nextIndex == 0) {
+        if (this.currentIndex == this.queue.size() - 1 && decision.nextIndex == 0) {
             Log.i(TAG, "wrap_last_to_first");
         }
-        Log.i(TAG, "advance reason=" + reason + " nextIndex=" + nextIndex + " attempts=" + attempts);
-        playIndex(nextIndex, null, 0, attempts);
+        Log.i(TAG, "advance reason=" + reason + " nextIndex=" + decision.nextIndex + " attempts=" + attempts);
+        playIndex(decision.nextIndex, null, 0, attempts);
     }
 
     private int normalizeIndex(int index) {
@@ -617,7 +582,7 @@ public class PlayerService extends Service {
                 logPlaybackState("play");
             } catch (Exception e) {
                 Log.e(TAG, "start_failed", e);
-                advanceQueue(AdvanceReason.ERROR, 1);
+                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, 1);
             }
         }
     }
@@ -648,7 +613,7 @@ public class PlayerService extends Service {
             startForeground(NOTIFICATION_ID, buildNotification());
         } catch (Exception e) {
             Log.e(TAG, "seek_failed", e);
-            advanceQueue(AdvanceReason.ERROR, 1);
+            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, 1);
         }
     }
 
@@ -673,7 +638,7 @@ public class PlayerService extends Service {
     }
 
     private void releasePlayer() {
-        releaseAudioEffects();
+        this.audioEffectsManager.release();
         if (this.player == null) {
             return;
         }
@@ -694,150 +659,7 @@ public class PlayerService extends Service {
     }
 
     private void applyAudioEffects(MediaPlayer targetPlayer) {
-        releaseAudioEffects();
-        if (targetPlayer == null) {
-            return;
-        }
-        SharedPreferences preferences = getSharedPreferences(EqualizerController.PREFS, 0);
-        int audioSessionId;
-        try {
-            audioSessionId = targetPlayer.getAudioSessionId();
-        } catch (RuntimeException error) {
-            Log.w(DEBUG_TAG, "audio_effect_session_unavailable error=" + error.getMessage());
-            return;
-        }
-        if (preferences.getBoolean(EqualizerController.ENABLED, false)) {
-            applyEqualizer(preferences, audioSessionId);
-        }
-        if (preferences.getBoolean(VolumeLevelingController.ENABLED, false)) {
-            applyVolumeLeveling(audioSessionId);
-        }
-    }
-
-    private void applyEqualizer(SharedPreferences preferences, int audioSessionId) {
-        try {
-            Equalizer effect = new Equalizer(0, audioSessionId);
-            short[] levelRange = effect.getBandLevelRange();
-            short bandCount = effect.getNumberOfBands();
-            for (short band = 0; band < bandCount; band++) {
-                int profileIndex = bandCount <= 1
-                        ? 0
-                        : Math.round((band * (EqualizerController.BAND_COUNT - 1.0f)) / (bandCount - 1.0f));
-                int db = preferences.getInt(EqualizerController.BAND_PREFIX + profileIndex, 0);
-                short milliBel = (short) Math.max(levelRange[0], Math.min(levelRange[1], db * 100));
-                effect.setBandLevel(band, milliBel);
-            }
-            effect.setEnabled(true);
-            this.equalizer = effect;
-            Log.i(DEBUG_TAG, "equalizer_applied session=" + audioSessionId + " bands=" + bandCount);
-        } catch (RuntimeException error) {
-            Log.w(DEBUG_TAG, "equalizer_unavailable session=" + audioSessionId + " error=" + error.getMessage());
-        }
-    }
-
-    private void applyVolumeLeveling(int audioSessionId) {
-        if (Build.VERSION.SDK_INT < 28) {
-            Log.w(DEBUG_TAG, "volume_leveling_requires_api_28 sdk=" + Build.VERSION.SDK_INT);
-            return;
-        }
-        if (this.customDynamicsUnsupported) {
-            applyCompatibleVolumeLeveling(audioSessionId);
-            return;
-        }
-        try {
-            DynamicsProcessing.Mbc multibandCompressor = new DynamicsProcessing.Mbc(true, true, 1);
-            multibandCompressor.setBand(0, new DynamicsProcessing.MbcBand(
-                    true, 20000.0f, 12.0f, 250.0f, 4.0f, -18.0f, 6.0f,
-                    -80.0f, 1.0f, 0.0f, 5.0f));
-            DynamicsProcessing.Limiter limiter = new DynamicsProcessing.Limiter(
-                    true, true, 0, 2.0f, 120.0f, 10.0f, -1.0f, 0.0f);
-            DynamicsProcessing.Config config = new DynamicsProcessing.Config.Builder(
-                    DynamicsProcessing.VARIANT_FAVOR_TIME_RESOLUTION,
-                    2, false, 0, true, 1, false, 0, true)
-                    .setMbcAllChannelsTo(multibandCompressor)
-                    .setLimiterAllChannelsTo(limiter)
-                    .build();
-            DynamicsProcessing effect = new DynamicsProcessing(0, audioSessionId, config);
-            effect.setEnabled(true);
-            this.dynamicsProcessing = effect;
-            Log.i(DEBUG_TAG, "volume_leveling_applied session=" + audioSessionId);
-        } catch (RuntimeException customConfigError) {
-            this.customDynamicsUnsupported = true;
-            Log.w(DEBUG_TAG, "volume_leveling_custom_config_failed session=" + audioSessionId + " error=" + customConfigError.getMessage());
-            applyCompatibleVolumeLeveling(audioSessionId);
-        }
-    }
-
-    private void applyCompatibleVolumeLeveling(int audioSessionId) {
-        try {
-            DynamicsProcessing effect = new DynamicsProcessing(0, audioSessionId, null);
-            int channelCount = effect.getChannelCount();
-            for (int channel = 0; channel < channelCount; channel++) {
-                DynamicsProcessing.Mbc compressor = effect.getMbcByChannelIndex(channel);
-                for (int band = 0; band < compressor.getBandCount(); band++) {
-                    DynamicsProcessing.MbcBand settings = compressor.getBand(band);
-                    settings.setEnabled(true);
-                    settings.setAttackTime(12.0f);
-                    settings.setReleaseTime(250.0f);
-                    settings.setRatio(4.0f);
-                    settings.setThreshold(-18.0f);
-                    settings.setKneeWidth(6.0f);
-                    settings.setNoiseGateThreshold(-80.0f);
-                    settings.setExpanderRatio(1.0f);
-                    settings.setPostGain(5.0f);
-                    effect.setMbcBandByChannelIndex(channel, band, settings);
-                }
-                DynamicsProcessing.Limiter limiter = effect.getLimiterByChannelIndex(channel);
-                limiter.setEnabled(true);
-                limiter.setAttackTime(2.0f);
-                limiter.setReleaseTime(120.0f);
-                limiter.setRatio(10.0f);
-                limiter.setThreshold(-1.0f);
-                effect.setLimiterByChannelIndex(channel, limiter);
-            }
-            effect.setEnabled(true);
-            this.dynamicsProcessing = effect;
-            Log.i(DEBUG_TAG, "volume_leveling_applied_compatible session=" + audioSessionId + " channels=" + channelCount);
-        } catch (RuntimeException defaultConfigError) {
-            Log.w(DEBUG_TAG, "volume_leveling_default_config_failed session=" + audioSessionId + " error=" + defaultConfigError.getMessage());
-            applyLoudnessFallback(audioSessionId);
-        }
-    }
-
-    private void applyLoudnessFallback(int audioSessionId) {
-        try {
-            LoudnessEnhancer effect = new LoudnessEnhancer(audioSessionId);
-            effect.setTargetGain(350);
-            effect.setEnabled(true);
-            this.loudnessEnhancer = effect;
-            Log.i(DEBUG_TAG, "volume_leveling_loudness_fallback session=" + audioSessionId);
-        } catch (RuntimeException error) {
-            Log.w(DEBUG_TAG, "volume_leveling_unavailable session=" + audioSessionId + " error=" + error.getMessage());
-        }
-    }
-
-    private void releaseAudioEffects() {
-        if (this.equalizer != null) {
-            try {
-                this.equalizer.release();
-            } catch (RuntimeException ignored) {
-            }
-            this.equalizer = null;
-        }
-        if (this.dynamicsProcessing != null) {
-            try {
-                this.dynamicsProcessing.release();
-            } catch (RuntimeException ignored) {
-            }
-            this.dynamicsProcessing = null;
-        }
-        if (this.loudnessEnhancer != null) {
-            try {
-                this.loudnessEnhancer.release();
-            } catch (RuntimeException ignored) {
-            }
-            this.loudnessEnhancer = null;
-        }
+        this.audioEffectsManager.apply(targetPlayer);
     }
 
     private void updateState() {
@@ -923,8 +745,7 @@ public class PlayerService extends Service {
         int accentColor = "custom".equals(theme)
                 ? uiPrefs.getInt("customFg", 0xff7c32e8)
                 : darkTheme ? 0xffa35cff : 0xff7c32e8;
-        ComponentName launcher = new ComponentName(this,
-                getPackageName() + (darkTheme ? ".LauncherDark" : ".LauncherLight"));
+        ComponentName launcher = LauncherComponents.forTheme(this, darkTheme);
         Intent launchIntent = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(launcher);
@@ -1285,13 +1106,13 @@ public class PlayerService extends Service {
         @Override
         public void onSkipToNext() {
             oneShot = false;
-            advanceQueue(AdvanceReason.MANUAL_NEXT, 0);
+            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_NEXT, 0);
         }
 
         @Override
         public void onSkipToPrevious() {
             oneShot = false;
-            advanceQueue(AdvanceReason.MANUAL_PREVIOUS, 0);
+            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0);
         }
 
         @Override

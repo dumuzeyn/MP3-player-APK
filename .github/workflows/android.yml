@@ -5,9 +5,13 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,10 +30,55 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Build release APK
-        run: ./gradlew assembleRelease
+      - name: Run Android lint
+        run: ./gradlew lintDebug
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MP3-Player-debug
+          path: app/build/outputs/apk/debug/*.apk
+
+  release:
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Restore release keystore
+        env:
+          MP3_RELEASE_KEYSTORE_BASE64: ${{ secrets.MP3_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$MP3_RELEASE_KEYSTORE_BASE64" ]; then
+            echo "MP3_RELEASE_KEYSTORE_BASE64 is not configured" >&2
+            exit 1
+          fi
+          echo "$MP3_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mp3player-release.keystore"
+          echo "MP3_RELEASE_KEYSTORE=$RUNNER_TEMP/mp3player-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          MP3_RELEASE_KEY_ALIAS: ${{ secrets.MP3_RELEASE_KEY_ALIAS }}
+          MP3_RELEASE_STORE_PASS: ${{ secrets.MP3_RELEASE_STORE_PASS }}
+          MP3_RELEASE_KEY_PASS: ${{ secrets.MP3_RELEASE_KEY_PASS }}
+        run: ./gradlew assembleRelease
+
+      - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
           name: MP3-Player-release

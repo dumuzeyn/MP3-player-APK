@@ -221,8 +221,8 @@ final class ThemeController {
 
     void updateLauncherIcon() {
         PackageManager packageManager = host.getPackageManager();
-        ComponentName light = new ComponentName(host, host.getPackageName() + ".LauncherLight");
-        ComponentName dark = new ComponentName(host, host.getPackageName() + ".LauncherDark");
+        ComponentName light = LauncherComponents.forTheme(host, false);
+        ComponentName dark = LauncherComponents.forTheme(host, true);
         boolean useDark = isDarkTheme(host.themeMode, host.customBg);
         try {
             packageManager.setComponentEnabledSetting(

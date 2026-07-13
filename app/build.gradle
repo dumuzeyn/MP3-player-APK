@@ -9,6 +9,19 @@ def releaseKeyPass = System.getenv("MP3_RELEASE_KEY_PASS")
 def hasReleaseSigning = releaseKeystorePath && releaseKeyAlias && releaseStorePass && releaseKeyPass
 def ciDebugKeystore = rootProject.file(".github/ci-debug.keystore")
 
+if (hasReleaseSigning && !file(releaseKeystorePath).isFile()) {
+    throw new GradleException("Release keystore was not found: ${releaseKeystorePath}")
+}
+
+gradle.taskGraph.whenReady { graph ->
+    boolean releaseRequested = graph.allTasks.any { task ->
+        task.name.toLowerCase().contains("release")
+    }
+    if (releaseRequested && !hasReleaseSigning) {
+        throw new GradleException("Release signing credentials are missing")
+    }
+}
+
 android {
     namespace "com.dumuzeyn.mp3player"
     compileSdk 35
@@ -29,30 +42,29 @@ android {
             keyPassword "android"
         }
 
-        release {
-            if (hasReleaseSigning) {
+        if (hasReleaseSigning) {
+            release {
                 storeFile file(releaseKeystorePath)
                 keyAlias releaseKeyAlias
                 storePassword releaseStorePass
                 keyPassword releaseKeyPass
-            } else {
-                storeFile ciDebugKeystore
-                keyAlias "ci-debug"
-                storePassword "android"
-                keyPassword "android"
             }
         }
     }
 
     buildTypes {
         debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
             signingConfig signingConfigs.debug
         }
 
         release {
             minifyEnabled true
             shrinkResources true
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }

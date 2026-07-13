@@ -66,7 +66,7 @@ $Aapt2 = Join-Path $SdkRoot "build-tools\$BuildTools\aapt2.exe"
 $D8 = Join-Path $SdkRoot "build-tools\$BuildTools\d8.bat"
 $ZipAlign = Join-Path $SdkRoot "build-tools\$BuildTools\zipalign.exe"
 $ApkSigner = Join-Path $SdkRoot "build-tools\$BuildTools\apksigner.bat"
-$SigningMode = if ($env:MP3_SIGNING_MODE) { $env:MP3_SIGNING_MODE.ToLowerInvariant() } else { "debug" }
+$SigningMode = if ($env:MP3_SIGNING_MODE) { $env:MP3_SIGNING_MODE.ToLowerInvariant() } else { "release" }
 
 function Require-Env($Name) {
     $Value = [Environment]::GetEnvironmentVariable($Name)
@@ -141,21 +141,7 @@ if ($SigningMode -eq "release") {
         throw "Release keystore not found: $KeyStore"
     }
 } elseif ($SigningMode -eq "debug") {
-    $KeyStore = Join-Path $Root "mp3player.keystore"
-    $KeyAlias = "mp3player"
-    $StorePass = "android"
-    $KeyPass = "android"
-    if (-not (Test-Path -LiteralPath $KeyStore)) {
-        & keytool -genkeypair `
-            -keystore $KeyStore `
-            -storepass $StorePass `
-            -keypass $KeyPass `
-            -alias $KeyAlias `
-            -keyalg RSA `
-            -keysize 2048 `
-            -validity 10000 `
-            -dname "CN=MP3 Player Debug, OU=Local, O=MP3 Player, L=Local, S=Local, C=RU"
-    }
+    throw "Use '.\gradlew.bat assembleDebug' for debug builds with the separate .debug package ID."
 } else {
     throw "Unknown MP3_SIGNING_MODE '$SigningMode'. Use 'debug' or 'release'."
 }

@@ -178,6 +178,8 @@ flowchart TB
 - `FullPlayerController.java` — полностью создаёт большой плеер, кнопки, очередь, seek bar и свайп закрытия.
 - `PlaybackController.java` — формирует очередь, восстанавливает сессию и отправляет команды сервису.
 - `PlayerService.java` — владеет `MediaPlayer`, audio focus, wake lock, MediaSession и уведомлением.
+- `AudioEffectsManager.java` — применяет и освобождает эквалайзер, выравнивание громкости и API-совместимые аудиоэффекты.
+- `PlaybackQueueNavigator.java` — независимо вычисляет следующий трек, остановку и поведение режимов повтора.
 - `SleepTimerController.java` — запускает, отображает и отменяет таймер сна.
 - `EqualizerController.java` — хранит настройки эквалайзера и управляет его интерфейсом.
 - `VolumeLevelingController.java` — включает и отображает режим выравнивания громкости.
@@ -226,19 +228,22 @@ flowchart TB
 - `app/src/main/AndroidManifest.xml` — разрешения, activity aliases и foreground service.
 - `app/build.gradle` — Android-конфигурация, версия, подпись и release-настройки R8.
 - `app/proguard-rules.pro` — правила сохранения необходимых классов при minify.
-- `.github/workflows/android.yml` — unit-тесты, release-сборка и публикация APK artifact.
+- `.github/workflows/android.yml` — unit-тесты, lint и debug artifact для push/PR; подписанный release запускается вручную.
 - `TrackStoreTest.java` — тесты сортировки и миграции данных песен.
 - `PlaylistManagerTest.java` — тесты сохранения плейлистов и очистки названий.
+- `PlaybackQueueNavigatorTest.java` — переходы очереди, repeat-one, repeat-all, one-shot и обработка ошибок.
 
 ## Сборка
 
 Требуются Android SDK и JDK 17.
 
 ```bash
-./gradlew clean testDebugUnitTest assembleRelease
+./gradlew clean testDebugUnitTest lintDebug assembleDebug
 ```
 
-Release APK создаётся в `app/build/outputs/apk/release/`. Готовые APK не хранятся в git: актуальную сборку загружает GitHub Actions.
+Debug APK создаётся в `app/build/outputs/apk/debug/` и устанавливается как отдельное приложение с package ID `com.dumuzeyn.mp3player.debug`.
+
+Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets, а подписанный release запускается вручную через `workflow_dispatch`. Готовые APK не хранятся в git.
 
 ## Авторство
 
@@ -428,6 +433,8 @@ The main package is located under `app/src/main/java`.
 - `FullPlayerController.java` — owns the full-player layout, buttons, queue, seek bar, and close gesture.
 - `PlaybackController.java` — builds queues, restores sessions, and sends service commands.
 - `PlayerService.java` — owns `MediaPlayer`, audio focus, wake lock, MediaSession, and notification.
+- `AudioEffectsManager.java` — applies and releases the equalizer, volume leveling, and API-compatible audio effects.
+- `PlaybackQueueNavigator.java` — independently decides the next track, stopping, and repeat-mode behavior.
 - `SleepTimerController.java` — starts, displays, and cancels the sleep timer.
 - `EqualizerController.java` — stores equalizer settings and controls its interface.
 - `VolumeLevelingController.java` — enables and displays perceived-volume leveling.
@@ -476,19 +483,22 @@ The main package is located under `app/src/main/java`.
 - `app/src/main/AndroidManifest.xml` — permissions, activity aliases, and foreground service.
 - `app/build.gradle` — Android configuration, version, signing, and release R8 settings.
 - `app/proguard-rules.pro` — keeps required classes during minification.
-- `.github/workflows/android.yml` — unit tests, release build, and APK artifact upload.
+- `.github/workflows/android.yml` — unit tests, lint, and a debug artifact for push/PR; signed releases run manually.
 - `TrackStoreTest.java` — track sorting and migration tests.
 - `PlaylistManagerTest.java` — playlist persistence and name-cleanup tests.
+- `PlaybackQueueNavigatorTest.java` — queue transitions, repeat-one, repeat-all, one-shot, and error handling.
 
 ## Build
 
 Android SDK and JDK 17 are required.
 
 ```bash
-./gradlew clean testDebugUnitTest assembleRelease
+./gradlew clean testDebugUnitTest lintDebug assembleDebug
 ```
 
-The release APK is written to `app/build/outputs/apk/release/`. APK binaries are not tracked in git; GitHub Actions publishes the current build.
+The debug APK is written to `app/build/outputs/apk/debug/` and installs as a separate app with package ID `com.dumuzeyn.mp3player.debug`.
+
+Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets, and the signed release runs manually through `workflow_dispatch`. APK binaries are not tracked in git.
 
 ## Authorship
 
