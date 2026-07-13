@@ -252,7 +252,7 @@ flowchart TB
 ./gradlew clean testDebugUnitTest lintDebug
 ```
 
-Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets, а подписанная сборка запускается вручную через `workflow_dispatch`. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
+Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets: ручной запуск `workflow_dispatch` собирает подписанный `MP3-Player.apk` и прикрепляет его к выбранному существующему релизу. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
 
 ## Авторство
 
@@ -516,7 +516,7 @@ Android SDK and JDK 17 are required.
 ./gradlew clean testDebugUnitTest lintDebug
 ```
 
-Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets, and the signed build runs manually through `workflow_dispatch`. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
+Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets: a manual `workflow_dispatch` run builds the signed `MP3-Player.apk` and attaches it to the selected existing release. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
 
 ## Authorship
 
