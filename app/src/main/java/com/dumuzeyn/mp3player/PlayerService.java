@@ -117,6 +117,12 @@ public class PlayerService extends Service {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS
+                    || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                hasAudioFocus = false;
+            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+                hasAudioFocus = true;
+            }
             if (uninterruptedPlaybackEnabled()) {
                 Log.i(TAG, "audio_focus_change_ignored value=" + focusChange);
                 restoreFullVolume();
@@ -161,6 +167,7 @@ public class PlayerService extends Service {
     private LoudnessEnhancer loudnessEnhancer;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
+    private boolean hasAudioFocus = false;
     private boolean playerPreparing = false;
     private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
@@ -888,6 +895,17 @@ public class PlayerService extends Service {
         }
     }
 
+    static boolean hasPlaybackSession() {
+        return instance != null && instance.player != null && instance.currentIndex >= 0;
+    }
+
+    static void persistSnapshot() {
+        if (instance != null && instance.player != null) {
+            instance.updateState();
+            instance.saveResumeState(true, true);
+        }
+    }
+
     public static void refreshAppearance() {
         if (instance != null && instance.player != null) {
             instance.startForeground(NOTIFICATION_ID, instance.buildNotification());
@@ -1120,6 +1138,9 @@ public class PlayerService extends Service {
         if (uninterruptedPlaybackEnabled()) {
             return true;
         }
+        if (this.hasAudioFocus) {
+            return true;
+        }
         if (this.audioManager == null) {
             return true;
         }
@@ -1135,7 +1156,8 @@ public class PlayerService extends Service {
         } else {
             result = this.audioManager.requestAudioFocus(this.audioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         }
-        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        this.hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        return this.hasAudioFocus;
     }
 
     private boolean uninterruptedPlaybackEnabled() {
@@ -1167,6 +1189,7 @@ public class PlayerService extends Service {
         } else {
             this.audioManager.abandonAudioFocus(this.audioFocusChangeListener);
         }
+        this.hasAudioFocus = false;
     }
 
     private void updateNoisyReceiver() {
@@ -1214,6 +1237,10 @@ public class PlayerService extends Service {
     @Override
     public void onDestroy() {
         logPlaybackState("on_destroy");
+        if (this.player != null) {
+            updateState();
+            saveResumeState(true, true);
+        }
         releasePlayer();
         unregisterNoisyReceiver();
         abandonAudioFocus();
@@ -1231,6 +1258,10 @@ public class PlayerService extends Service {
     @Override
     public void onTaskRemoved(Intent intent) {
         logPlaybackState("on_task_removed");
+        if (this.player != null) {
+            updateState();
+            saveResumeState(true, true);
+        }
         if (this.player != null && safeIsPlaying()) {
             startForeground(NOTIFICATION_ID, buildNotification());
         }

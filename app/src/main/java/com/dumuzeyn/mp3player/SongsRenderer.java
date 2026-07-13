@@ -4,11 +4,11 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.ArrayList;
-import org.json.JSONArray;
 
 final class SongsRenderer {
     private final MainActivityCore host;
@@ -18,47 +18,47 @@ final class SongsRenderer {
     }
 
     void restoreRecentPlayback() {
-        if (host.resumeWindowMinutes <= 0) {
+        PlayerService.refreshSnapshot();
+        boolean liveSession = PlayerService.hasPlaybackSession();
+        if (!liveSession && host.resumeWindowMinutes <= 0) {
             return;
         }
         SharedPreferences prefs = host.getSharedPreferences(PlayerService.RESUME_PREFS, 0);
         long savedAt = prefs.getLong(PlayerService.RESUME_SAVED_AT, 0L);
         long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
-        if (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow) {
+        if (!liveSession && (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow)) {
             return;
         }
-        String uri = prefs.getString(PlayerService.RESUME_URI, "");
+        String savedUri = prefs.getString(PlayerService.RESUME_URI, "");
+        String uri = liveSession && !PlayerService.lastUri.isEmpty()
+                ? PlayerService.lastUri
+                : savedUri;
         Track track = host.findTrack(uri);
         if (track == null) {
             return;
         }
         host.currentIndex = host.tracks.indexOf(track);
-        host.playing = false;
-        host.resumePosition = Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
-        PlayerService.lastIndex = host.currentIndex;
-        PlayerService.lastPlaying = false;
-        PlayerService.lastPosition = host.resumePosition;
-        PlayerService.lastDuration = Math.max(0, prefs.getInt(PlayerService.RESUME_DURATION, 0));
-        if (PlayerService.lastDuration <= 0 && track.durationMs > 0) {
-            PlayerService.lastDuration = track.durationMs;
-        }
-        PlayerService.lastUri = uri;
-        PlayerService.lastLoopMode = prefs.getInt(PlayerService.RESUME_LOOP_MODE, 0);
-        host.loopMode = PlayerService.lastLoopMode;
+        host.playing = liveSession && PlayerService.lastPlaying;
+        host.resumePosition = liveSession
+                ? Math.max(0, PlayerService.lastPosition)
+                : Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
+        host.loopMode = liveSession
+                ? PlayerService.lastLoopMode
+                : prefs.getInt(PlayerService.RESUME_LOOP_MODE, 0);
+        host.shuffleMode = prefs.getBoolean(PlayerService.RESUME_SHUFFLE, false);
         host.playbackQueue.clear();
-        try {
-            JSONArray queue = new JSONArray(prefs.getString(PlayerService.RESUME_QUEUE, "[]"));
-            for (int i = 0; i < queue.length(); i++) {
-                Track queueTrack = host.findTrack(queue.optString(i, ""));
-                if (queueTrack != null) {
-                    host.playbackQueue.add(queueTrack);
-                }
-            }
-        } catch (Exception ignored) {
-            // A malformed saved queue must not prevent the current track from restoring.
-        }
-        if (host.playbackQueue.isEmpty()) {
-            host.playbackQueue.add(track);
+        host.playbackQueue.addAll(PlaybackQueueResolver.restore(
+                host.tracks,
+                prefs.getString(PlayerService.RESUME_QUEUE, "[]"),
+                track));
+        if (!liveSession) {
+            PlayerService.lastIndex = host.currentIndex;
+            PlayerService.lastPlaying = false;
+            PlayerService.lastPosition = host.resumePosition;
+            PlayerService.lastDuration = Math.max(track.durationMs,
+                    prefs.getInt(PlayerService.RESUME_DURATION, 0));
+            PlayerService.lastUri = uri;
+            PlayerService.lastLoopMode = host.loopMode;
         }
     }
 
@@ -169,10 +169,11 @@ final class SongsRenderer {
 
     View songRow(final Track track, boolean showActions, boolean showFavoriteAction, final Runnable afterPlay,
             final Runnable actionOverride) {
+        FrameLayout container = new FrameLayout(host);
         LinearLayout row = new LinearLayout(host);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
-        row.setPadding(host.dp(8), host.dp(8), host.dp(10), host.dp(8));
+        row.setPadding(host.dp(8), host.dp(4), host.dp(8), host.dp(4));
         host.applyCardStyle(row);
 
         View marker = new View(host);
@@ -181,9 +182,6 @@ final class SongsRenderer {
         if (!host.renderingTabPreview) {
             host.songRows.registerCurrentMarker(track.uri, marker);
         }
-        LinearLayout.LayoutParams markerParams = new LinearLayout.LayoutParams(host.dp(4), host.dp(58));
-        markerParams.setMargins(0, 0, host.dp(6), 0);
-        row.addView(marker, markerParams);
 
         ImageView cover = host.coverView();
         host.loadCover(cover, track, host.purpleSoft);
@@ -196,12 +194,12 @@ final class SongsRenderer {
                 host.openFullPlayer();
             }
         });
-        row.addView(cover, host.square(58));
+        row.addView(cover, host.square(52));
 
         LinearLayout textColumn = new LinearLayout(host);
         textColumn.setOrientation(LinearLayout.VERTICAL);
-        textColumn.setPadding(host.dp(12), 0, host.dp(8), 0);
-        TextView title = host.text(track.title, 17, true);
+        textColumn.setPadding(host.dp(10), 0, host.dp(6), 0);
+        TextView title = host.text(track.title, 16, true);
         title.setTextColor(host.primaryText);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
@@ -214,13 +212,13 @@ final class SongsRenderer {
         if (!host.renderingTabPreview) {
             host.songRows.registerWaveform(track.uri, waveform);
         }
-        metaRow.addView(waveform, new LinearLayout.LayoutParams(0, host.dp(30), 1.0f));
+        metaRow.addView(waveform, new LinearLayout.LayoutParams(0, host.dp(26), 1.0f));
         TextView duration = host.text(host.formatTrackDuration(track), 12, false);
         duration.setGravity(17);
         duration.setTextColor(host.secondaryText);
-        metaRow.addView(duration, new LinearLayout.LayoutParams(host.dp(48), host.dp(30)));
+        metaRow.addView(duration, new LinearLayout.LayoutParams(host.dp(46), host.dp(26)));
         textColumn.addView(metaRow);
-        row.addView(textColumn, new LinearLayout.LayoutParams(0, host.dp(70), 1.0f));
+        row.addView(textColumn, new LinearLayout.LayoutParams(0, host.dp(62), 1.0f));
 
         if (host.tabIndex == 1) {
             Button favorite = host.icon(host.favorites.contains(track.uri) ? "♥︎" : "♡︎");
@@ -233,7 +231,7 @@ final class SongsRenderer {
                     host.render();
                 }
             });
-            row.addView(favorite, host.square(42));
+            row.addView(favorite, host.square(40));
         } else if (showActions) {
             Button actions = host.icon("⋯");
             host.applyPlainIconStyle(actions);
@@ -247,11 +245,12 @@ final class SongsRenderer {
                     }
                 }
             });
-            row.addView(actions, host.square(48));
+            row.addView(actions, host.square(44));
         }
 
-        Button play = host.icon((host.isCurrent(track) && host.playing) ? "Ⅱ" : "▶");
+        Button play = host.icon("");
         host.applyPrimaryButtonStyle(play);
+        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -268,27 +267,32 @@ final class SongsRenderer {
         if (!host.renderingTabPreview) {
             host.songRows.registerPlayButton(track.uri, play);
         }
-        row.addView(play, host.square(48));
-        return host.spaced(row);
+        row.addView(play, host.square(44));
+        container.addView(row, new FrameLayout.LayoutParams(-1, -2));
+        FrameLayout.LayoutParams markerParams = new FrameLayout.LayoutParams(host.dp(4), host.dp(52));
+        markerParams.gravity = android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL;
+        markerParams.setMargins(host.dp(2), 0, 0, 0);
+        container.addView(marker, markerParams);
+        return host.spaced(container);
     }
 
     View queueRow(final Track track, final Runnable removeAction, final Runnable playAction) {
         LinearLayout row = new LinearLayout(host);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
-        row.setPadding(host.dp(10), host.dp(8), host.dp(10), host.dp(8));
+        row.setPadding(host.dp(8), host.dp(4), host.dp(8), host.dp(4));
         host.setSurface(row, host.isCurrent(track) ? host.fg : host.panel, false);
 
         ImageView cover = host.coverView();
         host.loadCover(cover, track, host.dark ? android.graphics.Color.rgb(28, 28, 28) : android.graphics.Color.rgb(235, 235, 235));
-        row.addView(cover, host.square(58));
+        row.addView(cover, host.square(52));
 
         TextView title = host.text(track.title, 17, true);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         title.setPadding(host.dp(12), 0, host.dp(8), 0);
         title.setTextColor(host.isCurrent(track) ? host.bg : host.fg);
-        row.addView(title, new LinearLayout.LayoutParams(0, host.dp(70), 1.0f));
+        row.addView(title, new LinearLayout.LayoutParams(0, host.dp(62), 1.0f));
 
         Button remove = host.icon("−");
         host.applyPlainIconStyle(remove, host.isCurrent(track) ? host.bg : android.graphics.Color.rgb(190, 45, 45));
@@ -298,17 +302,18 @@ final class SongsRenderer {
                 removeAction.run();
             }
         });
-        row.addView(remove, host.square(48));
+        row.addView(remove, host.square(44));
 
-        Button play = host.icon((host.isCurrent(track) && host.playing) ? "Ⅱ" : "▶");
+        Button play = host.icon("");
         host.applyPlainIconStyle(play, host.isCurrent(track) ? host.bg : host.purple);
+        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 playAction.run();
             }
         });
-        row.addView(play, host.square(48));
+        row.addView(play, host.square(44));
         return host.spaced(row);
     }
 }

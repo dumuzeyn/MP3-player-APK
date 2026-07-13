@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
-import org.json.JSONArray;
 
 final class PlaybackController {
     private final MainActivityCore host;
@@ -128,19 +127,10 @@ final class PlaybackController {
 
     private void restoreQueueFromPrefs(SharedPreferences prefs, Track fallback) {
         host.playbackQueue.clear();
-        try {
-            JSONArray queue = new JSONArray(prefs.getString(PlayerService.RESUME_QUEUE, "[]"));
-            for (int i = 0; i < queue.length(); i++) {
-                Track queueTrack = host.findTrack(queue.optString(i, ""));
-                if (queueTrack != null) {
-                    host.playbackQueue.add(queueTrack);
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        if (host.playbackQueue.isEmpty() && fallback != null) {
-            host.playbackQueue.add(fallback);
-        }
+        host.playbackQueue.addAll(PlaybackQueueResolver.restore(
+                host.tracks,
+                prefs.getString(PlayerService.RESUME_QUEUE, "[]"),
+                fallback));
     }
 
     void next() {

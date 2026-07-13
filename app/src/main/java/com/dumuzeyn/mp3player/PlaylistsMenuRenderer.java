@@ -51,7 +51,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         final ArrayList<Track> tracks = host.playlistController.sortedPlaylistTracks(playlist);
         LinearLayout card = new LinearLayout(host);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(host.dp(14), host.dp(12), host.dp(14), host.dp(12));
+        card.setPadding(host.dp(10), host.dp(8), host.dp(10), host.dp(8));
         host.setSurface(card, host.panel, false);
 
         View marker = new View(host);
@@ -61,7 +61,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         LinearLayout header = host.row();
         LinearLayout titleColumn = new LinearLayout(host);
         titleColumn.setOrientation(LinearLayout.VERTICAL);
-        TextView title = host.text(playlist.name, 22, true);
+        TextView title = host.text(playlist.name, 20, true);
         host.makeMarquee(title);
         TextView count = host.text(playlist.uris.size() + " " + host.tr3("songs", "песен", "♪"), 13, false);
         titleColumn.addView(title);
@@ -71,15 +71,16 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         Button delete = host.icon("×");
         host.applyPlainIconStyle(delete, Color.rgb(190, 45, 45));
         delete.setOnClickListener(view -> host.confirmDeletePlaylist(playlist));
-        header.addView(delete, host.square(48));
+        header.addView(delete, host.square(44));
 
         Button rename = host.icon("✎");
         host.applyPlainIconStyle(rename);
         rename.setOnClickListener(view -> host.renamePlaylistDialog(playlist));
-        header.addView(rename, host.square(48));
+        header.addView(rename, host.square(44));
 
         Button play = host.icon(host.isPlayingCollection(tracks) ? "Ⅱ" : "▶");
         host.applyPlainIconStyle(play, host.purple);
+        SongRowStateRegistry.applyPlayState(play, host.isPlayingCollection(tracks));
         play.setOnClickListener(view -> {
             if (host.isCurrentCollection(tracks)) {
                 host.toggleCurrent();
@@ -88,7 +89,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
             }
             updatePlaybackState(play, marker, tracks);
         });
-        header.addView(play, host.square(48));
+        header.addView(play, host.square(44));
 
         Button shuffle = host.shuffleButton();
         host.applyPlainIconStyle(shuffle);
@@ -96,18 +97,18 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
             host.playList(tracks, true);
             updatePlaybackState(play, marker, tracks);
         });
-        header.addView(shuffle, host.square(48));
+        header.addView(shuffle, host.square(44));
         card.addView(header);
 
         LinearLayout body = host.row();
         FrameLayoutCover cover = new FrameLayoutCover(host);
         int fallback = host.dark ? 28 : 235;
         cover.setFallback(Color.rgb(fallback, fallback, fallback));
-        body.addView(cover, host.square(86));
+        body.addView(cover, host.square(72));
 
         SmoothPlaylistTicker ticker = new SmoothPlaylistTicker(host);
         ticker.setPadding(host.dp(12), 0, 0, 0);
-        body.addView(ticker, new LinearLayout.LayoutParams(0, host.dp(72), 1.0f));
+        body.addView(ticker, new LinearLayout.LayoutParams(0, -2, 1.0f));
         card.addView(body);
         host.playlistController.bindRollingPreview(ticker, cover, tracks, host.songRenderGeneration);
 
@@ -124,6 +125,6 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
 
     private void updatePlaybackState(Button play, View marker, ArrayList<Track> tracks) {
         marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
-        play.setText(host.isPlayingCollection(tracks) ? "Ⅱ" : "▶");
+        SongRowStateRegistry.applyPlayState(play, host.isPlayingCollection(tracks));
     }
 }

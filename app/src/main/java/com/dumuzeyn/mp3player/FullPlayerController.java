@@ -216,7 +216,10 @@ final class FullPlayerController {
         like.setTextSize(14.0f);
         host.applyPlayerToolStyle(like, host.favorites.contains(track.uri));
         like.setOnClickListener(view -> {
-            host.openSaveTrackDialog(track);
+            Track current = currentTrack();
+            if (current != null) {
+                host.openSaveTrackDialog(current);
+            }
         });
         row.addView(like, toolButtonParams());
 
@@ -273,7 +276,9 @@ final class FullPlayerController {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
                     elapsed.setText(host.formatMs(progress));
-                    remain.setText("-" + host.formatMs(Math.max(0, host.playbackDurationFor(track) - progress)));
+                    Track current = currentTrack();
+                    int duration = current == null ? seekBar.getMax() : host.playbackDurationFor(current);
+                    remain.setText("-" + host.formatMs(Math.max(0, duration - progress)));
                 }
             }
 
@@ -389,9 +394,16 @@ final class FullPlayerController {
                 : host.tr("Save ♡", "Добавить ♡");
     }
 
+    private Track currentTrack() {
+        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+            return null;
+        }
+        return host.tracks.get(host.currentIndex);
+    }
+
     private final class ProgressUpdater implements Runnable {
         private final FrameLayout sheet;
-        private final Track track;
+        private Track track;
         private final SeekBar seek;
         private final TextView elapsed;
         private final TextView remain;
@@ -422,10 +434,15 @@ final class FullPlayerController {
                 return;
             }
             if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(track.uri) && (resolvedTrack = host.findTrack(PlayerService.lastUri)) != null) {
+                this.track = resolvedTrack;
                 host.currentIndex = host.tracks.indexOf(resolvedTrack);
                 refreshFromState(true);
                 host.render();
-                return;
+            }
+            boolean playbackChanged = host.playing != PlayerService.lastPlaying;
+            host.playing = PlayerService.lastPlaying;
+            if (playbackChanged) {
+                refreshFromState(false);
             }
             int displayDuration = host.playbackDurationFor(track);
             seek.setMax(Math.max(1, displayDuration));

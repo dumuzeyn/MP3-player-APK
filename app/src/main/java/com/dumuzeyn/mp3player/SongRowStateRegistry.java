@@ -50,11 +50,18 @@ final class SongRowStateRegistry {
         }
     }
 
+    static void applyPlayState(Button button, boolean playing) {
+        button.setText(playing ? "\u2161" : "\u25b6");
+        int opticalOffset = playing ? 0 : Math.round(
+                button.getResources().getDisplayMetrics().density * 2.0f);
+        button.setPadding(opticalOffset, 0, 0, 0);
+    }
+
     void refresh(StateResolver resolver) {
         for (Map.Entry<String, Button> entry : playButtons.entrySet()) {
             Track track = resolver.findTrack(entry.getKey());
             boolean current = track != null && resolver.isCurrent(track);
-            entry.getValue().setText((current && resolver.isPlaying()) ? "Ⅱ" : "▶");
+            applyPlayState(entry.getValue(), current && resolver.isPlaying());
         }
         for (Map.Entry<String, View> entry : currentMarkers.entrySet()) {
             Track track = resolver.findTrack(entry.getKey());

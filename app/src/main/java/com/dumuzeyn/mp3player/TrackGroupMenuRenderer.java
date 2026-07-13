@@ -73,7 +73,7 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
 
     private LinearLayout groupCard(final String name, final ArrayList<Track> tracks) {
         LinearLayout row = host.row();
-        row.setPadding(host.dp(12), host.dp(12), host.dp(12), host.dp(12));
+        row.setPadding(host.dp(6), host.dp(4), host.dp(8), host.dp(4));
         host.setSurface(row, host.panel, false);
 
         ImageView cover = host.coverView();
@@ -86,20 +86,21 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
                 ((RotatingCoverImageView) cover).bindTracks(tracks);
             }
         }
-        row.addView(cover, host.square(72));
+        row.addView(cover, host.square(52));
 
         LinearLayout labels = new LinearLayout(host);
         labels.setOrientation(LinearLayout.VERTICAL);
-        labels.setPadding(host.dp(12), 0, host.dp(8), 0);
-        TextView title = host.text(name, 20, true);
+        labels.setPadding(host.dp(10), 0, host.dp(6), 0);
+        TextView title = host.text(name, 17, true);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         labels.addView(title);
         labels.addView(host.text(tracks.size() + " " + host.tr("songs", "песен"), 13, false));
-        row.addView(labels, new LinearLayout.LayoutParams(0, host.dp(72), 1.0f));
+        row.addView(labels, new LinearLayout.LayoutParams(0, host.dp(62), 1.0f));
 
         Button play = host.icon(host.isPlayingSource(tracks) ? "Ⅱ" : "▶");
         host.applyPlainIconStyle(play, host.purple);
+        SongRowStateRegistry.applyPlayState(play, host.isPlayingSource(tracks));
         play.setOnClickListener(view -> {
             if (host.isPlayingSource(tracks)) {
                 host.toggleCurrent();
@@ -107,12 +108,12 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
                 host.playList(tracks, false);
             }
         });
-        row.addView(play, host.square(52));
+        row.addView(play, host.square(44));
 
         Button shuffle = host.shuffleButton();
         host.applyPlainIconStyle(shuffle);
         shuffle.setOnClickListener(view -> host.playList(tracks, true));
-        row.addView(shuffle, host.square(52));
+        row.addView(shuffle, host.square(44));
         row.setOnClickListener(view -> host.openGroupSongs(name, tracks));
         return row;
     }

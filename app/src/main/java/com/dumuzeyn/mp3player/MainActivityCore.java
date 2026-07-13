@@ -146,6 +146,9 @@ class MainActivityCore extends AppState {
         this.songsRenderer.restoreRecentPlayback();
         this.themeController.applyPalette();
         buildUi();
+        if (PlayerService.hasPlaybackSession()) {
+            this.playbackController.startPlaybackWatcher();
+        }
         this.songsRenderer.refreshMissingMetadataAsync();
     }
 
@@ -162,6 +165,7 @@ class MainActivityCore extends AppState {
 
     @Override
     protected void onStop() {
+        PlayerService.persistSnapshot();
         super.onStop();
         this.themeController.onHostStopped();
     }
