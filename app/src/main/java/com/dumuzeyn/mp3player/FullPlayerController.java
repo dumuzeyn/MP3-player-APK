@@ -390,8 +390,8 @@ final class FullPlayerController {
 
     private String saveButtonText(Track track) {
         return host.favorites.contains(track.uri)
-                ? host.tr("Saved ♥", "Добавлено ♥")
-                : host.tr("Save ♡", "Добавить ♡");
+                ? host.tr("Saved ♥︎", "Добавлено ♥︎")
+                : host.tr("Save ♡︎", "Добавить ♡︎");
     }
 
     private Track currentTrack() {

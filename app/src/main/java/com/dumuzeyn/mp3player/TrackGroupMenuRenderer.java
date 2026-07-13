@@ -39,7 +39,7 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
             }
             host.list.addView(host.spaced(groupCard(entry.getKey(), entry.getValue())));
             rendered++;
-            if (host.renderingTabPreview && rendered >= 5) {
+            if (host.renderingTabPreview && rendered >= 15) {
                 break;
             }
         }

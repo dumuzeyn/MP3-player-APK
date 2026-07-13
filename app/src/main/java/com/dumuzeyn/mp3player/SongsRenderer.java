@@ -141,7 +141,7 @@ final class SongsRenderer {
         if (generation != host.songRenderGeneration || host.tabIndex > 1) {
             return;
         }
-        int batchSize = host.renderingTabPreview ? 5 : 24;
+        int batchSize = host.renderingTabPreview ? 15 : 24;
         int end = Math.min(tracksToRender.size(), start + batchSize);
         for (int i = start; i < end; i++) {
             host.list.addView(songRow(tracksToRender.get(i), true, true));
