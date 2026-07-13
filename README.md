@@ -180,6 +180,7 @@ flowchart TB
 - `PlayerService.java` — владеет `MediaPlayer`, audio focus, wake lock, MediaSession и уведомлением.
 - `AudioEffectsManager.java` — применяет и освобождает эквалайзер, выравнивание громкости и API-совместимые аудиоэффекты.
 - `PlaybackQueueNavigator.java` — независимо вычисляет следующий трек, остановку и поведение режимов повтора.
+- `PlaybackStateRepository.java` — единообразно сохраняет и восстанавливает очередь, позицию, repeat и shuffle между сервисом и UI.
 - `SleepTimerController.java` — запускает, отображает и отменяет таймер сна.
 - `EqualizerController.java` — хранит настройки эквалайзера и управляет его интерфейсом.
 - `VolumeLevelingController.java` — включает и отображает режим выравнивания громкости.
@@ -435,6 +436,7 @@ The main package is located under `app/src/main/java`.
 - `PlayerService.java` — owns `MediaPlayer`, audio focus, wake lock, MediaSession, and notification.
 - `AudioEffectsManager.java` — applies and releases the equalizer, volume leveling, and API-compatible audio effects.
 - `PlaybackQueueNavigator.java` — independently decides the next track, stopping, and repeat-mode behavior.
+- `PlaybackStateRepository.java` — consistently persists and restores the queue, position, repeat, and shuffle for both the service and UI.
 - `SleepTimerController.java` — starts, displays, and cancels the sleep timer.
 - `EqualizerController.java` — stores equalizer settings and controls its interface.
 - `VolumeLevelingController.java` — enables and displays perceived-volume leveling.

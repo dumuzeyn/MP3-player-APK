@@ -1,7 +1,6 @@
 package com.dumuzeyn.mp3player;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -94,13 +93,13 @@ final class PlaybackController {
         int loopMode = PlayerService.lastLoopMode;
         boolean wasPlaying = PlayerService.lastPlaying;
         if (current == null) {
-            SharedPreferences prefs = host.getSharedPreferences(PlayerService.RESUME_PREFS, 0);
-            current = restoreFromSavedResume(prefs);
-            position = Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
-            loopMode = prefs.getInt(PlayerService.RESUME_LOOP_MODE, host.loopMode);
-            wasPlaying = prefs.getBoolean(PlayerService.RESUME_PLAYING, false);
+            PlaybackStateRepository.State savedState = new PlaybackStateRepository(host).load();
+            current = restoreFromSavedResume(savedState);
+            position = savedState.position;
+            loopMode = savedState.loopMode;
+            wasPlaying = savedState.playing;
         } else if (host.playbackQueue.isEmpty()) {
-            restoreQueueFromPrefs(host.getSharedPreferences(PlayerService.RESUME_PREFS, 0), current);
+            restoreQueueFromSavedState(new PlaybackStateRepository(host).load(), current);
         }
         if (current == null) {
             return false;
@@ -115,21 +114,21 @@ final class PlaybackController {
         return host.currentIndex >= 0;
     }
 
-    private Track restoreFromSavedResume(SharedPreferences prefs) {
-        long savedAt = prefs.getLong(PlayerService.RESUME_SAVED_AT, 0L);
+    private Track restoreFromSavedResume(PlaybackStateRepository.State savedState) {
+        long savedAt = savedState.savedAt;
         if (host.resumeWindowMinutes > 0 && savedAt > 0 && System.currentTimeMillis() - savedAt > ((long) host.resumeWindowMinutes) * 60000L) {
             return null;
         }
-        Track current = host.findTrack(prefs.getString(PlayerService.RESUME_URI, ""));
-        restoreQueueFromPrefs(prefs, current);
+        Track current = host.findTrack(savedState.uri);
+        restoreQueueFromSavedState(savedState, current);
         return current;
     }
 
-    private void restoreQueueFromPrefs(SharedPreferences prefs, Track fallback) {
+    private void restoreQueueFromSavedState(PlaybackStateRepository.State savedState, Track fallback) {
         host.playbackQueue.clear();
         host.playbackQueue.addAll(PlaybackQueueResolver.restore(
                 host.tracks,
-                prefs.getString(PlayerService.RESUME_QUEUE, "[]"),
+                savedState.queueUris,
                 fallback));
     }
 
@@ -189,7 +188,7 @@ final class PlaybackController {
         PlayerService.lastDuration = 0;
         PlayerService.lastPosition = 0;
         PlayerService.lastUri = "";
-        host.getSharedPreferences(PlayerService.RESUME_PREFS, 0).edit().clear().apply();
+        new PlaybackStateRepository(host).clear();
         Intent intent = new Intent(host, (Class<?>) PlayerService.class);
         intent.setAction(PlayerService.ACTION_STOP);
         startService(intent);

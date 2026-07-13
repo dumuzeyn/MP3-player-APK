@@ -1,6 +1,5 @@
 package com.dumuzeyn.mp3player;
 
-import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -23,13 +22,13 @@ final class SongsRenderer {
         if (!liveSession && host.resumeWindowMinutes <= 0) {
             return;
         }
-        SharedPreferences prefs = host.getSharedPreferences(PlayerService.RESUME_PREFS, 0);
-        long savedAt = prefs.getLong(PlayerService.RESUME_SAVED_AT, 0L);
+        PlaybackStateRepository.State savedState = new PlaybackStateRepository(host).load();
+        long savedAt = savedState.savedAt;
         long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
         if (!liveSession && (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow)) {
             return;
         }
-        String savedUri = prefs.getString(PlayerService.RESUME_URI, "");
+        String savedUri = savedState.uri;
         String uri = liveSession && !PlayerService.lastUri.isEmpty()
                 ? PlayerService.lastUri
                 : savedUri;
@@ -41,22 +40,22 @@ final class SongsRenderer {
         host.playing = liveSession && PlayerService.lastPlaying;
         host.resumePosition = liveSession
                 ? Math.max(0, PlayerService.lastPosition)
-                : Math.max(0, prefs.getInt(PlayerService.RESUME_POSITION, 0));
+                : savedState.position;
         host.loopMode = liveSession
                 ? PlayerService.lastLoopMode
-                : prefs.getInt(PlayerService.RESUME_LOOP_MODE, 0);
-        host.shuffleMode = prefs.getBoolean(PlayerService.RESUME_SHUFFLE, false);
+                : savedState.loopMode;
+        host.shuffleMode = savedState.shuffle;
         host.playbackQueue.clear();
         host.playbackQueue.addAll(PlaybackQueueResolver.restore(
                 host.tracks,
-                prefs.getString(PlayerService.RESUME_QUEUE, "[]"),
+                savedState.queueUris,
                 track));
         if (!liveSession) {
             PlayerService.lastIndex = host.currentIndex;
             PlayerService.lastPlaying = false;
             PlayerService.lastPosition = host.resumePosition;
             PlayerService.lastDuration = Math.max(track.durationMs,
-                    prefs.getInt(PlayerService.RESUME_DURATION, 0));
+                    savedState.duration);
             PlayerService.lastUri = uri;
             PlayerService.lastLoopMode = host.loopMode;
         }

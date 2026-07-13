@@ -11,22 +11,33 @@ final class PlaybackQueueResolver {
     }
 
     static ArrayList<Track> restore(List<Track> library, String queueJson, Track fallback) {
+        ArrayList<String> savedUris = new ArrayList<>();
+        try {
+            JSONArray savedQueue = new JSONArray(queueJson == null ? "[]" : queueJson);
+            for (int index = 0; index < savedQueue.length(); index++) {
+                String uri = savedQueue.optString(index, "");
+                if (!uri.isEmpty()) {
+                    savedUris.add(uri);
+                }
+            }
+        } catch (Exception ignored) {
+            // A damaged saved queue falls back to the current track.
+        }
+        return restore(library, savedUris, fallback);
+    }
+
+    static ArrayList<Track> restore(List<Track> library, List<String> savedUris, Track fallback) {
         Map<String, Track> tracksByUri = new HashMap<>();
         for (Track track : library) {
             tracksByUri.put(track.uri, track);
         }
 
         ArrayList<Track> restored = new ArrayList<>();
-        try {
-            JSONArray savedQueue = new JSONArray(queueJson == null ? "[]" : queueJson);
-            for (int index = 0; index < savedQueue.length(); index++) {
-                Track track = tracksByUri.get(savedQueue.optString(index, ""));
-                if (track != null) {
-                    restored.add(track);
-                }
+        for (String uri : savedUris) {
+            Track track = tracksByUri.get(uri);
+            if (track != null) {
+                restored.add(track);
             }
-        } catch (Exception ignored) {
-            // A damaged saved queue falls back to the current track.
         }
         if (restored.isEmpty() && fallback != null) {
             restored.add(fallback);

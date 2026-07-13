@@ -1,0 +1,139 @@
+package com.dumuzeyn.mp3player;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import java.util.ArrayList;
+import java.util.List;
+import org.json.JSONArray;
+
+/** Persists the playback session independently from the service and UI. */
+final class PlaybackStateRepository {
+    static final String PREFS = "player_resume";
+    private static final String DURATION = "duration";
+    private static final String INDEX = "index";
+    private static final String LOOP_MODE = "loopMode";
+    private static final String PLAYING = "playing";
+    private static final String POSITION = "position";
+    private static final String QUEUE = "queue";
+    private static final String SAVED_AT = "savedAt";
+    private static final String SHUFFLE = "shuffle";
+    private static final String URI = "uri";
+
+    private final SharedPreferences preferences;
+    private String lastSavedQueueJson = "";
+
+    PlaybackStateRepository(Context context) {
+        preferences = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    State load() {
+        return new State(
+                preferences.getString(URI, ""),
+                Math.max(0, preferences.getInt(POSITION, 0)),
+                Math.max(0, preferences.getInt(DURATION, 0)),
+                Math.max(0, preferences.getInt(INDEX, 0)),
+                preferences.getInt(LOOP_MODE, 0),
+                preferences.getBoolean(PLAYING, false),
+                preferences.getBoolean(SHUFFLE, false),
+                preferences.getLong(SAVED_AT, 0L),
+                queueUris(preferences.getString(QUEUE, "[]")));
+    }
+
+    void save(Snapshot snapshot, boolean includeQueue) {
+        String queueJson = queueJson(snapshot.queueUris);
+        SharedPreferences.Editor editor = preferences.edit()
+                .putString(URI, snapshot.uri)
+                .putInt(POSITION, Math.max(0, snapshot.position))
+                .putInt(DURATION, Math.max(0, snapshot.duration))
+                .putInt(INDEX, Math.max(0, snapshot.index))
+                .putInt(LOOP_MODE, snapshot.loopMode)
+                .putBoolean(PLAYING, snapshot.playing)
+                .putBoolean(SHUFFLE, snapshot.shuffle)
+                .putLong(SAVED_AT, System.currentTimeMillis());
+        if (includeQueue || !queueJson.equals(lastSavedQueueJson)) {
+            editor.putString(QUEUE, queueJson);
+            lastSavedQueueJson = queueJson;
+        }
+        editor.apply();
+    }
+
+    void clear() {
+        lastSavedQueueJson = "";
+        preferences.edit().clear().apply();
+    }
+
+    static final class State {
+        final String uri;
+        final int position;
+        final int duration;
+        final int index;
+        final int loopMode;
+        final boolean playing;
+        final boolean shuffle;
+        final long savedAt;
+        final ArrayList<String> queueUris;
+
+        State(String uri, int position, int duration, int index, int loopMode, boolean playing,
+                boolean shuffle, long savedAt, ArrayList<String> queueUris) {
+            this.uri = uri;
+            this.position = position;
+            this.duration = duration;
+            this.index = index;
+            this.loopMode = loopMode;
+            this.playing = playing;
+            this.shuffle = shuffle;
+            this.savedAt = savedAt;
+            this.queueUris = queueUris;
+        }
+    }
+
+    static final class Snapshot {
+        final String uri;
+        final int position;
+        final int duration;
+        final int index;
+        final int loopMode;
+        final boolean playing;
+        final boolean shuffle;
+        final ArrayList<String> queueUris;
+
+        Snapshot(String uri, int position, int duration, int index, int loopMode, boolean playing,
+                boolean shuffle, List<Track> queue) {
+            this.uri = uri == null ? "" : uri;
+            this.position = position;
+            this.duration = duration;
+            this.index = index;
+            this.loopMode = loopMode;
+            this.playing = playing;
+            this.shuffle = shuffle;
+            this.queueUris = new ArrayList<>();
+            for (Track track : queue) {
+                this.queueUris.add(track.uri);
+            }
+        }
+    }
+
+    private static ArrayList<String> queueUris(String json) {
+        ArrayList<String> uris = new ArrayList<>();
+        try {
+            JSONArray queue = new JSONArray(json == null ? "[]" : json);
+            for (int index = 0; index < queue.length(); index++) {
+                String uri = queue.optString(index, "");
+                if (!uri.isEmpty()) {
+                    uris.add(uri);
+                }
+            }
+        } catch (Exception ignored) {
+            // A damaged saved queue is treated as empty and falls back to the current track.
+        }
+        return uris;
+    }
+
+    private static String queueJson(List<String> uris) {
+        JSONArray queue = new JSONArray();
+        for (String uri : uris) {
+            queue.put(uri);
+        }
+        return queue.toString();
+    }
+}

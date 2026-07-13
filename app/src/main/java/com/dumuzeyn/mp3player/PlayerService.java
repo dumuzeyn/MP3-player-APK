@@ -35,9 +35,7 @@ import android.util.Log;
 import android.util.LruCache;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import org.json.JSONArray;
 
 public class PlayerService extends Service {
     public static final String ACTION_LOOP = "com.dumuzeyn.mp3player.LOOP";
@@ -55,17 +53,6 @@ public class PlayerService extends Service {
     public static final String EXTRA_POSITION = "position";
     public static final String EXTRA_QUEUE_URIS = "queueUris";
     public static final String EXTRA_SHUFFLE = "shuffle";
-    public static final String RESUME_DURATION = "duration";
-    public static final String RESUME_INDEX = "index";
-    public static final String RESUME_LOOP_MODE = "loopMode";
-    public static final String RESUME_PLAYING = "playing";
-    public static final String RESUME_POSITION = "position";
-    public static final String RESUME_PREFS = "player_resume";
-    public static final String RESUME_QUEUE = "queue";
-    public static final String RESUME_SAVED_AT = "savedAt";
-    public static final String RESUME_SHUFFLE = "shuffle";
-    public static final String RESUME_URI = "uri";
-
     private static final String CHANNEL_ID = "playback";
     private static final String TAG = "MP3PlayerService";
     private static final String DEBUG_TAG = "MP3PlayerDebug";
@@ -159,7 +146,7 @@ public class PlayerService extends Service {
     private boolean playerPreparing = false;
     private boolean noisyReceiverRegistered = false;
     private long lastResumePositionSavedAt = 0L;
-    private String lastSavedQueueJson = "";
+    private PlaybackStateRepository playbackStateRepository;
     private int currentIndex = -1;
     private boolean oneShot = false;
     private boolean shuffle = false;
@@ -175,6 +162,7 @@ public class PlayerService extends Service {
         super.onCreate();
         instance = this;
         this.audioEffectsManager = new AudioEffectsManager(this);
+        this.playbackStateRepository = new PlaybackStateRepository(this);
         this.audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         createChannel();
         this.mediaSession = new MediaSession(this, "MP3 Player");
@@ -456,25 +444,15 @@ public class PlayerService extends Service {
         if (intent.hasExtra(EXTRA_INDEX)) {
             this.currentIndex = normalizeIndex(intent.getIntExtra(EXTRA_INDEX, this.currentIndex));
         } else if (this.currentIndex < 0) {
-            this.currentIndex = normalizeIndex(getSharedPreferences(RESUME_PREFS, 0).getInt(RESUME_INDEX, 0));
+            this.currentIndex = normalizeIndex(this.playbackStateRepository.load().index);
         }
     }
 
     private void restoreQueueForToggle() {
-        SharedPreferences prefs = getSharedPreferences(RESUME_PREFS, 0);
-        ArrayList<String> uris = new ArrayList<>();
-        try {
-            JSONArray savedQueue = new JSONArray(prefs.getString(RESUME_QUEUE, "[]"));
-            for (int i = 0; i < savedQueue.length(); i++) {
-                String uri = savedQueue.optString(i, "");
-                if (!uri.isEmpty()) {
-                    uris.add(uri);
-                }
-            }
-        } catch (Exception ignored) {
-        }
+        PlaybackStateRepository.State savedState = this.playbackStateRepository.load();
+        ArrayList<String> uris = new ArrayList<>(savedState.queueUris);
         if (uris.isEmpty()) {
-            String uri = prefs.getString(RESUME_URI, "");
+            String uri = savedState.uri;
             if (!uri.isEmpty()) {
                 uris.add(uri);
             }
@@ -515,31 +493,22 @@ public class PlayerService extends Service {
         if (this.player != null) {
             return;
         }
-        SharedPreferences prefs = getSharedPreferences(RESUME_PREFS, 0);
-        if (!prefs.getBoolean(RESUME_PLAYING, false)) {
+        PlaybackStateRepository.State savedState = this.playbackStateRepository.load();
+        if (!savedState.playing) {
             return;
         }
-        JSONArray savedQueue;
-        try {
-            savedQueue = new JSONArray(prefs.getString(RESUME_QUEUE, "[]"));
-        } catch (Exception e) {
-            savedQueue = new JSONArray();
-        }
-        ArrayList<String> uris = new ArrayList<>();
-        for (int index = 0; index < savedQueue.length(); index++) {
-            uris.add(savedQueue.optString(index, ""));
-        }
+        ArrayList<String> uris = new ArrayList<>(savedState.queueUris);
         if (uris.isEmpty()) {
-            String uri = prefs.getString(RESUME_URI, "");
+            String uri = savedState.uri;
             if (!uri.isEmpty()) {
                 uris.add(uri);
             }
         }
-        this.loopMode = prefs.getInt(RESUME_LOOP_MODE, 0);
-        this.shuffle = prefs.getBoolean(RESUME_SHUFFLE, false);
+        this.loopMode = savedState.loopMode;
+        this.shuffle = savedState.shuffle;
         this.oneShot = false;
-        int index = prefs.getInt(RESUME_INDEX, 0);
-        int position = Math.max(0, prefs.getInt(RESUME_POSITION, 0));
+        int index = savedState.index;
+        int position = savedState.position;
         Log.i(TAG, "restore_after_process_death index=" + index + " queue=" + uris.size() + " loopMode=" + this.loopMode);
         playIndex(index, uris, position, 0);
     }
@@ -625,7 +594,7 @@ public class PlayerService extends Service {
             lastUri = "";
             lastPosition = 0;
             lastDuration = 0;
-            getSharedPreferences(RESUME_PREFS, 0).edit().clear().apply();
+            this.playbackStateRepository.clear();
         } else {
             updateState();
             saveResumeState(true, true);
@@ -686,26 +655,9 @@ public class PlayerService extends Service {
         if (this.currentIndex < 0 || this.currentIndex >= this.queue.size()) {
             return;
         }
-        JSONArray queueJsonArray = new JSONArray();
-        Iterator<Track> it = this.queue.iterator();
-        while (it.hasNext()) {
-            queueJsonArray.put(it.next().uri);
-        }
-        String queueJson = queueJsonArray.toString();
-        SharedPreferences.Editor edit = getSharedPreferences(RESUME_PREFS, 0).edit();
-        edit.putString(RESUME_URI, this.queue.get(this.currentIndex).uri);
-        edit.putInt(RESUME_POSITION, Math.max(0, lastPosition));
-        edit.putInt(RESUME_DURATION, Math.max(0, lastDuration));
-        edit.putInt(RESUME_INDEX, Math.max(0, this.currentIndex));
-        edit.putInt(RESUME_LOOP_MODE, this.loopMode);
-        edit.putBoolean(RESUME_PLAYING, lastPlaying);
-        edit.putBoolean(RESUME_SHUFFLE, this.shuffle);
-        edit.putLong(RESUME_SAVED_AT, System.currentTimeMillis());
-        if (includeQueue || !queueJson.equals(this.lastSavedQueueJson)) {
-            edit.putString(RESUME_QUEUE, queueJson);
-            this.lastSavedQueueJson = queueJson;
-        }
-        edit.apply();
+        this.playbackStateRepository.save(new PlaybackStateRepository.Snapshot(
+                this.queue.get(this.currentIndex).uri, lastPosition, lastDuration, this.currentIndex,
+                this.loopMode, lastPlaying, this.shuffle, this.queue), includeQueue);
         if (forcePosition || lastPlaying) {
             this.lastResumePositionSavedAt = System.currentTimeMillis();
         }

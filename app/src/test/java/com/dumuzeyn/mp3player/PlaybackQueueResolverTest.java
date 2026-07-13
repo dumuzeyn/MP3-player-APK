@@ -35,4 +35,22 @@ public class PlaybackQueueResolverTest {
         assertEquals(1, restored.size());
         assertEquals("uri:current", restored.get(0).uri);
     }
+
+    @Test
+    public void restoreUsesDecodedUrisFromPlaybackState() {
+        ArrayList<Track> library = new ArrayList<>();
+        Track first = new Track("uri:first", "First", "Artist");
+        Track second = new Track("uri:second", "Second", "Artist");
+        library.add(first);
+        library.add(second);
+        ArrayList<String> savedUris = new ArrayList<>();
+        savedUris.add("uri:second");
+        savedUris.add("uri:first");
+
+        ArrayList<Track> restored = PlaybackQueueResolver.restore(library, savedUris, first);
+
+        assertEquals(2, restored.size());
+        assertEquals("uri:second", restored.get(0).uri);
+        assertEquals("uri:first", restored.get(1).uri);
+    }
 }
