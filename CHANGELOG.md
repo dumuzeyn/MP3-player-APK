@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.1 - Playback continuity and cover rotation
+
+- Keep a playlist advancing after the app task is removed while the sleep timer remains active.
+- Persist active playback correctly while the next queue item is preparing.
+- Restore the current service state when the Activity returns to the foreground.
+- Reset a rotating cover when the track changes and resume rotation after reopening the player.
+- Remove the empty bottom inset above the Android navigation bar.
+- Add physical-device instrumentation coverage for queue continuation and rotating covers.
+
 ## 2.4 - Continuous compatibility checks
 
 - Run Android 8 and Android 16 instrumentation tests for every pull request.

@@ -15,6 +15,7 @@ final class RotatingCoverImageView extends ImageView {
     private ArrayList<Track> sourceTracks = new ArrayList<>();
     private boolean requireActiveQueue;
     private ValueAnimator rotationAnimator;
+    private String boundTrackUri = "";
     private String lastObservedTrackUri = "";
 
     RotatingCoverImageView(MainActivityCore host) {
@@ -34,13 +35,16 @@ final class RotatingCoverImageView extends ImageView {
     }
 
     void bindTrack(Track track) {
-        stopRotation(true);
+        String nextTrackUri = track == null || track.uri == null ? "" : track.uri;
+        if (!nextTrackUri.equals(this.boundTrackUri)) {
+            stopRotation(true);
+            this.boundTrackUri = nextTrackUri;
+        }
         this.trackUris.clear();
         this.sourceTracks.clear();
         this.requireActiveQueue = false;
-        this.lastObservedTrackUri = track == null || track.uri == null ? "" : track.uri;
-        if (track != null && track.uri != null) {
-            this.trackUris.add(track.uri);
+        if (!nextTrackUri.isEmpty()) {
+            this.trackUris.add(nextTrackUri);
         }
         updatePlaybackState();
     }

@@ -91,7 +91,10 @@ final class SleepTimerController {
     }
 
     String buttonText() {
-        syncFromService();
+        if (host.sleepTimerEndsAt > 0L
+                && host.sleepTimerEndsAt <= System.currentTimeMillis()) {
+            syncFromService();
+        }
         if (host.sleepTimerEndsAt <= 0) {
             return host.tr("Timer ◷", "Таймер ◷");
         }

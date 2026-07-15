@@ -18,12 +18,17 @@ final class InstrumentedTestSupport {
     }
 
     static File createTestWave(Context context, int durationSeconds) throws Exception {
+        return createTestWave(context, "instrumented-playback.wav", durationSeconds);
+    }
+
+    static File createTestWave(Context context, String fileName, int durationSeconds)
+            throws Exception {
         int sampleRate = 8000;
         int channels = 1;
         int bitsPerSample = 16;
         int sampleCount = sampleRate * durationSeconds;
         int dataSize = sampleCount * channels * bitsPerSample / 8;
-        File output = new File(context.getCacheDir(), "instrumented-playback.wav");
+        File output = new File(context.getCacheDir(), fileName);
         try (FileOutputStream stream = new FileOutputStream(output, false)) {
             stream.write(new byte[]{'R', 'I', 'F', 'F'});
             writeLittleEndian(stream, 36 + dataSize, 4);

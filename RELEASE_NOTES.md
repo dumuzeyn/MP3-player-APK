@@ -1,8 +1,15 @@
-# MP3 Player 2.4
+# MP3 Player 2.4.1
 
 ## Русский
 
 Актуальная официальная сборка локального MP3-плеера для Android.
+
+### Исправления 2.4.1
+
+- Плейлист продолжает играть после удаления приложения из списка недавних, пока не закончится очередь или таймер сна.
+- Таймер сна хранится в сервисе воспроизведения и не зависит от открытого экрана приложения.
+- Вращение обложки восстанавливается после возврата в приложение, а при смене песни новая обложка начинает с исходного угла.
+- Убрана пустая полоса над системными кнопками Android.
 
 ### Надёжность и совместимость
 
@@ -24,6 +31,13 @@
 ## English
 
 Current official build of the local Android MP3 player.
+
+### 2.4.1 fixes
+
+- Playlists keep advancing after the app task is removed until the queue or sleep timer ends.
+- The sleep timer is owned by the playback service and no longer depends on an open Activity.
+- Cover rotation resumes after returning to the app, and a new track starts from the initial cover angle.
+- Removed the empty strip above the Android navigation buttons.
 
 ### Reliability and compatibility
 

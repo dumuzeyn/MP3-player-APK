@@ -569,7 +569,7 @@ public class PlayerService extends Service {
     private void persistSleepTimer() {
         getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).edit()
                 .putLong(TIMER_ENDS_AT, this.sleepTimerEndsAt)
-                .apply();
+                .commit();
     }
 
     static long getSleepTimerEndsAt(Context context) {
@@ -608,7 +608,9 @@ public class PlayerService extends Service {
 
     private void updateState() {
         lastIndex = this.currentIndex;
-        lastPlaying = this.player != null && safeIsPlaying();
+        // Preparing the next queue item is still an active playback request. Persisting false
+        // here makes a sticky service restart treat the queue as paused between two tracks.
+        lastPlaying = this.player != null && (this.playerPreparing || safeIsPlaying());
         int currentDuration = safeDuration();
         if (currentDuration <= 0 && this.currentIndex >= 0
                 && this.currentIndex < this.queueManager.size()) {

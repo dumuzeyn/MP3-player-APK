@@ -176,7 +176,12 @@ class MainActivityCore extends AppState {
     protected void onResume() {
         super.onResume();
         this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
+        this.songsRenderer.restoreRecentPlayback();
+        if (PlayerService.hasPlaybackSession()) {
+            this.playbackController.startPlaybackWatcher();
+        }
         this.playerUiController.syncPlaybackUi();
+        refreshAfterTrackChange();
     }
 
     @Override
@@ -292,7 +297,7 @@ class MainActivityCore extends AppState {
         }
         this.page = new LinearLayout(this);
         this.page.setOrientation(LinearLayout.VERTICAL);
-        this.page.setPadding(dp(8), dp(14), dp(8), dp(8));
+        this.page.setPadding(dp(8), dp(14), dp(8), 0);
         this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
         buildHeader();
         this.tabsController.buildTabs();
