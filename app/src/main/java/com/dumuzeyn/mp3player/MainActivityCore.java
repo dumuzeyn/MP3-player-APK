@@ -81,7 +81,6 @@ class MainActivityCore extends AppState {
     private final CoverLoader coverLoader = new CoverLoader(this);
     final Handler uiHandler = new Handler(Looper.getMainLooper());
     final Handler playbackHandler = new Handler(Looper.getMainLooper());
-    final Handler sleepHandler = new Handler(Looper.getMainLooper());
     final SongRowStateRegistry songRows = new SongRowStateRegistry();
     final SongsRenderer songsRenderer = new SongsRenderer(this);
     final PlayerUiController playerUiController = new PlayerUiController(this);
@@ -126,6 +125,7 @@ class MainActivityCore extends AppState {
             this.language = "en";
         }
         this.customTimerMinutes = this.prefs.getInt(CUSTOM_TIMER, 10);
+        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
         this.resumeWindowMinutes = Math.max(0, this.prefs.getInt(RESUME_WINDOW_MINUTES, 120));
         this.particleFrequency = clamp(this.prefs.getInt(PARTICLE_FREQUENCY, 45), 10, 100);
         this.particleSize = clamp(this.prefs.getInt(PARTICLE_SIZE, 100), 60, 150);
@@ -170,6 +170,13 @@ class MainActivityCore extends AppState {
         PlayerService.persistSnapshot();
         super.onStop();
         this.themeController.onHostStopped();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
+        this.playerUiController.syncPlaybackUi();
     }
 
     @Override

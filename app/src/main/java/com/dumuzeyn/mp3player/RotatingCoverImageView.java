@@ -15,6 +15,7 @@ final class RotatingCoverImageView extends ImageView {
     private ArrayList<Track> sourceTracks = new ArrayList<>();
     private boolean requireActiveQueue;
     private ValueAnimator rotationAnimator;
+    private String lastObservedTrackUri = "";
 
     RotatingCoverImageView(MainActivityCore host) {
         super(host);
@@ -33,9 +34,11 @@ final class RotatingCoverImageView extends ImageView {
     }
 
     void bindTrack(Track track) {
+        stopRotation(true);
         this.trackUris.clear();
         this.sourceTracks.clear();
         this.requireActiveQueue = false;
+        this.lastObservedTrackUri = track == null || track.uri == null ? "" : track.uri;
         if (track != null && track.uri != null) {
             this.trackUris.add(track.uri);
         }
@@ -66,6 +69,16 @@ final class RotatingCoverImageView extends ImageView {
 
     void updatePlaybackState() {
         invalidateOutline();
+        String currentUri = "";
+        if (host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
+                && host.tracks.get(host.currentIndex) != null
+                && host.tracks.get(host.currentIndex).uri != null) {
+            currentUri = host.tracks.get(host.currentIndex).uri;
+        }
+        if (!currentUri.equals(this.lastObservedTrackUri)) {
+            stopRotation(true);
+            this.lastObservedTrackUri = currentUri;
+        }
         boolean shouldRotate = host.circularCovers && host.playing
                 && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
                 && trackUris.contains(host.tracks.get(host.currentIndex).uri)
@@ -85,7 +98,7 @@ final class RotatingCoverImageView extends ImageView {
 
     @Override
     protected void onDetachedFromWindow() {
-        stopRotation(false);
+        stopRotation(true);
         super.onDetachedFromWindow();
     }
 

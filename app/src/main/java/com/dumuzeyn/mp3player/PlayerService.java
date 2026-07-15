@@ -9,7 +9,9 @@ import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 import java.util.ArrayList;
@@ -24,14 +26,19 @@ public class PlayerService extends Service {
     public static final String ACTION_TOGGLE = "com.dumuzeyn.mp3player.TOGGLE";
     public static final String ACTION_AUDIO_EFFECTS = "com.dumuzeyn.mp3player.AUDIO_EFFECTS";
     public static final String ACTION_UPDATE_QUEUE = "com.dumuzeyn.mp3player.UPDATE_QUEUE";
+    public static final String ACTION_TIMER_START = "com.dumuzeyn.mp3player.TIMER_START";
+    public static final String ACTION_TIMER_CANCEL = "com.dumuzeyn.mp3player.TIMER_CANCEL";
     public static final String EXTRA_INDEX = "index";
     public static final String EXTRA_LOOP_MODE = "loopMode";
     public static final String EXTRA_ONE_SHOT = "oneShot";
     public static final String EXTRA_POSITION = "position";
     public static final String EXTRA_QUEUE_URIS = "queueUris";
     public static final String EXTRA_SHUFFLE = "shuffle";
+    public static final String EXTRA_TIMER_MS = "timerMs";
     private static final String TAG = "MP3PlayerService";
     private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String TIMER_PREFS = "player_sleep_timer";
+    private static final String TIMER_ENDS_AT = "endsAt";
     private static final int NOTIFICATION_ID = 7;
     private static PlayerService instance;
 
@@ -57,6 +64,22 @@ public class PlayerService extends Service {
     private boolean pausedByUser = false;
     private int loopOneErrorRetries = 0;
     private int consecutivePlaybackErrors = 0;
+    private final Handler timerHandler = new Handler(Looper.getMainLooper());
+    private long sleepTimerEndsAt = 0L;
+    private final Runnable sleepTimerStop = new Runnable() {
+        @Override
+        public void run() {
+            if (sleepTimerEndsAt <= 0L || System.currentTimeMillis() < sleepTimerEndsAt) {
+                scheduleSleepTimer();
+                return;
+            }
+            Log.i(DEBUG_TAG, "sleep_timer_expired");
+            sleepTimerEndsAt = 0L;
+            persistSleepTimer();
+            stopPlayback(true);
+            stopSelf();
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -67,6 +90,7 @@ public class PlayerService extends Service {
         this.playbackStateRepository = new PlaybackStateRepository(this);
         this.notificationController = new MediaNotificationController(this, new SessionCallback());
         this.queueManager.replace(TrackStore.load(this));
+        restoreSleepTimer();
         Log.i(TAG, "service_created");
     }
 
@@ -78,6 +102,18 @@ public class PlayerService extends Service {
             return START_STICKY;
         }
         String action = intent.getAction();
+        if (ACTION_TIMER_START.equals(action)) {
+            startSleepTimer(intent.getLongExtra(EXTRA_TIMER_MS, 0L));
+            return START_STICKY;
+        }
+        if (ACTION_TIMER_CANCEL.equals(action)) {
+            cancelSleepTimer();
+            if (this.player == null) {
+                stopForeground(true);
+                stopSelf();
+            }
+            return START_STICKY;
+        }
         if (ACTION_PLAY_INDEX.equals(action)) {
             this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
             this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, false);
@@ -471,6 +507,7 @@ public class PlayerService extends Service {
     }
 
     private void stopPlayback(boolean explicit) {
+        cancelSleepTimer();
         releasePlayer();
         if (explicit) {
             this.currentIndex = -1;
@@ -487,6 +524,61 @@ public class PlayerService extends Service {
         this.audioFocusController.stop();
         stopForeground(true);
         logPlaybackState(explicit ? "stop_explicit" : "stop_queue_end");
+    }
+
+    private void startSleepTimer(long delayMs) {
+        long safeDelayMs = Math.max(1000L, delayMs);
+        this.sleepTimerEndsAt = System.currentTimeMillis() + safeDelayMs;
+        persistSleepTimer();
+        scheduleSleepTimer();
+        Log.i(DEBUG_TAG, "sleep_timer_started delayMs=" + safeDelayMs
+                + " endsAt=" + this.sleepTimerEndsAt);
+    }
+
+    private void restoreSleepTimer() {
+        this.sleepTimerEndsAt = getSharedPreferences(TIMER_PREFS, MODE_PRIVATE)
+                .getLong(TIMER_ENDS_AT, 0L);
+        if (this.sleepTimerEndsAt <= 0L) {
+            return;
+        }
+        if (this.sleepTimerEndsAt <= System.currentTimeMillis()) {
+            this.sleepTimerEndsAt = 0L;
+            persistSleepTimer();
+            return;
+        }
+        scheduleSleepTimer();
+        Log.i(DEBUG_TAG, "sleep_timer_restored endsAt=" + this.sleepTimerEndsAt);
+    }
+
+    private void scheduleSleepTimer() {
+        this.timerHandler.removeCallbacks(this.sleepTimerStop);
+        if (this.sleepTimerEndsAt <= 0L) {
+            return;
+        }
+        long remainingMs = this.sleepTimerEndsAt - System.currentTimeMillis();
+        this.timerHandler.postDelayed(this.sleepTimerStop, Math.max(1000L, remainingMs));
+    }
+
+    private void cancelSleepTimer() {
+        this.sleepTimerEndsAt = 0L;
+        this.timerHandler.removeCallbacks(this.sleepTimerStop);
+        persistSleepTimer();
+        Log.i(DEBUG_TAG, "sleep_timer_cancelled");
+    }
+
+    private void persistSleepTimer() {
+        getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).edit()
+                .putLong(TIMER_ENDS_AT, this.sleepTimerEndsAt)
+                .apply();
+    }
+
+    static long getSleepTimerEndsAt(Context context) {
+        if (instance != null) {
+            return instance.sleepTimerEndsAt;
+        }
+        return context.getApplicationContext()
+                .getSharedPreferences(TIMER_PREFS, Context.MODE_PRIVATE)
+                .getLong(TIMER_ENDS_AT, 0L);
     }
 
     private void releasePlayer() {
@@ -637,6 +729,7 @@ public class PlayerService extends Service {
             saveResumeState(true, true);
         }
         releasePlayer();
+        this.timerHandler.removeCallbacks(this.sleepTimerStop);
         this.audioFocusController.stop();
         this.notificationController.release();
         instance = null;

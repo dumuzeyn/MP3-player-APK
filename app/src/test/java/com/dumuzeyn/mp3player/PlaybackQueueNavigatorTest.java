@@ -13,6 +13,13 @@ public class PlaybackQueueNavigatorTest {
     }
 
     @Test
+    public void playlistContinuesThroughEveryTrackWithoutOneShot() {
+        assertPlay(decide(3, 0, 0, false, PlaybackQueueNavigator.Reason.FINISHED, 0), 1, 0);
+        assertPlay(decide(3, 1, 0, false, PlaybackQueueNavigator.Reason.FINISHED, 0), 2, 0);
+        assertTrue(decide(3, 2, 0, false, PlaybackQueueNavigator.Reason.FINISHED, 0).stop);
+    }
+
+    @Test
     public void noRepeatStopsAtQueueEnd() {
         assertTrue(decide(3, 2, 0, false, PlaybackQueueNavigator.Reason.FINISHED, 0).stop);
     }
