@@ -15,6 +15,8 @@ final class RotatingCoverImageView extends ImageView {
     private ArrayList<Track> sourceTracks = new ArrayList<>();
     private boolean requireActiveQueue;
     private ValueAnimator rotationAnimator;
+    private String boundTrackUri = "";
+    private String lastObservedTrackUri = "";
 
     RotatingCoverImageView(MainActivityCore host) {
         super(host);
@@ -33,11 +35,16 @@ final class RotatingCoverImageView extends ImageView {
     }
 
     void bindTrack(Track track) {
+        String nextTrackUri = track == null || track.uri == null ? "" : track.uri;
+        if (!nextTrackUri.equals(this.boundTrackUri)) {
+            stopRotation(true);
+            this.boundTrackUri = nextTrackUri;
+        }
         this.trackUris.clear();
         this.sourceTracks.clear();
         this.requireActiveQueue = false;
-        if (track != null && track.uri != null) {
-            this.trackUris.add(track.uri);
+        if (!nextTrackUri.isEmpty()) {
+            this.trackUris.add(nextTrackUri);
         }
         updatePlaybackState();
     }
@@ -66,6 +73,16 @@ final class RotatingCoverImageView extends ImageView {
 
     void updatePlaybackState() {
         invalidateOutline();
+        String currentUri = "";
+        if (host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
+                && host.tracks.get(host.currentIndex) != null
+                && host.tracks.get(host.currentIndex).uri != null) {
+            currentUri = host.tracks.get(host.currentIndex).uri;
+        }
+        if (!currentUri.equals(this.lastObservedTrackUri)) {
+            stopRotation(true);
+            this.lastObservedTrackUri = currentUri;
+        }
         boolean shouldRotate = host.circularCovers && host.playing
                 && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
                 && trackUris.contains(host.tracks.get(host.currentIndex).uri)
@@ -85,7 +102,7 @@ final class RotatingCoverImageView extends ImageView {
 
     @Override
     protected void onDetachedFromWindow() {
-        stopRotation(false);
+        stopRotation(true);
         super.onDetachedFromWindow();
     }
 

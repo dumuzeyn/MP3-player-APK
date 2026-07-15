@@ -14,6 +14,7 @@ final class SleepTimerController {
     }
 
     void openDialog() {
+        syncFromService();
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
@@ -77,30 +78,23 @@ final class SleepTimerController {
     }
 
     void start(int minutes) {
-        long delayMs = ((long) minutes) * 60L * 1000L;
+        long delayMs = Math.max(1L, (long) minutes) * 60L * 1000L;
         host.sleepTimerEndsAt = System.currentTimeMillis() + delayMs;
-        host.sleepHandler.removeCallbacksAndMessages(null);
+        sendTimerAction(PlayerService.ACTION_TIMER_START, delayMs);
         host.playerUiController.syncPlaybackUi();
-        host.sleepHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                stopPlayback();
-                host.playing = false;
-                host.currentIndex = -1;
-                host.sleepTimerEndsAt = 0L;
-                host.updateMini();
-                host.render();
-            }
-        }, delayMs);
     }
 
     void cancel() {
         host.sleepTimerEndsAt = 0L;
-        host.sleepHandler.removeCallbacksAndMessages(null);
+        sendTimerAction(PlayerService.ACTION_TIMER_CANCEL, 0L);
         host.playerUiController.syncPlaybackUi();
     }
 
     String buttonText() {
+        if (host.sleepTimerEndsAt > 0L
+                && host.sleepTimerEndsAt <= System.currentTimeMillis()) {
+            syncFromService();
+        }
         if (host.sleepTimerEndsAt <= 0) {
             return host.tr("Timer ◷", "Таймер ◷");
         }
@@ -108,9 +102,16 @@ final class SleepTimerController {
         return host.formatSeconds((remainingMs + 999L) / 1000L);
     }
 
-    private void stopPlayback() {
+    private void syncFromService() {
+        host.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(host);
+    }
+
+    private void sendTimerAction(String action, long delayMs) {
         Intent intent = new Intent(host, (Class<?>) PlayerService.class);
-        intent.setAction(PlayerService.ACTION_STOP);
+        intent.setAction(action);
+        if (delayMs > 0L) {
+            intent.putExtra(PlayerService.EXTRA_TIMER_MS, delayMs);
+        }
         if (Build.VERSION.SDK_INT >= 26) {
             host.startForegroundService(intent);
         } else {

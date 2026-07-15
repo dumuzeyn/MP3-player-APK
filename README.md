@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4.1-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -326,7 +326,7 @@ flowchart LR
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.4-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.4.1-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player">
     <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
