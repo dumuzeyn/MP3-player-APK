@@ -99,10 +99,19 @@ jobs:
           name: MP3-Player-Voltune-release
           path: MP3-Player-Voltune.apk
 
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: |
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "release_tag is missing" >&2
+            exit 1
+          fi
+
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.release_tag }}
+          tag_name: ${{ github.event.inputs.release_tag }}
           name: MP3 Player Voltune 2.4.3
           body_path: RELEASE_NOTES.md
           files: MP3-Player-Voltune.apk
