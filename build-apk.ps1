@@ -140,7 +140,7 @@ if (-not (Test-Path -LiteralPath $KeyStore)) {
 }
 
 $AlignedApk = Join-Path $BuildDir "mp3-player-aligned.apk"
-$SignedApk = Join-Path $OutputDir "MP3-Player.apk"
+$SignedApk = Join-Path $OutputDir "MP3-Player-Voltune.apk"
 
 Invoke-Checked { & $ZipAlign -f -p 4 $UnsignedApk $AlignedApk }
 Invoke-Checked { & $ApkSigner sign `

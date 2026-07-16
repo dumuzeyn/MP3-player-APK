@@ -13,6 +13,16 @@ final class DialogController {
     }
 
     void showConfirmation(String title, String message, Runnable yesAction) {
+        showConfirmation(title, message, host.tr("No", "Нет"), host.tr("Yes", "Да"), yesAction);
+    }
+
+    void showConfirmation(String title, String message, String negativeLabel,
+            String positiveLabel, Runnable yesAction) {
+        showConfirmation(title, message, negativeLabel, positiveLabel, true, yesAction);
+    }
+
+    void showConfirmation(String title, String message, String negativeLabel,
+            String positiveLabel, boolean emphasizePositive, Runnable yesAction) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
@@ -22,11 +32,16 @@ final class DialogController {
         messageView.setPadding(0, host.dp(4), 0, host.dp(14));
         panel.addView(messageView, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout actions = host.row();
-        Button no = host.button(host.tr("No", "Нет"));
+        Button no = host.button(negativeLabel);
+        if (!emphasizePositive) {
+            host.applyPrimaryButtonStyle(no);
+        }
         no.setOnClickListener(view -> close(shade));
         actions.addView(no, new LinearLayout.LayoutParams(0, host.dp(54), 1.0f));
-        Button yes = host.button(host.tr("Yes", "Да"));
-        host.applyPrimaryButtonStyle(yes);
+        Button yes = host.button(positiveLabel);
+        if (emphasizePositive) {
+            host.applyPrimaryButtonStyle(yes);
+        }
         yes.setOnClickListener(view -> {
             close(shade);
             yesAction.run();

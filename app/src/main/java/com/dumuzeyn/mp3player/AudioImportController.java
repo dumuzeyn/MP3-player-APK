@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 final class AudioImportController {
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
     private static final int PICK_AUDIO = 2001;
     private static final int PICK_AUDIO_FOLDER = 2002;
     private static final int MAX_FOLDER_IMPORT = 3000;

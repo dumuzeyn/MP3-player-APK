@@ -10,7 +10,7 @@ on:
       release_tag:
         description: GitHub Release tag to create or update
         required: true
-        default: MP3Player2.4.2
+        default: MP3PlayerVoltune2.4.3
 
 permissions:
   contents: read
@@ -91,18 +91,19 @@ jobs:
         run: ./gradlew assembleRelease
 
       - name: Prepare release APK
-        run: cp app/build/outputs/apk/release/app-release.apk MP3-Player.apk
+        run: cp app/build/outputs/apk/release/app-release.apk MP3-Player-Voltune.apk
 
       - name: Upload signed release APK
         uses: actions/upload-artifact@v6
         with:
-          name: MP3-Player-release
-          path: MP3-Player.apk
+          name: MP3-Player-Voltune-release
+          path: MP3-Player-Voltune.apk
 
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.release_tag }}
+          name: MP3 Player Voltune 2.4.3
           body_path: RELEASE_NOTES.md
-          files: MP3-Player.apk
+          files: MP3-Player-Voltune.apk
           fail_on_unmatched_files: true

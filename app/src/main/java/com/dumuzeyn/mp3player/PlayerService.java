@@ -35,8 +35,8 @@ public class PlayerService extends Service {
     public static final String EXTRA_QUEUE_URIS = "queueUris";
     public static final String EXTRA_SHUFFLE = "shuffle";
     public static final String EXTRA_TIMER_MS = "timerMs";
-    private static final String TAG = "MP3PlayerService";
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String TAG = "VoltuneService";
+    private static final String DEBUG_TAG = "VoltuneDebug";
     private static final String TIMER_PREFS = "player_sleep_timer";
     private static final String TIMER_ENDS_AT = "endsAt";
     private static final int NOTIFICATION_ID = 7;
@@ -794,7 +794,7 @@ public class PlayerService extends Service {
     private Notification currentNotification() {
         Track track = (this.currentIndex >= 0 && this.currentIndex < this.queueManager.size())
                 ? this.queueManager.get(this.currentIndex)
-                : new Track("", "MP3 Player", "Музыка готова");
+                : new Track("", "MP3 Player Voltune", "Музыка готова");
         return this.notificationController.build(
                 track, this.player != null, safeIsPlaying(), safePosition(), safeDuration());
     }

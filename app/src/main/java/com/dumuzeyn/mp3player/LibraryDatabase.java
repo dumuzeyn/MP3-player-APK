@@ -15,7 +15,7 @@ import java.util.Set;
 final class LibraryDatabase extends SQLiteOpenHelper {
     private static final String DB_NAME = "mp3_player_library.db";
     private static final int DB_VERSION = 1;
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
     private static final String PREFS_STORE = "mp3_player_store";
     private static final String PREFS_UI = "mp3_player_ui";
     private static final String PREFS_MIGRATED = "sqlite_migrated";

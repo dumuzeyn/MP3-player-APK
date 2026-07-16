@@ -26,7 +26,7 @@ import java.util.Locale;
 class MainActivityCore extends AppState {
     private static final String CUSTOM_TIMER = "customTimer";
     private static final String ANIMATIONS = "animations";
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
     private static final String LANGUAGE = "language";
     static final int COVER_FULL_SIZE = 1024;
     private static final String PREFS = "mp3_player_ui";
@@ -127,6 +127,7 @@ class MainActivityCore extends AppState {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
+        SettingsDefaults.resetForVersion243(this);
         this.prefs = getSharedPreferences(PREFS, 0);
         this.themeController.load(this.prefs);
         this.animations = this.prefs.getBoolean(ANIMATIONS, true);
@@ -836,6 +837,18 @@ class MainActivityCore extends AppState {
 
     void showConfirmPanel(String title, String message, Runnable yesAction) {
         this.dialogController.showConfirmation(title, message, yesAction);
+    }
+
+    void showActionPanel(String title, String message, String negativeLabel,
+            String positiveLabel, Runnable action) {
+        this.dialogController.showConfirmation(
+                title, message, negativeLabel, positiveLabel, action);
+    }
+
+    void showActionPanel(String title, String message, String negativeLabel,
+            String positiveLabel, boolean emphasizePositive, Runnable action) {
+        this.dialogController.showConfirmation(
+                title, message, negativeLabel, positiveLabel, emphasizePositive, action);
     }
 
     FrameLayout.LayoutParams centerParams(int i, int i2) {
