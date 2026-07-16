@@ -55,9 +55,9 @@ public class BackgroundPlaybackInstrumentedTest {
         secondWaveFile = InstrumentedTestSupport.createTestWave(
                 context, "instrumented-playback-2.wav", 3);
         Track firstTrack = new Track(Uri.fromFile(waveFile).toString(), "Instrumentation tone 1",
-                "MP3 Player tests", "Compatibility", "Test", 3000);
+                "MP3 Player Voltune tests", "Compatibility", "Test", 3000);
         Track secondTrack = new Track(Uri.fromFile(secondWaveFile).toString(), "Instrumentation tone 2",
-                "MP3 Player tests", "Compatibility", "Test", 3000);
+                "MP3 Player Voltune tests", "Compatibility", "Test", 3000);
         TrackStore.save(context, Arrays.asList(firstTrack, secondTrack));
     }
 

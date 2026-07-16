@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.3 - Voltune identity and settings cleanup
+
+- Rename the application and distributed APK to MP3 Player Voltune.
+- Reorder the settings screen and show explicit animation and particle states.
+- Add a voluntary CloudTips support link with a clear external-page confirmation.
+- Allow every modal panel to close with a horizontal swipe without intercepting sliders.
+- Reset application settings once while preserving songs, favorites, and playlists.
+- Replace the README with a shorter Russian and English project overview.
+
 ## 2.4.2 - Reliable repeat and library stability
 
 - Keep repeat-one and repeat-all playback alive in the foreground service until the user, sleep timer, or a real interruption stops it.

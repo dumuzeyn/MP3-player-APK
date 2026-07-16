@@ -23,11 +23,11 @@ final class HeaderController {
         icon.setImageResource(host.getResources().getIdentifier(
                 "ic_music_vector_user", "drawable", host.getPackageName()));
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        icon.setContentDescription("MP3 Player");
+        icon.setContentDescription("MP3 Player Voltune");
         LinearLayout.LayoutParams iconParams = host.square(36);
         iconParams.setMargins(0, 0, host.dp(8), 0);
         row.addView(icon, iconParams);
-        TextView title = host.text("MP3 Player", 20, true);
+        TextView title = host.text("MP3 Player Voltune", 20, true);
         title.setTextColor(host.primaryText);
         row.addView(title, new LinearLayout.LayoutParams(0, host.dp(52), 1.0f));
         TriangleDecorView artwork = new TriangleDecorView(host);

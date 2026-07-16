@@ -24,8 +24,9 @@ final class CardTransparencyController {
         FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(12), host.dp(16), host.dp(12));
-        panel.addView(host.text(settingLabel(), 19, true),
-                new LinearLayout.LayoutParams(-1, host.dp(42)));
+        TextView title = host.text(settingLabel(), 18, true);
+        title.setPadding(0, 0, 0, host.dp(8));
+        panel.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout controls = new LinearLayout(host);
         controls.setOrientation(LinearLayout.VERTICAL);
@@ -162,15 +163,15 @@ final class CardTransparencyController {
             host.rebuildUi();
         });
         panel.addView(done, new LinearLayout.LayoutParams(-1, host.dp(48)));
-        int maxHeight = host.getResources().getDisplayMetrics().heightPixels - host.dp(48);
-        shade.addView(panel, host.centerParams(host.dp(350), Math.min(host.dp(680), maxHeight)));
+        int maxHeight = host.getResources().getDisplayMetrics().heightPixels - host.dp(96);
+        shade.addView(panel, host.centerParams(host.dp(350), Math.min(host.dp(600), maxHeight)));
         host.overlayHost.addView(shade);
         host.updateMini();
     }
 
     private void addControl(LinearLayout panel, String title, OpacityValue value) {
         TextView label = host.text(labelText(title, value.get()), 14, true);
-        panel.addView(label, new LinearLayout.LayoutParams(-1, host.dp(28)));
+        panel.addView(label, new LinearLayout.LayoutParams(-1, host.dp(24)));
 
         SeekBar seek = new SeekBar(host);
         seek.setMax(MAX_OPACITY - MIN_OPACITY);
@@ -194,7 +195,7 @@ final class CardTransparencyController {
                 host.saveState();
             }
         });
-        panel.addView(seek, new LinearLayout.LayoutParams(-1, host.dp(38)));
+        panel.addView(seek, new LinearLayout.LayoutParams(-1, host.dp(32)));
     }
 
     private String labelText(String title, int value) {

@@ -8,6 +8,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 final class SettingsController {
+    private static final String SUPPORT_URL = "https://pay.cloudtips.ru/p/54e5a4f9";
     private final MainActivityCore host;
 
     SettingsController(MainActivityCore host) {
@@ -66,7 +67,7 @@ final class SettingsController {
     void openGithub() {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/dumuzeyn/MP3-player-APK"));
+                    Uri.parse("https://github.com/dumuzeyn/MP3-Player-Voltune"));
             intent.addCategory(Intent.CATEGORY_BROWSABLE);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             host.startActivity(intent);
@@ -75,6 +76,40 @@ final class SettingsController {
                     host.tr("GitHub is unavailable", "GitHub недоступен"),
                     host.tr("No application can open the project link.",
                             "Нет приложения, которое может открыть ссылку проекта."),
+                    () -> {
+                    });
+        }
+    }
+
+    void openAuthorSupport() {
+        host.showActionPanel(
+                host.tr("Support the author", "Поддержка автора"),
+                host.tr(
+                        "You will be taken to an external CloudTips page.\n\n"
+                                + "Support is voluntary and non-refundable. It does not unlock "
+                                + "additional features, a subscription, or other benefits. "
+                                + "All application features remain free.",
+                        "Вы перейдёте на внешнюю страницу CloudTips.\n\n"
+                                + "Поддержка является добровольной и безвозмездной. Она не открывает "
+                                + "дополнительные функции, подписку или другие преимущества. "
+                                + "Все возможности приложения остаются бесплатными."),
+                host.tr("Cancel", "Отмена"),
+                host.tr("Support", "Поддержать"),
+                false,
+                this::openSupportPage);
+    }
+
+    private void openSupportPage() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_URL));
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            host.startActivity(intent);
+        } catch (RuntimeException error) {
+            host.showConfirmPanel(
+                    host.tr("CloudTips is unavailable", "CloudTips недоступен"),
+                    host.tr("No application can open the support page.",
+                            "Нет приложения, которое может открыть страницу поддержки."),
                     () -> {
                     });
         }

@@ -17,7 +17,7 @@ final class ParticleSettingsController {
         FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
-        panel.addView(host.text(host.tr("Particle effects", "Эффекты частиц"), 22, true),
+        panel.addView(host.text(host.tr("Particle settings", "Настройка частиц"), 22, true),
                 new LinearLayout.LayoutParams(-1, host.dp(48)));
         addSlider(panel, host.tr("Frequency", "Частота"), 10, 100, host.particleFrequency,
                 value -> host.particleFrequency = value);
@@ -32,6 +32,7 @@ final class ParticleSettingsController {
             host.saveState();
             host.refreshParticleSettings();
             host.overlayHost.removeView(shade);
+            host.render();
         });
         LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(-1, host.dp(50));
         closeParams.setMargins(0, host.dp(10), 0, 0);

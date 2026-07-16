@@ -14,29 +14,32 @@ final class SettingsRenderer {
     }
 
     void render() {
+        addButton(host.tr("Language: ", "Язык: ") + host.languageName(),
+                view -> host.settingsController.openLanguageDialog());
         addButton(host.tr("Theme: ", "Тема: ") + host.themeName(), view -> host.openThemeDialog());
-        addButton(host.tr(host.animations ? "Turn animations off" : "Turn animations on",
-                host.animations ? "Отключить анимации" : "Включить анимации"), view -> toggleAnimations());
-        addButton(host.tr(host.particlesEnabled ? "Turn particles off" : "Turn particles on",
-                host.particlesEnabled ? "Отключить частицы" : "Включить частицы"), view -> toggleParticles());
-        addButton(host.tr("Particle effects", "Эффекты частиц"),
-                view -> host.particleSettingsController.openDialog());
         addButton(host.tr("Gradient backgrounds", "Градиентные фоны"),
                 view -> host.gradientSettingsController.openDialog());
-        addButton(host.cardTransparencyController.settingLabel(),
-                view -> host.cardTransparencyController.openDialog());
         addButton(host.tr("Cover style: ", "Стиль обложек: ")
                         + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
                         host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),
                 view -> toggleCoverStyle());
+        addButton(host.tr("Animations: ", "Анимации: ")
+                        + host.tr(host.animations ? "on" : "off", host.animations ? "вкл" : "выкл"),
+                view -> toggleAnimations());
+        addButton(host.tr("Particles: ", "Частицы: ")
+                        + host.tr(host.particlesEnabled ? "on" : "off",
+                        host.particlesEnabled ? "вкл" : "выкл"),
+                view -> toggleParticles());
+        addButton(host.tr("Particle settings", "Настройка частиц"),
+                view -> host.particleSettingsController.openDialog());
+        addButton(host.cardTransparencyController.settingLabel(),
+                view -> host.cardTransparencyController.openDialog());
         addButton(host.playlistTickerSettingsController.settingLabel(),
                 view -> host.playlistTickerSettingsController.openDialog());
         addButton(host.uninterruptedPlaybackController.settingLabel(),
                 view -> host.uninterruptedPlaybackController.toggle());
         addButton(host.stableVolumeController.settingLabel(),
                 view -> host.stableVolumeController.toggle());
-        addButton(host.tr("Language: ", "Язык: ") + host.languageName(),
-                view -> host.settingsController.openLanguageDialog());
         addButton(host.tr("Mini-player memory: ", "Память мини-плеера: ")
                         + host.settingsController.resumeWindowText(),
                 view -> host.settingsController.openResumeWindowDialog());
@@ -48,6 +51,8 @@ final class SettingsRenderer {
         addButton(host.tr("Delete all playlists", "Удалить все плейлисты"),
                 view -> host.settingsController.confirmDeleteAllPlaylists());
         addButton(host.tr("GitHub project", "GitHub проект"), view -> host.settingsController.openGithub());
+        addButton(host.tr("Support the author", "Поддержка автора"),
+                view -> host.settingsController.openAuthorSupport());
     }
 
     private void toggleAnimations() {

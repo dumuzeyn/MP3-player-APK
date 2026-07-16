@@ -57,7 +57,7 @@ final class MediaNotificationController {
         this.context = context.getApplicationContext();
         this.coverReadyCallback = coverReadyCallback;
         createChannel();
-        mediaSession = new MediaSession(context, "MP3 Player");
+        mediaSession = new MediaSession(context, "MP3 Player Voltune");
         mediaSession.setCallback(callback);
         mediaSession.setActive(true);
     }

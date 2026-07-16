@@ -149,13 +149,17 @@ final class UiFactory {
     }
 
     FrameLayout shade() {
-        FrameLayout shade = new FrameLayout(host);
+        SwipeDismissFrameLayout shade = new SwipeDismissFrameLayout(host);
         int channel = host.dark ? 0 : 255;
         shade.setBackgroundColor(Color.argb(190, channel, channel, channel));
-        shade.setOnClickListener(view -> {
-            host.overlayHost.removeView(view);
+        Runnable dismiss = () -> {
+            if (shade.getParent() != null) {
+                host.overlayHost.removeView(shade);
+            }
             host.updateMini();
-        });
+        };
+        shade.setDismissAction(dismiss);
+        shade.setOnClickListener(view -> dismiss.run());
         return shade;
     }
 

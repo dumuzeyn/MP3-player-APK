@@ -127,6 +127,7 @@ class MainActivityCore extends AppState {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
+        SettingsDefaults.resetForVersion243(this);
         this.prefs = getSharedPreferences(PREFS, 0);
         this.themeController.load(this.prefs);
         this.animations = this.prefs.getBoolean(ANIMATIONS, true);
@@ -836,6 +837,18 @@ class MainActivityCore extends AppState {
 
     void showConfirmPanel(String title, String message, Runnable yesAction) {
         this.dialogController.showConfirmation(title, message, yesAction);
+    }
+
+    void showActionPanel(String title, String message, String negativeLabel,
+            String positiveLabel, Runnable action) {
+        this.dialogController.showConfirmation(
+                title, message, negativeLabel, positiveLabel, action);
+    }
+
+    void showActionPanel(String title, String message, String negativeLabel,
+            String positiveLabel, boolean emphasizePositive, Runnable action) {
+        this.dialogController.showConfirmation(
+                title, message, negativeLabel, positiveLabel, emphasizePositive, action);
     }
 
     FrameLayout.LayoutParams centerParams(int i, int i2) {
