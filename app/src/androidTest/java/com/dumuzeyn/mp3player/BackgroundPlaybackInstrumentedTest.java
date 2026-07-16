@@ -90,7 +90,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 .putExtra(PlayerService.EXTRA_INDEX, 0)
                 .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
                 .putExtra(PlayerService.EXTRA_SHUFFLE, false)
-                .putExtra(PlayerService.EXTRA_LOOP_MODE, 0);
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 1);
         startPlaybackService(playIntent);
 
         InstrumentedTestSupport.waitFor("PlayerService did not start playback", 15000L,
