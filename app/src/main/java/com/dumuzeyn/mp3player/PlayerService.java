@@ -150,6 +150,9 @@ public class PlayerService extends Service {
         }
         if (ACTION_LOOP.equals(action)) {
             this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, 0);
+            if (this.loopMode != 0) {
+                this.oneShot = false;
+            }
             lastLoopMode = this.loopMode;
             saveResumeState(true, true);
             logPlaybackState("loop_changed");

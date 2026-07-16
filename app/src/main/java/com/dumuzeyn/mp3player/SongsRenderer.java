@@ -173,7 +173,7 @@ final class SongsRenderer {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
         row.setPadding(host.dp(8), host.dp(4), host.dp(8), host.dp(4));
-        host.applyCardStyle(row);
+        host.applyCardStyle(row, host.songCardOpacity);
 
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);
@@ -280,7 +280,8 @@ final class SongsRenderer {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
         row.setPadding(host.dp(8), host.dp(4), host.dp(8), host.dp(4));
-        host.setSurface(row, host.isCurrent(track) ? host.fg : host.panel, false);
+        host.setSurface(row, host.isCurrent(track) ? host.fg : host.panel, false,
+                host.songCardOpacity);
 
         ImageView cover = host.coverView();
         host.loadCover(cover, track, host.dark ? android.graphics.Color.rgb(28, 28, 28) : android.graphics.Color.rgb(235, 235, 235));

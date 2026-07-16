@@ -149,6 +149,55 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     @Test
+    public void repeatAllKeepsCyclingWhileActivityIsInBackground() {
+        Intent activityIntent = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        activity = instrumentation.startActivitySync(activityIntent);
+        instrumentation.waitForIdleSync();
+
+        ArrayList<String> queue = new ArrayList<>();
+        queue.add(Uri.fromFile(waveFile).toString());
+        queue.add(Uri.fromFile(secondWaveFile).toString());
+        startPlaybackService(new Intent(context, PlayerService.class)
+                .setAction(PlayerService.ACTION_PLAY_INDEX)
+                .putExtra(PlayerService.EXTRA_INDEX, 0)
+                .putExtra(PlayerService.EXTRA_ONE_SHOT, false)
+                .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
+                .putExtra(PlayerService.EXTRA_SHUFFLE, false)
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 2));
+
+        waitForPlayingUri("First repeat track did not start", queue.get(0));
+        instrumentation.runOnMainSync(() -> activity.moveTaskToBack(true));
+        instrumentation.waitForIdleSync();
+
+        waitForPlayingUri("Repeat queue did not reach the second track", queue.get(1));
+        waitForPlayingUri("Repeat queue did not wrap to the first track", queue.get(0));
+        waitForPlayingUri("Repeat queue stopped during its second cycle", queue.get(1));
+        assertTrue(PlayerService.hasPlaybackSession());
+        assertTrue(PlayerService.lastPlaying);
+        assertEquals(2, PlayerService.lastLoopMode);
+    }
+
+    @Test
+    public void closingActivityWithFullPlayerDoesNotUseClosedCoverLoader() {
+        Intent activityIntent = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        activity = instrumentation.startActivitySync(activityIntent);
+        instrumentation.waitForIdleSync();
+
+        MainActivityCore host = (MainActivityCore) activity;
+        instrumentation.runOnMainSync(() -> {
+            host.currentIndex = 0;
+            host.openFullPlayer();
+            activity.finish();
+        });
+        activity = null;
+        instrumentation.waitForIdleSync();
+        SystemClock.sleep(1200L);
+        assertFalse(PlayerService.hasPlaybackSession());
+    }
+
+    @Test
     public void rotatingCoverResetsAndRestartsWhenTrackChanges() {
         Intent activityIntent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -185,6 +234,13 @@ public class BackgroundPlaybackInstrumentedTest {
         } else {
             context.startService(intent);
         }
+    }
+
+    private void waitForPlayingUri(String message, String uri) {
+        InstrumentedTestSupport.waitFor(message, 10000L, () -> {
+            PlayerService.refreshSnapshot();
+            return PlayerService.lastPlaying && uri.equals(PlayerService.lastUri);
+        });
     }
 
     private void stopPlayback() {

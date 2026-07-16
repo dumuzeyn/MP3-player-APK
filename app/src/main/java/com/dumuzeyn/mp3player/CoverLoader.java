@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 final class CoverLoader {
     private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
@@ -21,6 +22,7 @@ final class CoverLoader {
     private final LruCache<String, Bitmap> cache;
     private final Map<String, ArrayList<WeakReference<ImageView>>> pendingTargets = new LinkedHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private volatile boolean closed;
 
     CoverLoader(MainActivityCore host) {
         this.host = host;
@@ -39,6 +41,9 @@ final class CoverLoader {
     }
 
     void load(final ImageView view, final Track track, int fallbackColor, final int maxSize) {
+        if (closed) {
+            return;
+        }
         final String key = key(track, maxSize);
         if (key.equals(view.getTag()) && view.getDrawable() != null) {
             return;
@@ -66,30 +71,39 @@ final class CoverLoader {
             waiting.add(new WeakReference<>(view));
             pendingTargets.put(key, waiting);
         }
-        executor.execute(() -> {
-            final Bitmap bitmap = read(track, maxSize);
-            if (bitmap != null) {
-                cache.put(key, bitmap);
-                if (maxSize != THUMB_SIZE) {
-                    cacheThumbnail(track, bitmap);
-                }
-            }
-            final ArrayList<WeakReference<ImageView>> targets;
-            synchronized (pendingTargets) {
-                targets = pendingTargets.remove(key);
-            }
-            host.uiHandler.post(() -> {
-                if (bitmap == null || targets == null) {
+        try {
+            executor.execute(() -> {
+                final Bitmap bitmap = read(track, maxSize);
+                if (closed) {
                     return;
                 }
-                for (WeakReference<ImageView> reference : targets) {
-                    ImageView target = reference.get();
-                    if (target != null && key.equals(target.getTag())) {
-                        target.setImageBitmap(bitmap);
+                if (bitmap != null) {
+                    cache.put(key, bitmap);
+                    if (maxSize != THUMB_SIZE) {
+                        cacheThumbnail(track, bitmap);
                     }
                 }
+                final ArrayList<WeakReference<ImageView>> targets;
+                synchronized (pendingTargets) {
+                    targets = pendingTargets.remove(key);
+                }
+                host.uiHandler.post(() -> {
+                    if (closed || bitmap == null || targets == null) {
+                        return;
+                    }
+                    for (WeakReference<ImageView> reference : targets) {
+                        ImageView target = reference.get();
+                        if (target != null && key.equals(target.getTag())) {
+                            target.setImageBitmap(bitmap);
+                        }
+                    }
+                });
             });
-        });
+        } catch (RejectedExecutionException ignored) {
+            synchronized (pendingTargets) {
+                pendingTargets.remove(key);
+            }
+        }
     }
 
     void seedFromView(ImageView view, Track track) {
@@ -113,6 +127,7 @@ final class CoverLoader {
     }
 
     void close() {
+        closed = true;
         executor.shutdownNow();
         synchronized (pendingTargets) {
             pendingTargets.clear();

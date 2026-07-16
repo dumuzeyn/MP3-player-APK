@@ -56,8 +56,12 @@ final class ButtonFactory {
     }
 
     void applySecondary(Button button) {
+        applySecondary(button, host.cardOpacity);
+    }
+
+    void applySecondary(Button button, int opacity) {
         button.setTextColor(host.primaryText);
-        GradientDrawable drawable = background(host.cardSurfaceColor(host.card), true);
+        GradientDrawable drawable = background(host.cardSurfaceColor(host.card, opacity), true);
         drawable.setStroke(host.dp(1), host.cardStroke);
         button.setBackground(drawable);
     }

@@ -14,4 +14,9 @@ final class ArtistsMenuRenderer extends TrackGroupMenuRenderer {
     String unknownGroupName() {
         return host.tr("Unknown artist", "Неизвестный исполнитель");
     }
+
+    @Override
+    int cardOpacity() {
+        return host.artistCardOpacity;
+    }
 }

@@ -40,4 +40,8 @@ final class PlayerUiController {
     boolean closeFullPlayerIfTop(View top) {
         return fullPlayerController.closeIfTop(top);
     }
+
+    void onHostDestroyed() {
+        fullPlayerController.onHostDestroyed();
+    }
 }

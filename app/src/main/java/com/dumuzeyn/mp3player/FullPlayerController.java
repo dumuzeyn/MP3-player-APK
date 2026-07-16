@@ -25,6 +25,8 @@ final class FullPlayerController {
     private Button repeatButton;
     private Button playButton;
     private Track boundTrack;
+    private Handler progressHandler;
+    private Runnable progressUpdater;
 
     FullPlayerController(MainActivityCore host) {
         this.host = host;
@@ -82,6 +84,19 @@ final class FullPlayerController {
 
     boolean isOpen() {
         return this.currentSheet != null && this.currentSheet.getParent() != null;
+    }
+
+    void onHostDestroyed() {
+        stopProgressUpdates();
+        this.currentSheet = null;
+        this.coverView = null;
+        this.titleView = null;
+        this.subtitleView = null;
+        this.timerButton = null;
+        this.likeButton = null;
+        this.repeatButton = null;
+        this.playButton = null;
+        this.boundTrack = null;
     }
 
     boolean closeIfTop(View top) {
@@ -292,8 +307,11 @@ final class FullPlayerController {
             }
         });
 
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.postDelayed(new ProgressUpdater(sheet, track, seek, elapsed, remain, handler), 700L);
+        stopProgressUpdates();
+        this.progressHandler = new Handler(Looper.getMainLooper());
+        this.progressUpdater = new ProgressUpdater(
+                sheet, track, seek, elapsed, remain, this.progressHandler);
+        this.progressHandler.postDelayed(this.progressUpdater, 700L);
     }
 
     private void addTransportRow(LinearLayout content, FrameLayout sheet) {
@@ -324,6 +342,9 @@ final class FullPlayerController {
     }
 
     private void close(FrameLayout sheet, boolean animate) {
+        if (sheet == this.currentSheet) {
+            stopProgressUpdates();
+        }
         if (sheet == null || sheet.getParent() == null) {
             host.updateMini();
         } else if (animate && host.animations) {
@@ -347,6 +368,14 @@ final class FullPlayerController {
             this.currentSheet = null;
             this.boundTrack = null;
         }
+    }
+
+    private void stopProgressUpdates() {
+        if (this.progressHandler != null && this.progressUpdater != null) {
+            this.progressHandler.removeCallbacks(this.progressUpdater);
+        }
+        this.progressUpdater = null;
+        this.progressHandler = null;
     }
 
     private void refreshFromState(boolean allowTrackChange) {
@@ -452,7 +481,9 @@ final class FullPlayerController {
             if (timerButton != null) {
                 timerButton.setText(host.timerButtonText());
             }
-            handler.postDelayed(this, 250L);
+            if (handler == progressHandler && this == progressUpdater) {
+                handler.postDelayed(this, 250L);
+            }
         }
     }
 }

@@ -22,6 +22,12 @@ abstract class AppState extends Activity {
     int particleLifetime = 100;
     int playlistTickerSpeed = 100;
     int cardOpacity = 82;
+    int songCardOpacity = 82;
+    int playlistCardOpacity = 82;
+    int genreCardOpacity = 82;
+    int artistCardOpacity = 82;
+    int albumCardOpacity = 82;
+    int settingsCardOpacity = 82;
     int resumePosition = 0;
     long sleepTimerEndsAt = 0L;
     boolean dark = false;

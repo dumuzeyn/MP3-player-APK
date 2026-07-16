@@ -36,6 +36,12 @@ class MainActivityCore extends AppState {
     private static final String PARTICLE_LIFETIME = "particleLifetime";
     private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
     private static final String CARD_OPACITY = "cardOpacity";
+    private static final String SONG_CARD_OPACITY = "songCardOpacity";
+    private static final String PLAYLIST_CARD_OPACITY = "playlistCardOpacity";
+    private static final String GENRE_CARD_OPACITY = "genreCardOpacity";
+    private static final String ARTIST_CARD_OPACITY = "artistCardOpacity";
+    private static final String ALBUM_CARD_OPACITY = "albumCardOpacity";
+    private static final String SETTINGS_CARD_OPACITY = "settingsCardOpacity";
     private static final String PARTICLES_ENABLED = "particlesEnabled";
     private static final String PLAYER_GRADIENT = "playerGradient";
     private static final String CIRCULAR_COVERS = "circularCovers";
@@ -132,6 +138,12 @@ class MainActivityCore extends AppState {
         this.particleLifetime = clamp(this.prefs.getInt(PARTICLE_LIFETIME, 100), 50, 180);
         this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
         this.cardOpacity = clamp(this.prefs.getInt(CARD_OPACITY, 82), 35, 100);
+        this.songCardOpacity = clamp(this.prefs.getInt(SONG_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.playlistCardOpacity = clamp(this.prefs.getInt(PLAYLIST_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.genreCardOpacity = clamp(this.prefs.getInt(GENRE_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.artistCardOpacity = clamp(this.prefs.getInt(ARTIST_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.albumCardOpacity = clamp(this.prefs.getInt(ALBUM_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.settingsCardOpacity = clamp(this.prefs.getInt(SETTINGS_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.particlesEnabled = this.prefs.getBoolean(PARTICLES_ENABLED, true);
         this.gradientPlayerBackground = this.prefs.getBoolean(PLAYER_GRADIENT, true);
         this.circularCovers = this.prefs.getBoolean(CIRCULAR_COVERS, false);
@@ -194,6 +206,7 @@ class MainActivityCore extends AppState {
     protected void onDestroy() {
         this.uiHandler.removeCallbacksAndMessages(null);
         this.playbackHandler.removeCallbacksAndMessages(null);
+        this.playerUiController.onHostDestroyed();
         this.coverLoader.close();
         super.onDestroy();
     }
@@ -234,7 +247,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putInt(SONG_CARD_OPACITY, this.songCardOpacity).putInt(PLAYLIST_CARD_OPACITY, this.playlistCardOpacity).putInt(GENRE_CARD_OPACITY, this.genreCardOpacity).putInt(ARTIST_CARD_OPACITY, this.artistCardOpacity).putInt(ALBUM_CARD_OPACITY, this.albumCardOpacity).putInt(SETTINGS_CARD_OPACITY, this.settingsCardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -692,8 +705,16 @@ class MainActivityCore extends AppState {
         this.uiFactory.applyCardStyle(view);
     }
 
+    void applyCardStyle(View view, int opacity) {
+        this.uiFactory.applyCardStyle(view, opacity);
+    }
+
     int cardSurfaceColor(int color) {
-        return Color.argb(Math.round(255.0f * this.cardOpacity / 100.0f),
+        return cardSurfaceColor(color, this.cardOpacity);
+    }
+
+    int cardSurfaceColor(int color, int opacity) {
+        return Color.argb(Math.round(255.0f * opacity / 100.0f),
                 Color.red(color), Color.green(color), Color.blue(color));
     }
 
@@ -703,6 +724,10 @@ class MainActivityCore extends AppState {
 
     void applySecondaryButtonStyle(Button button) {
         this.uiFactory.applySecondaryButtonStyle(button);
+    }
+
+    void applySecondaryButtonStyle(Button button, int opacity) {
+        this.uiFactory.applySecondaryButtonStyle(button, opacity);
     }
 
     void applyPlayerToolStyle(Button button, boolean active) {
@@ -723,6 +748,10 @@ class MainActivityCore extends AppState {
 
     void setSurface(View view, int color, boolean outlined) {
         this.uiFactory.setSurface(view, color, outlined);
+    }
+
+    void setSurface(View view, int color, boolean outlined, int opacity) {
+        this.uiFactory.setSurface(view, color, outlined, opacity);
     }
 
     View lineView() {

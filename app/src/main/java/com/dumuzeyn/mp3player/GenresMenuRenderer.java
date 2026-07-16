@@ -14,4 +14,9 @@ final class GenresMenuRenderer extends TrackGroupMenuRenderer {
     String unknownGroupName() {
         return host.tr("Unknown genre", "Неизвестный жанр");
     }
+
+    @Override
+    int cardOpacity() {
+        return host.genreCardOpacity;
+    }
 }
