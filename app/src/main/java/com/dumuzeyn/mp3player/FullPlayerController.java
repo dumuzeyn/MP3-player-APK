@@ -281,7 +281,7 @@ final class FullPlayerController {
         LinearLayout row = host.row();
         TextView elapsed = host.text(host.formatMs(PlayerService.lastPosition), 13, false);
         TextView remain = host.text("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)), 13, false);
-        remain.setGravity(MainActivityCore.TAB_CYCLES);
+        remain.setGravity(android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL);
         row.addView(elapsed, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
         row.addView(remain, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
         content.addView(row);

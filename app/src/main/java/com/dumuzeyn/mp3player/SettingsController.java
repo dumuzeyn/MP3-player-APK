@@ -67,8 +67,9 @@ final class SettingsController {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW,
                     Uri.parse("https://github.com/dumuzeyn/MP3-player-APK"));
-            host.startActivity(Intent.createChooser(
-                    intent, host.tr("Open GitHub", "Открыть GitHub")));
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            host.startActivity(intent);
         } catch (RuntimeException error) {
             host.showConfirmPanel(
                     host.tr("GitHub is unavailable", "GitHub недоступен"),

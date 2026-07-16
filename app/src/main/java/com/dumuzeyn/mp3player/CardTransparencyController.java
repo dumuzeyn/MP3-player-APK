@@ -4,6 +4,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 final class CardTransparencyController {
@@ -26,7 +27,9 @@ final class CardTransparencyController {
         panel.addView(host.text(settingLabel(), 19, true),
                 new LinearLayout.LayoutParams(-1, host.dp(42)));
 
-        addControl(panel, host.tr("Songs and favorites", "Песни и избранное"),
+        LinearLayout controls = new LinearLayout(host);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        addControl(controls, host.tr("Songs", "Песни"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -38,7 +41,19 @@ final class CardTransparencyController {
                         host.songCardOpacity = value;
                     }
                 });
-        addControl(panel, host.tr("Playlists", "Плейлисты"),
+        addControl(controls, host.tr("Favorites", "Избранное"),
+                new OpacityValue() {
+                    @Override
+                    public int get() {
+                        return host.favoriteCardOpacity;
+                    }
+
+                    @Override
+                    public void set(int value) {
+                        host.favoriteCardOpacity = value;
+                    }
+                });
+        addControl(controls, host.tr("Playlists", "Плейлисты"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -50,7 +65,7 @@ final class CardTransparencyController {
                         host.playlistCardOpacity = value;
                     }
                 });
-        addControl(panel, host.tr("Genres", "Жанры"),
+        addControl(controls, host.tr("Genres", "Жанры"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -62,7 +77,7 @@ final class CardTransparencyController {
                         host.genreCardOpacity = value;
                     }
                 });
-        addControl(panel, host.tr("Artists", "Исполнители"),
+        addControl(controls, host.tr("Artists", "Исполнители"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -74,7 +89,7 @@ final class CardTransparencyController {
                         host.artistCardOpacity = value;
                     }
                 });
-        addControl(panel, host.tr("Albums", "Альбомы"),
+        addControl(controls, host.tr("Albums", "Альбомы"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -86,7 +101,7 @@ final class CardTransparencyController {
                         host.albumCardOpacity = value;
                     }
                 });
-        addControl(panel, host.tr("Settings", "Настройки"),
+        addControl(controls, host.tr("Settings", "Настройки"),
                 new OpacityValue() {
                     @Override
                     public int get() {
@@ -98,6 +113,46 @@ final class CardTransparencyController {
                         host.settingsCardOpacity = value;
                     }
                 });
+        addControl(controls, host.tr("Mini-player", "Мини-плеер"),
+                new OpacityValue() {
+                    @Override
+                    public int get() {
+                        return host.miniPlayerCardOpacity;
+                    }
+
+                    @Override
+                    public void set(int value) {
+                        host.miniPlayerCardOpacity = value;
+                    }
+                });
+        addControl(controls, host.tr("Application header", "Шапка приложения"),
+                new OpacityValue() {
+                    @Override
+                    public int get() {
+                        return host.headerCardOpacity;
+                    }
+
+                    @Override
+                    public void set(int value) {
+                        host.headerCardOpacity = value;
+                    }
+                });
+        addControl(controls, host.tr("Dialogs", "Диалоговые окна"),
+                new OpacityValue() {
+                    @Override
+                    public int get() {
+                        return host.dialogCardOpacity;
+                    }
+
+                    @Override
+                    public void set(int value) {
+                        host.dialogCardOpacity = value;
+                    }
+                });
+
+        ScrollView scroll = new ScrollView(host);
+        scroll.addView(controls, new ScrollView.LayoutParams(-1, -2));
+        panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
         Button done = host.button(host.tr("Done", "Готово"));
         host.applyPrimaryButtonStyle(done);
@@ -107,7 +162,8 @@ final class CardTransparencyController {
             host.rebuildUi();
         });
         panel.addView(done, new LinearLayout.LayoutParams(-1, host.dp(48)));
-        shade.addView(panel, host.centerParams(host.dp(350), -2));
+        int maxHeight = host.getResources().getDisplayMetrics().heightPixels - host.dp(48);
+        shade.addView(panel, host.centerParams(host.dp(350), Math.min(host.dp(680), maxHeight)));
         host.overlayHost.addView(shade);
         host.updateMini();
     }

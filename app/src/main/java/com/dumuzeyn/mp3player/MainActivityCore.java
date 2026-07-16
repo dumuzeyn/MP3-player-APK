@@ -37,11 +37,15 @@ class MainActivityCore extends AppState {
     private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
     private static final String CARD_OPACITY = "cardOpacity";
     private static final String SONG_CARD_OPACITY = "songCardOpacity";
+    private static final String FAVORITE_CARD_OPACITY = "favoriteCardOpacity";
     private static final String PLAYLIST_CARD_OPACITY = "playlistCardOpacity";
     private static final String GENRE_CARD_OPACITY = "genreCardOpacity";
     private static final String ARTIST_CARD_OPACITY = "artistCardOpacity";
     private static final String ALBUM_CARD_OPACITY = "albumCardOpacity";
     private static final String SETTINGS_CARD_OPACITY = "settingsCardOpacity";
+    private static final String MINI_PLAYER_CARD_OPACITY = "miniPlayerCardOpacity";
+    private static final String HEADER_CARD_OPACITY = "headerCardOpacity";
+    private static final String DIALOG_CARD_OPACITY = "dialogCardOpacity";
     private static final String PARTICLES_ENABLED = "particlesEnabled";
     private static final String PLAYER_GRADIENT = "playerGradient";
     private static final String CIRCULAR_COVERS = "circularCovers";
@@ -50,7 +54,7 @@ class MainActivityCore extends AppState {
     private static final String MAIN_GRADIENT_END = "mainGradientEnd";
     private static final String PLAYER_GRADIENT_START = "playerGradientStart";
     private static final String PLAYER_GRADIENT_END = "playerGradientEnd";
-    static final int TAB_CYCLES = 21;
+    static final int TAB_CYCLES = 5;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
     private static final String CUSTOM_FG = "customFg";
@@ -139,11 +143,15 @@ class MainActivityCore extends AppState {
         this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
         this.cardOpacity = clamp(this.prefs.getInt(CARD_OPACITY, 82), 35, 100);
         this.songCardOpacity = clamp(this.prefs.getInt(SONG_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.favoriteCardOpacity = clamp(this.prefs.getInt(FAVORITE_CARD_OPACITY, this.songCardOpacity), 35, 100);
         this.playlistCardOpacity = clamp(this.prefs.getInt(PLAYLIST_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.genreCardOpacity = clamp(this.prefs.getInt(GENRE_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.artistCardOpacity = clamp(this.prefs.getInt(ARTIST_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.albumCardOpacity = clamp(this.prefs.getInt(ALBUM_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.settingsCardOpacity = clamp(this.prefs.getInt(SETTINGS_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.miniPlayerCardOpacity = clamp(this.prefs.getInt(MINI_PLAYER_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.headerCardOpacity = clamp(this.prefs.getInt(HEADER_CARD_OPACITY, this.cardOpacity), 35, 100);
+        this.dialogCardOpacity = clamp(this.prefs.getInt(DIALOG_CARD_OPACITY, this.cardOpacity), 35, 100);
         this.particlesEnabled = this.prefs.getBoolean(PARTICLES_ENABLED, true);
         this.gradientPlayerBackground = this.prefs.getBoolean(PLAYER_GRADIENT, true);
         this.circularCovers = this.prefs.getBoolean(CIRCULAR_COVERS, false);
@@ -204,6 +212,8 @@ class MainActivityCore extends AppState {
 
     @Override
     protected void onDestroy() {
+        this.audioImportController.close();
+        this.songsRenderer.close();
         this.uiHandler.removeCallbacksAndMessages(null);
         this.playbackHandler.removeCallbacksAndMessages(null);
         this.playerUiController.onHostDestroyed();
@@ -247,7 +257,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putInt(SONG_CARD_OPACITY, this.songCardOpacity).putInt(PLAYLIST_CARD_OPACITY, this.playlistCardOpacity).putInt(GENRE_CARD_OPACITY, this.genreCardOpacity).putInt(ARTIST_CARD_OPACITY, this.artistCardOpacity).putInt(ALBUM_CARD_OPACITY, this.albumCardOpacity).putInt(SETTINGS_CARD_OPACITY, this.settingsCardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
+        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putInt(SONG_CARD_OPACITY, this.songCardOpacity).putInt(FAVORITE_CARD_OPACITY, this.favoriteCardOpacity).putInt(PLAYLIST_CARD_OPACITY, this.playlistCardOpacity).putInt(GENRE_CARD_OPACITY, this.genreCardOpacity).putInt(ARTIST_CARD_OPACITY, this.artistCardOpacity).putInt(ALBUM_CARD_OPACITY, this.albumCardOpacity).putInt(SETTINGS_CARD_OPACITY, this.settingsCardOpacity).putInt(MINI_PLAYER_CARD_OPACITY, this.miniPlayerCardOpacity).putInt(HEADER_CARD_OPACITY, this.headerCardOpacity).putInt(DIALOG_CARD_OPACITY, this.dialogCardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -317,6 +327,8 @@ class MainActivityCore extends AppState {
         this.contentHost = new FrameLayout(this);
         ScrollView scrollView = new ScrollView(this);
         this.contentScroll = scrollView;
+        scrollView.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) ->
+                songsRenderer.loadMoreIfNearBottom());
         this.list = new LinearLayout(this);
         this.list.setOrientation(LinearLayout.VERTICAL);
         scrollView.addView(this.list, new FrameLayout.LayoutParams(-1, -2));
@@ -447,6 +459,14 @@ class MainActivityCore extends AppState {
 
     void addTrackToQueue(Track track) {
         this.playbackController.addToQueue(track);
+    }
+
+    void removeTrackFromQueue(Track track) {
+        this.playbackController.removeFromQueue(track);
+    }
+
+    void removeTrackFromLibrary(Track track) {
+        this.playbackController.removeFromLibrary(track);
     }
 
     void confirmDeletePlaylist(Playlist playlist) {

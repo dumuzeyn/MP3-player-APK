@@ -212,6 +212,87 @@ final class PlaybackController {
         }
     }
 
+    void removeFromQueue(Track track) {
+        if (track == null) {
+            return;
+        }
+        ArrayList<Track> queue = new ArrayList<>(activeQueue());
+        int removedIndex = indexOfUri(queue, track.uri);
+        if (removedIndex < 0) {
+            return;
+        }
+        Track current = currentTrack();
+        boolean removingCurrent = current != null && current.uri.equals(track.uri);
+        queue.remove(removedIndex);
+        host.playbackQueue.clear();
+        host.playbackQueue.addAll(queue);
+        if (queue.isEmpty()) {
+            clearPlaybackMemory();
+            return;
+        }
+        if (removingCurrent) {
+            int nextIndex = Math.min(removedIndex, queue.size() - 1);
+            Track next = queue.get(nextIndex);
+            host.currentIndex = host.tracks.indexOf(next);
+            host.playing = true;
+            host.resumePosition = 0;
+            startServiceAction(PlayerService.ACTION_PLAY_INDEX, nextIndex, false);
+            startPlaybackWatcher();
+        } else {
+            syncCurrentIndexFromService();
+            sendQueueUpdate();
+        }
+        host.refreshAfterTrackChange();
+    }
+
+    void removeFromLibrary(Track track) {
+        if (track == null) {
+            return;
+        }
+        Track storedTrack = host.findTrack(track.uri);
+        if (storedTrack == null) {
+            return;
+        }
+        track = storedTrack;
+        Track current = currentTrack();
+        boolean removingCurrent = current != null && current.uri.equals(track.uri);
+        ArrayList<Track> queue = new ArrayList<>(activeQueue());
+        int removedQueueIndex = indexOfUri(queue, track.uri);
+        if (removedQueueIndex >= 0) {
+            queue.remove(removedQueueIndex);
+        }
+
+        host.tracks.remove(track);
+        host.favorites.remove(track.uri);
+        host.playlistController.removeTrackFromAllPlaylists(track);
+        host.playbackQueue.clear();
+        host.playbackQueue.addAll(queue);
+        TrackStore.save(host, host.tracks);
+        host.saveState();
+
+        if (removingCurrent) {
+            if (queue.isEmpty()) {
+                clearPlaybackMemory();
+            } else {
+                int nextIndex = Math.min(Math.max(0, removedQueueIndex), queue.size() - 1);
+                Track next = queue.get(nextIndex);
+                host.currentIndex = host.tracks.indexOf(next);
+                host.playing = true;
+                host.resumePosition = 0;
+                startServiceAction(PlayerService.ACTION_PLAY_INDEX, nextIndex, false);
+                startPlaybackWatcher();
+            }
+        } else {
+            if (current != null) {
+                host.currentIndex = host.tracks.indexOf(current);
+            }
+            if (removedQueueIndex >= 0) {
+                sendQueueUpdate();
+            }
+        }
+        host.render();
+    }
+
     String loopLabel() {
         if (host.loopMode == 1) {
             return host.tr("Track ↻", "Песня ↻");
@@ -255,6 +336,39 @@ final class PlaybackController {
         } else {
             host.startForegroundService(intent);
         }
+    }
+
+    private void sendQueueUpdate() {
+        Intent intent = new Intent(host, PlayerService.class);
+        intent.setAction(PlayerService.ACTION_UPDATE_QUEUE);
+        intent.putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queueUris());
+        startService(intent);
+    }
+
+    private Track currentTrack() {
+        PlayerService.refreshSnapshot();
+        Track live = host.findTrack(PlayerService.lastUri);
+        if (live != null) {
+            return live;
+        }
+        return host.currentIndex >= 0 && host.currentIndex < host.tracks.size()
+                ? host.tracks.get(host.currentIndex) : null;
+    }
+
+    private void syncCurrentIndexFromService() {
+        Track current = currentTrack();
+        if (current != null) {
+            host.currentIndex = host.tracks.indexOf(current);
+        }
+    }
+
+    private int indexOfUri(ArrayList<Track> tracks, String uri) {
+        for (int index = 0; index < tracks.size(); index++) {
+            if (tracks.get(index).uri.equals(uri)) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     ArrayList<String> queueUris() {

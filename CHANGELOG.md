@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.4.2 - Reliable repeat and library stability
+
+- Keep repeat-one and repeat-all playback alive in the foreground service until the user, sleep timer, or a real interruption stops it.
+- Recover playback after a temporary audio-focus denial without losing the queue.
+- Keep queue and library state synchronized when tracks are removed.
+- Move audio import, metadata refresh, and notification artwork decoding off the UI/service main thread.
+- Add independent opacity controls for songs, favorites, collections, mini-player, header, and dialogs.
+- Reduce tab, playlist preview, and long song-list memory use.
+- Fix the GitHub project button, Android 8 volume-leveling fallback, and full-player alignment.
+- Verify repeat and sleep-timer continuation on a physical Android 13 device.
+
 ## 2.4.1 - Playback continuity and cover rotation
 
 - Keep a playlist advancing after the app task is removed while the sleep timer remains active.
@@ -43,7 +54,7 @@
 - Renamed the playback watcher from a generated-looking anonymous class to `PlaybackWatcher`.
 - Added JVM tests for track sorting, legacy track JSON migration, playlist JSON round-trip, and playlist name cleanup.
 - Release builds now run with R8 minify and resource shrinking enabled.
-- GitHub Actions now builds the release APK artifact instead of publishing a debug APK artifact.
+- GitHub Actions now publishes only the signed release APK artifact.
 - Removed the generated APK from git tracking; release APKs should be downloaded from GitHub Actions or GitHub Releases.
 
 ## 2.0

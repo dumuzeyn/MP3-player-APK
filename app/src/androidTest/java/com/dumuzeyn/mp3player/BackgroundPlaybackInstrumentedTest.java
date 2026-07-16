@@ -39,6 +39,10 @@ public class BackgroundPlaybackInstrumentedTest {
     public void setUp() throws Exception {
         context = ApplicationProvider.getApplicationContext();
         instrumentation = InstrumentationRegistry.getInstrumentation();
+        context.getSharedPreferences("mp3_player_ui", Context.MODE_PRIVATE).edit()
+                .putBoolean("particlesEnabled", false)
+                .putBoolean("animations", false)
+                .commit();
         if (Build.VERSION.SDK_INT >= 33) {
             InstrumentedTestSupport.runShellCommand(instrumentation,
                     "pm grant " + context.getPackageName() + " "
@@ -114,7 +118,7 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     @Test
-    public void playlistWithSleepTimerAdvancesAfterTaskIsRemoved() {
+    public void repeatingPlaylistWithSleepTimerKeepsPlayingAfterTaskIsRemoved() {
         Intent activityIntent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         activity = instrumentation.startActivitySync(activityIntent);
@@ -129,7 +133,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 .putExtra(PlayerService.EXTRA_ONE_SHOT, false)
                 .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
                 .putExtra(PlayerService.EXTRA_SHUFFLE, false)
-                .putExtra(PlayerService.EXTRA_LOOP_MODE, 0);
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 2);
         startPlaybackService(playIntent);
 
         InstrumentedTestSupport.waitFor("First playlist track did not start", 10000L,
@@ -145,6 +149,9 @@ public class BackgroundPlaybackInstrumentedTest {
         InstrumentedTestSupport.waitFor(
                 "Playlist did not advance after the task was removed", 12000L,
                 () -> PlayerService.lastPlaying && queue.get(1).equals(PlayerService.lastUri));
+        InstrumentedTestSupport.waitFor(
+                "Repeating playlist did not wrap after the task was removed", 12000L,
+                () -> PlayerService.lastPlaying && queue.get(0).equals(PlayerService.lastUri));
         assertTrue(PlayerService.getSleepTimerEndsAt(context) > System.currentTimeMillis());
     }
 

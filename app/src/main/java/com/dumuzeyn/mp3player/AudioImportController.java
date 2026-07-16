@@ -7,7 +7,13 @@ import android.net.Uri;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 final class AudioImportController {
     private static final String DEBUG_TAG = "MP3PlayerDebug";
@@ -17,6 +23,8 @@ final class AudioImportController {
     private static final long MAX_AUDIO_BYTES = 220L * 1024L * 1024L;
 
     private final MainActivityCore host;
+    private final ExecutorService importExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean closed;
 
     AudioImportController(MainActivityCore host) {
         this.host = host;
@@ -45,26 +53,74 @@ final class AudioImportController {
         if (resultCode != Activity.RESULT_OK || data == null) {
             return false;
         }
+        final ArrayList<Uri> selectedUris = new ArrayList<>();
+        final Uri selectedTree;
         if (requestCode == PICK_AUDIO) {
             if (data.getClipData() != null) {
                 for (int i = 0; i < data.getClipData().getItemCount(); i++) {
-                    addTrack(data.getClipData().getItemAt(i).getUri(), data.getFlags(), true);
+                    selectedUris.add(data.getClipData().getItemAt(i).getUri());
                 }
             } else if (data.getData() != null) {
-                addTrack(data.getData(), data.getFlags(), true);
+                selectedUris.add(data.getData());
             }
+            selectedTree = null;
         } else if (requestCode == PICK_AUDIO_FOLDER && data.getData() != null) {
-            importFolder(data.getData(), data.getFlags());
+            selectedTree = data.getData();
         } else {
             return false;
         }
-        TrackStore.sort(host.tracks);
-        TrackStore.save(host, host.tracks);
-        host.render();
+        final int permissionFlags = data.getFlags();
+        final HashSet<String> knownUris = new HashSet<>();
+        for (Track track : host.tracks) {
+            knownUris.add(track.uri);
+        }
+        try {
+            importExecutor.execute(() -> processImport(
+                    selectedUris, selectedTree, permissionFlags, knownUris));
+        } catch (RejectedExecutionException ignored) {
+            return false;
+        }
         return true;
     }
 
-    private void importFolder(Uri treeUri, int flags) {
+    void close() {
+        closed = true;
+        importExecutor.shutdown();
+    }
+
+    private void processImport(ArrayList<Uri> selectedUris, Uri treeUri, int permissionFlags,
+            HashSet<String> knownUris) {
+        ArrayList<Track> imported = new ArrayList<>();
+        if (treeUri != null) {
+            importFolder(treeUri, permissionFlags, knownUris, imported);
+        } else {
+            for (Uri uri : selectedUris) {
+                Track track = readTrack(uri, permissionFlags, true, knownUris);
+                if (track != null) {
+                    imported.add(track);
+                    TrackStore.upsert(host, track);
+                }
+            }
+        }
+        if (imported.isEmpty() || closed) {
+            return;
+        }
+        host.uiHandler.post(() -> {
+            if (closed) {
+                return;
+            }
+            for (Track track : imported) {
+                if (host.findTrack(track.uri) == null) {
+                    host.tracks.add(track);
+                }
+            }
+            TrackStore.sort(host.tracks);
+            host.render();
+        });
+    }
+
+    private void importFolder(Uri treeUri, int flags, HashSet<String> knownUris,
+            ArrayList<Track> importedTracks) {
         if (treeUri == null || !"content".equalsIgnoreCase(treeUri.getScheme())) {
             return;
         }
@@ -76,14 +132,16 @@ final class AudioImportController {
         }
         int[] imported = {0};
         try {
-            scanDocumentTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri), imported);
+            scanDocumentTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri), imported,
+                    knownUris, importedTracks);
         } catch (RuntimeException error) {
             Log.w(DEBUG_TAG, "folder_import_failed uri=" + treeUri + " error=" + error.getMessage());
         }
     }
 
-    private void scanDocumentTree(Uri treeUri, String documentId, int[] imported) {
-        if (imported[0] >= MAX_FOLDER_IMPORT) {
+    private void scanDocumentTree(Uri treeUri, String documentId, int[] imported,
+            HashSet<String> knownUris, ArrayList<Track> importedTracks) {
+        if (closed || imported[0] >= MAX_FOLDER_IMPORT) {
             return;
         }
         Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId);
@@ -100,11 +158,12 @@ final class AudioImportController {
                 String displayName = cursor.getString(2);
                 Uri childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, childId);
                 if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
-                    scanDocumentTree(treeUri, childId, imported);
+                    scanDocumentTree(treeUri, childId, imported, knownUris, importedTracks);
                 } else if (isAudioDocument(mimeType, displayName)) {
-                    int before = host.tracks.size();
-                    addTrack(childUri, 0, false);
-                    if (host.tracks.size() > before) {
+                    Track track = readTrack(childUri, 0, false, knownUris);
+                    if (track != null) {
+                        importedTracks.add(track);
+                        TrackStore.upsert(host, track);
                         imported[0]++;
                     }
                 }
@@ -125,10 +184,11 @@ final class AudioImportController {
         return hasAudioExtension(displayName);
     }
 
-    private void addTrack(Uri uri, int permissionFlags, boolean persistPermission) {
+    private Track readTrack(Uri uri, int permissionFlags, boolean persistPermission,
+            Set<String> knownUris) {
         if (!isSafeAudioUri(uri)) {
             Log.w(DEBUG_TAG, "add_track_rejected uri=" + uri + " reason=unsafe");
-            return;
+            return null;
         }
         if (persistPermission) {
             int takeFlags = permissionFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION;
@@ -142,10 +202,8 @@ final class AudioImportController {
             }
         }
         String value = uri.toString();
-        for (Track track : host.tracks) {
-            if (track.uri.equals(value)) {
-                return;
-            }
+        if (knownUris.contains(value)) {
+            return null;
         }
         try {
             String mime = host.getContentResolver().getType(uri);
@@ -155,16 +213,18 @@ final class AudioImportController {
             Log.i(DEBUG_TAG, "add_track_candidate uri=" + uri + " mime=" + mime
                     + " displayName=" + displayName + " size=" + size + " canOpen=" + canOpen);
             if (!canOpen) {
-                return;
+                return null;
             }
             Track track = TrackStore.fromUri(host, uri);
             if (track != null) {
-                host.tracks.add(track);
+                knownUris.add(value);
                 Log.i(DEBUG_TAG, "add_track_saved uri=" + uri + " title=" + track.title
                         + " durationMs=" + track.durationMs);
             }
+            return track;
         } catch (RuntimeException error) {
             Log.e(DEBUG_TAG, "add_track_failed uri=" + uri + " error=" + error.getMessage(), error);
+            return null;
         }
     }
 

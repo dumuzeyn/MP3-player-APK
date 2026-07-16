@@ -65,6 +65,24 @@ public final class TrackStore {
         }
     }
 
+    public static void upsert(Context context, Track track) {
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.upsertTrack(track);
+        } finally {
+            database.close();
+        }
+    }
+
+    public static void updateMetadata(Context context, Track track) {
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.updateTrackMetadata(track);
+        } finally {
+            database.close();
+        }
+    }
+
     public static Track fromUri(Context context, Uri uri) {
         boolean canOpen = canOpenForRead(context, uri);
         if (!canOpen) {

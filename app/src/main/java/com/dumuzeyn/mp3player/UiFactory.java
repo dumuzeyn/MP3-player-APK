@@ -67,7 +67,7 @@ final class UiFactory {
     }
 
     GradientDrawable cardBackground() {
-        return cardBackground(host.cardOpacity);
+        return cardBackground(host.dialogCardOpacity);
     }
 
     GradientDrawable cardBackground(int opacity) {
@@ -126,7 +126,7 @@ final class UiFactory {
     }
 
     void setSurface(View view, int color, boolean outlined) {
-        setSurface(view, color, outlined, host.cardOpacity);
+        setSurface(view, color, outlined, host.dialogCardOpacity);
     }
 
     void setSurface(View view, int color, boolean outlined, int opacity) {

@@ -6,10 +6,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.view.View;
 import android.widget.Button;
@@ -251,14 +249,9 @@ final class ThemeController {
 
     private Bitmap launcherPreviewIcon() {
         try {
-            Drawable drawable = host.getResources().getDrawable(
-                    host.dark ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
             int size = Math.max(1, host.dp(64));
-            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            drawable.setBounds(0, 0, size, size);
-            drawable.draw(canvas);
-            return bitmap;
+            return ThemeIconBitmap.create(host, host.dark, "custom".equals(host.themeMode),
+                    host.customBg, host.customFg, size);
         } catch (RuntimeException error) {
             return BitmapFactory.decodeResource(host.getResources(), host.getApplicationInfo().icon);
         }

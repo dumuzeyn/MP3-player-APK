@@ -55,6 +55,8 @@ public class PlayerService extends Service {
     private AudioFocusController audioFocusController;
     private MediaNotificationController notificationController;
     private boolean playerPreparing = false;
+    private boolean playWhenPrepared = true;
+    private boolean waitingForAudioFocus = false;
     private long lastResumePositionSavedAt = 0L;
     private PlaybackStateRepository playbackStateRepository;
     private int currentIndex = -1;
@@ -62,6 +64,7 @@ public class PlayerService extends Service {
     private boolean shuffle = false;
     private int loopMode = 0;
     private boolean pausedByUser = false;
+    private boolean pausedForInterruption = false;
     private int loopOneErrorRetries = 0;
     private int consecutivePlaybackErrors = 0;
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
@@ -80,6 +83,34 @@ public class PlayerService extends Service {
             stopSelf();
         }
     };
+    private final Runnable audioFocusRetry = new Runnable() {
+        @Override
+        public void run() {
+            if (!waitingForAudioFocus || !playWhenPrepared || player == null) {
+                return;
+            }
+            attemptStartReadyPlayer(player);
+        }
+    };
+    private final Runnable playbackWatchdog = new Runnable() {
+        @Override
+        public void run() {
+            if (player != null) {
+                updateState();
+            }
+            if (loopMode != 0 && playWhenPrepared && !pausedByUser
+                    && !pausedForInterruption && !queueManager.isEmpty()) {
+                if (player == null) {
+                    Log.w(TAG, "repeat_watchdog_restoring_player");
+                    playIndex(currentIndex < 0 ? 0 : currentIndex);
+                } else if (!playerPreparing && !waitingForAudioFocus && !safeIsPlaying()) {
+                    Log.w(TAG, "repeat_watchdog_restarting_playback");
+                    play();
+                }
+            }
+            timerHandler.postDelayed(this, 2500L);
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -88,9 +119,11 @@ public class PlayerService extends Service {
         this.audioEffectsManager = new AudioEffectsManager(this);
         this.audioFocusController = new AudioFocusController(this, new AudioFocusCallback());
         this.playbackStateRepository = new PlaybackStateRepository(this);
-        this.notificationController = new MediaNotificationController(this, new SessionCallback());
+        this.notificationController = new MediaNotificationController(
+                this, new SessionCallback(), this::onNotificationCoverReady);
         this.queueManager.replace(TrackStore.load(this));
         restoreSleepTimer();
+        this.timerHandler.postDelayed(this.playbackWatchdog, 2500L);
         Log.i(TAG, "service_created");
     }
 
@@ -115,6 +148,9 @@ public class PlayerService extends Service {
             return START_STICKY;
         }
         if (ACTION_PLAY_INDEX.equals(action)) {
+            this.playWhenPrepared = true;
+            this.waitingForAudioFocus = false;
+            this.pausedForInterruption = false;
             this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
             this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, false);
             this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
@@ -133,12 +169,16 @@ public class PlayerService extends Service {
             return START_STICKY;
         }
         if (ACTION_NEXT.equals(action)) {
+            this.playWhenPrepared = true;
+            this.pausedForInterruption = false;
             this.oneShot = false;
             this.pausedByUser = false;
             advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_NEXT, 0);
             return START_STICKY;
         }
         if (ACTION_PREV.equals(action)) {
+            this.playWhenPrepared = true;
+            this.pausedForInterruption = false;
             this.oneShot = false;
             this.pausedByUser = false;
             advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0);
@@ -172,11 +212,20 @@ public class PlayerService extends Service {
         if (ACTION_UPDATE_QUEUE.equals(action)) {
             String playingUri = currentUri();
             rebuildQueue(intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
+            if (this.queueManager.isEmpty()) {
+                stopPlayback(true);
+                stopSelf();
+                return START_STICKY;
+            }
             int updatedIndex = this.queueManager.indexOfUri(playingUri);
             if (updatedIndex >= 0) {
                 this.currentIndex = updatedIndex;
+                saveResumeState(true, true);
+            } else if (this.player != null) {
+                int replacementIndex = normalizeIndex(this.currentIndex);
+                this.playWhenPrepared = true;
+                playIndex(replacementIndex, null, 0, 0);
             }
-            saveResumeState(true, true);
             return START_STICKY;
         }
         if (ACTION_STOP.equals(action)) {
@@ -198,6 +247,9 @@ public class PlayerService extends Service {
     }
 
     private void playIndex(int index, ArrayList<String> queueUris, int startPosition, int attempts) {
+        this.playWhenPrepared = true;
+        this.waitingForAudioFocus = false;
+        this.timerHandler.removeCallbacks(this.audioFocusRetry);
         if (queueUris != null) {
             rebuildQueue(queueUris);
         } else if (this.queueManager.isEmpty()) {
@@ -330,23 +382,49 @@ public class PlayerService extends Service {
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
-            if (!this.audioFocusController.requestFocus()) {
-                Log.w(TAG, "audio_focus_denied");
-                stopPlayback(false);
+            if (!this.playWhenPrepared) {
+                updateState();
+                saveResumeState(true, true);
+                startForeground(NOTIFICATION_ID, currentNotification());
                 return;
             }
+            attemptStartReadyPlayer(preparedPlayer);
+        } catch (Exception e) {
+            this.consecutivePlaybackErrors++;
+            Log.e(DEBUG_TAG, "start_prepared_failed index=" + this.currentIndex + " uri=" + currentUri() + " error=" + e.getMessage(), e);
+            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
+        }
+    }
+
+    private void attemptStartReadyPlayer(MediaPlayer preparedPlayer) {
+        if (preparedPlayer != this.player || !this.playWhenPrepared) {
+            return;
+        }
+        this.timerHandler.removeCallbacks(this.audioFocusRetry);
+        if (!this.audioFocusController.requestFocus()) {
+            this.waitingForAudioFocus = true;
+            Log.w(TAG, "audio_focus_waiting");
+            updateState();
+            saveResumeState(true, true);
+            startForeground(NOTIFICATION_ID, currentNotification());
+            this.timerHandler.postDelayed(this.audioFocusRetry, 900L);
+            return;
+        }
+        this.waitingForAudioFocus = false;
+        try {
             preparedPlayer.start();
             this.audioFocusController.applyPlaybackVolume();
             this.loopOneErrorRetries = 0;
             updateState();
             TrackStore.updateDuration(this, currentUri(), safeDuration());
             saveResumeState(true, true);
-            this.audioFocusController.updateNoisyReceiver(safeIsPlaying());
+            this.audioFocusController.updateNoisyReceiver(true);
             startForeground(NOTIFICATION_ID, currentNotification());
             logPlaybackState("track_started");
-        } catch (Exception e) {
+        } catch (RuntimeException error) {
             this.consecutivePlaybackErrors++;
-            Log.e(DEBUG_TAG, "start_prepared_failed index=" + this.currentIndex + " uri=" + currentUri() + " error=" + e.getMessage(), e);
+            Log.e(DEBUG_TAG, "start_ready_failed index=" + this.currentIndex
+                    + " uri=" + currentUri() + " error=" + error.getMessage(), error);
             advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
         }
     }
@@ -437,6 +515,28 @@ public class PlayerService extends Service {
     }
 
     private void toggle() {
+        if (this.playerPreparing) {
+            this.playWhenPrepared = !this.playWhenPrepared;
+            this.pausedByUser = !this.playWhenPrepared;
+            updateState();
+            saveResumeState(true, true);
+            startForeground(NOTIFICATION_ID, currentNotification());
+            return;
+        }
+        if (this.waitingForAudioFocus) {
+            this.playWhenPrepared = !this.playWhenPrepared;
+            this.pausedByUser = !this.playWhenPrepared;
+            if (this.playWhenPrepared) {
+                attemptStartReadyPlayer(this.player);
+            } else {
+                this.waitingForAudioFocus = false;
+                this.timerHandler.removeCallbacks(this.audioFocusRetry);
+                updateState();
+                saveResumeState(true, true);
+                startForeground(NOTIFICATION_ID, currentNotification());
+            }
+            return;
+        }
         if (this.player == null) {
             this.pausedByUser = false;
             playIndex(this.currentIndex < 0 ? 0 : this.currentIndex);
@@ -453,6 +553,9 @@ public class PlayerService extends Service {
     }
 
     private void play() {
+        this.playWhenPrepared = true;
+        this.pausedByUser = false;
+        this.pausedForInterruption = false;
         if (this.player == null) {
             playIndex(this.currentIndex < 0 ? 0 : this.currentIndex);
             return;
@@ -462,8 +565,15 @@ public class PlayerService extends Service {
         }
         if (!safeIsPlaying()) {
             if (!this.audioFocusController.requestFocus()) {
+                this.waitingForAudioFocus = true;
+                this.timerHandler.removeCallbacks(this.audioFocusRetry);
+                this.timerHandler.postDelayed(this.audioFocusRetry, 900L);
+                updateState();
+                saveResumeState(true, true);
+                startForeground(NOTIFICATION_ID, currentNotification());
                 return;
             }
+            this.waitingForAudioFocus = false;
             try {
                 this.player.start();
                 this.audioFocusController.applyPlaybackVolume();
@@ -510,6 +620,8 @@ public class PlayerService extends Service {
     }
 
     private void stopPlayback(boolean explicit) {
+        this.playWhenPrepared = false;
+        this.waitingForAudioFocus = false;
         cancelSleepTimer();
         releasePlayer();
         if (explicit) {
@@ -585,6 +697,9 @@ public class PlayerService extends Service {
     }
 
     private void releasePlayer() {
+        this.timerHandler.removeCallbacks(this.audioFocusRetry);
+        this.timerHandler.removeCallbacks(this.playbackWatchdog);
+        this.waitingForAudioFocus = false;
         this.audioEffectsManager.release();
         if (this.player == null) {
             return;
@@ -613,7 +728,9 @@ public class PlayerService extends Service {
         lastIndex = this.currentIndex;
         // Preparing the next queue item is still an active playback request. Persisting false
         // here makes a sticky service restart treat the queue as paused between two tracks.
-        lastPlaying = this.player != null && (this.playerPreparing || safeIsPlaying());
+        lastPlaying = this.player != null
+                && ((this.playerPreparing && this.playWhenPrepared)
+                || this.waitingForAudioFocus || safeIsPlaying());
         int currentDuration = safeDuration();
         if (currentDuration <= 0 && this.currentIndex >= 0
                 && this.currentIndex < this.queueManager.size()) {
@@ -676,6 +793,13 @@ public class PlayerService extends Service {
                 track, this.player != null, safeIsPlaying(), safePosition(), safeDuration());
     }
 
+    private void onNotificationCoverReady(String uri) {
+        if (uri == null || !uri.equals(currentUri()) || this.notificationController == null) {
+            return;
+        }
+        startForeground(NOTIFICATION_ID, currentNotification());
+    }
+
     private int safeDuration() {
         if (this.player == null || this.playerPreparing) {
             return currentTrackDurationFallback();
@@ -735,6 +859,7 @@ public class PlayerService extends Service {
         }
         releasePlayer();
         this.timerHandler.removeCallbacks(this.sleepTimerStop);
+        this.timerHandler.removeCallbacks(this.audioFocusRetry);
         this.audioFocusController.stop();
         this.notificationController.release();
         instance = null;
@@ -767,17 +892,20 @@ public class PlayerService extends Service {
 
         @Override
         public void pauseForInterruption(String reason) {
+            pausedForInterruption = true;
             pauseInternal(reason);
         }
 
         @Override
         public void pauseForDisconnectedOutput() {
             pausedByUser = true;
+            pausedForInterruption = true;
             pauseInternal("audio_becoming_noisy");
         }
 
         @Override
         public void resumeAfterInterruption() {
+            pausedForInterruption = false;
             play();
         }
 

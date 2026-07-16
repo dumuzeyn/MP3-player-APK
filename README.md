@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4.1-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4.2-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -306,11 +306,9 @@ flowchart LR
 
 Требуются Android SDK и JDK 17.
 
-```bash
-./gradlew clean testDebugUnitTest lintDebug assembleDebugAndroidTest
-```
+Проверки JVM, Android lint и instrumentation-сценарии автоматически выполняются в GitHub Actions.
 
-При запущенном Android Emulator instrumentation-тесты выполняются командой `./gradlew connectedDebugAndroidTest`.
+Instrumentation-сценарии также можно запустить из Android Studio на подключённом эмуляторе или телефоне.
 
 Официальный `assembleRelease` требует `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS` и `MP3_RELEASE_KEY_PASS`. Без них Gradle останавливает сборку. В GitHub Actions закрытый ключ хранится только в encrypted Secrets: ручной запуск `workflow_dispatch` собирает подписанный `MP3-Player.apk` и создаёт либо обновляет релиз с указанным тегом. Пользовательский APK публикуется только в [GitHub Releases](../../releases/latest); бинарные файлы не хранятся в git.
 
@@ -326,7 +324,7 @@ flowchart LR
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.4.1-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.4.2-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player">
     <img src="https://img.shields.io/badge/Русская_версия-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -630,11 +628,9 @@ Emulators cannot reproduce One UI, HyperOS, vendor Bluetooth stacks, or aggressi
 
 Android SDK and JDK 17 are required.
 
-```bash
-./gradlew clean testDebugUnitTest lintDebug assembleDebugAndroidTest
-```
+JVM checks, Android lint, and instrumentation scenarios run automatically in GitHub Actions.
 
-With an Android Emulator running, execute instrumentation tests with `./gradlew connectedDebugAndroidTest`.
+Instrumentation scenarios can also be launched from Android Studio on a connected emulator or phone.
 
 Official `assembleRelease` builds require `MP3_RELEASE_KEYSTORE`, `MP3_RELEASE_KEY_ALIAS`, `MP3_RELEASE_STORE_PASS`, and `MP3_RELEASE_KEY_PASS`. Gradle stops when they are missing. GitHub Actions stores the private key only in encrypted Secrets: a manual `workflow_dispatch` run builds the signed `MP3-Player.apk` and creates or updates the release for the selected tag. The user-facing APK is published only through [GitHub Releases](../../releases/latest); binaries are not tracked in git.
 

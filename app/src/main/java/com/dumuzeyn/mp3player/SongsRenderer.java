@@ -8,9 +8,19 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 final class SongsRenderer {
     private final MainActivityCore host;
+    private final ExecutorService metadataExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean closed;
+    private ArrayList<Track> pendingTracks;
+    private int pendingStart;
+    private int pendingGeneration = -1;
 
     SongsRenderer(MainActivityCore host) {
         this.host = host;
@@ -62,36 +72,54 @@ final class SongsRenderer {
     }
 
     void refreshMissingMetadataAsync() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final ArrayList<Track> refreshed = new ArrayList<>(host.tracks);
-                boolean changed = false;
-                for (int i = 0; i < refreshed.size(); i++) {
-                    Track track = refreshed.get(i);
-                    if (!needsMetadataRefresh(track)) {
-                        continue;
+        final ArrayList<Track> snapshot = new ArrayList<>(host.tracks);
+        try {
+            metadataExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    final Map<String, Track> refreshed = new HashMap<>();
+                    for (Track track : snapshot) {
+                        if (closed) {
+                            return;
+                        }
+                        if (!needsMetadataRefresh(track)) {
+                            continue;
+                        }
+                        Track updated = TrackStore.refreshMetadata(host, track);
+                        if (metadataChanged(track, updated)) {
+                            TrackStore.updateMetadata(host, updated);
+                            refreshed.put(updated.uri, updated);
+                        }
                     }
-                    Track updated = TrackStore.refreshMetadata(host, track);
-                    if (metadataChanged(track, updated)) {
-                        refreshed.set(i, updated);
-                        changed = true;
+                    if (refreshed.isEmpty() || closed) {
+                        return;
                     }
+                    host.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (closed) {
+                                return;
+                            }
+                            for (int index = 0; index < host.tracks.size(); index++) {
+                                Track current = host.tracks.get(index);
+                                Track updated = refreshed.get(current.uri);
+                                if (updated != null) {
+                                    host.tracks.set(index, updated);
+                                }
+                            }
+                            host.render();
+                        }
+                    });
                 }
-                if (!changed) {
-                    return;
-                }
-                TrackStore.save(host, refreshed);
-                host.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        host.tracks.clear();
-                        host.tracks.addAll(refreshed);
-                        host.render();
-                    }
-                });
-            }
-        }).start();
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Activity is already closing.
+        }
+    }
+
+    void close() {
+        closed = true;
+        metadataExecutor.shutdownNow();
     }
 
     private boolean needsMetadataRefresh(Track track) {
@@ -117,6 +145,9 @@ final class SongsRenderer {
     }
 
     void renderSongsState(ArrayList<Track> tracks) {
+        pendingTracks = null;
+        pendingStart = 0;
+        pendingGeneration = -1;
         String title;
         String titleRu;
         if (tracks.isEmpty()) {
@@ -133,27 +164,38 @@ final class SongsRenderer {
             host.addMiniSpacerIfNeeded();
             return;
         }
-        appendSongRows(tracks, 0, host.songRenderGeneration);
+        pendingTracks = new ArrayList<>(tracks);
+        pendingGeneration = host.songRenderGeneration;
+        appendNextSongBatch();
     }
 
-    private void appendSongRows(final ArrayList<Track> tracksToRender, int start, final int generation) {
-        if (generation != host.songRenderGeneration || host.tabIndex > 1) {
+    void loadMoreIfNearBottom() {
+        if (host.contentScroll == null || pendingTracks == null || pendingStart >= pendingTracks.size()) {
             return;
         }
+        View child = host.contentScroll.getChildAt(0);
+        if (child == null || child.getBottom() - (host.contentScroll.getHeight()
+                + host.contentScroll.getScrollY()) > host.dp(900)) {
+            return;
+        }
+        appendNextSongBatch();
+    }
+
+    private void appendNextSongBatch() {
+        if (pendingTracks == null || pendingGeneration != host.songRenderGeneration || host.tabIndex > 1) {
+            pendingTracks = null;
+            return;
+        }
+        ArrayList<Track> tracksToRender = pendingTracks;
+        int start = pendingStart;
         int batchSize = host.renderingTabPreview ? 15 : 24;
         int end = Math.min(tracksToRender.size(), start + batchSize);
         for (int i = start; i < end; i++) {
             host.list.addView(songRow(tracksToRender.get(i), true, true));
         }
-        if (!host.renderingTabPreview && end < tracksToRender.size()) {
-            final int nextStart = end;
-            host.uiHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    appendSongRows(tracksToRender, nextStart, generation);
-                }
-            });
-        } else {
+        pendingStart = end;
+        if (end >= tracksToRender.size()) {
+            pendingTracks = null;
             host.addMiniSpacerIfNeeded();
         }
     }
@@ -173,7 +215,8 @@ final class SongsRenderer {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(16);
         row.setPadding(host.dp(8), host.dp(4), host.dp(8), host.dp(4));
-        host.applyCardStyle(row, host.songCardOpacity);
+        host.applyCardStyle(row, host.tabIndex == 1
+                ? host.favoriteCardOpacity : host.songCardOpacity);
 
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);

@@ -46,6 +46,18 @@ public class PlaybackQueueNavigatorTest {
     }
 
     @Test
+    public void repeatAllNeverStopsAcrossManyCycles() {
+        int index = 0;
+        for (int transition = 0; transition < 100; transition++) {
+            PlaybackQueueNavigator.Decision decision = decide(
+                    15, index, 2, false, PlaybackQueueNavigator.Reason.FINISHED, 0);
+            assertFalse(decision.stop);
+            index = decision.nextIndex;
+        }
+        assertEquals(10, index);
+    }
+
+    @Test
     public void manualPreviousWrapsToQueueEnd() {
         assertPlay(decide(3, 0, 0, false, PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0), 2, 0);
     }
