@@ -1,8 +1,6 @@
 package com.dumuzeyn.mp3player;
 
-import android.content.Intent;
 import android.graphics.Color;
-import android.os.Build;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextUtils;
@@ -375,12 +373,7 @@ final class OverlayController {
         host.showConfirmPanel(host.tr("Delete song?", "Удалить песню?"),
                 host.tr("The song will disappear from the app, but the file will stay on the phone.",
                         "Песня исчезнет из приложения, но файл останется на телефоне."), () -> {
-                    host.tracks.remove(track);
-                    host.favorites.remove(track.uri);
-                    host.playlistController.removeTrackFromAllPlaylists(track);
-                    TrackStore.save(host, host.tracks);
-                    host.saveState();
-                    host.render();
+                    host.removeTrackFromLibrary(track);
                 });
     }
 
@@ -445,22 +438,7 @@ final class OverlayController {
     }
 
     private void removeFromQueue(Track track) {
-        for (int i = host.playbackQueue.size() - 1; i >= 0; i--) {
-            if (host.playbackQueue.get(i).uri.equals(track.uri)) {
-                host.playbackQueue.remove(i);
-            }
-        }
-        if (host.isCurrent(track)) {
-            Intent intent = new Intent(host, PlayerService.class);
-            intent.setAction(PlayerService.ACTION_STOP);
-            if (Build.VERSION.SDK_INT >= 26) {
-                host.startForegroundService(intent);
-            } else {
-                host.startService(intent);
-            }
-            host.currentIndex = -1;
-            host.playing = false;
-        }
+        host.removeTrackFromQueue(track);
     }
 
     private void playQueueTrack(Track track) {

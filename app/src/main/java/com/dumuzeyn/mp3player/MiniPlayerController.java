@@ -21,7 +21,7 @@ final class MiniPlayerController {
         host.miniPlayer.setOrientation(LinearLayout.HORIZONTAL);
         host.miniPlayer.setGravity(16);
         host.miniPlayer.setPadding(host.dp(14), 0, host.dp(10), 0);
-        host.applyCardStyle(host.miniPlayer);
+        host.applyCardStyle(host.miniPlayer, host.miniPlayerCardOpacity);
         host.miniPlayer.setVisibility(View.GONE);
         host.miniPlayer.setOnClickListener(new View.OnClickListener() {
             @Override

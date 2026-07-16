@@ -107,6 +107,18 @@ final class LibraryDatabase extends SQLiteOpenHelper {
         getWritableDatabase().update("tracks", values, "uri=?", new String[]{uri});
     }
 
+    void upsertTrack(Track track) {
+        ContentValues values = trackValues(track);
+        getWritableDatabase().insertWithOnConflict(
+                "tracks", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    void updateTrackMetadata(Track track) {
+        ContentValues values = trackValues(track);
+        values.remove("uri");
+        getWritableDatabase().update("tracks", values, "uri=?", new String[]{track.uri});
+    }
+
     HashSet<String> loadFavorites() {
         HashSet<String> favorites = new HashSet<>();
         Cursor cursor = null;
@@ -172,15 +184,20 @@ final class LibraryDatabase extends SQLiteOpenHelper {
     private static void saveTracks(SQLiteDatabase db, List<Track> tracks) {
         db.delete("tracks", null, null);
         for (Track track : tracks) {
-            ContentValues values = new ContentValues();
-            values.put("uri", track.uri);
-            values.put("title", track.title);
-            values.put("artist", track.artist);
-            values.put("album", track.album);
-            values.put("genre", track.genre);
-            values.put("duration_ms", track.durationMs);
-            db.insertWithOnConflict("tracks", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+            db.insertWithOnConflict("tracks", null, trackValues(track),
+                    SQLiteDatabase.CONFLICT_REPLACE);
         }
+    }
+
+    private static ContentValues trackValues(Track track) {
+        ContentValues values = new ContentValues();
+        values.put("uri", track.uri);
+        values.put("title", track.title);
+        values.put("artist", track.artist);
+        values.put("album", track.album);
+        values.put("genre", track.genre);
+        values.put("duration_ms", track.durationMs);
+        return values;
     }
 
     private static void saveFavorites(SQLiteDatabase db, Set<String> favorites) {

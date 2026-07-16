@@ -67,8 +67,12 @@ final class UiFactory {
     }
 
     GradientDrawable cardBackground() {
+        return cardBackground(host.dialogCardOpacity);
+    }
+
+    GradientDrawable cardBackground(int opacity) {
         GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(host.cardSurfaceColor(host.card));
+        drawable.setColor(host.cardSurfaceColor(host.card, opacity));
         drawable.setCornerRadius(host.dp(16));
         drawable.setStroke(host.dp(1), host.cardStroke);
         return drawable;
@@ -79,12 +83,21 @@ final class UiFactory {
         view.setElevation(host.dp(1));
     }
 
+    void applyCardStyle(View view, int opacity) {
+        view.setBackground(cardBackground(opacity));
+        view.setElevation(host.dp(1));
+    }
+
     void applyPrimaryButtonStyle(Button button) {
         buttons.applyPrimary(button);
     }
 
     void applySecondaryButtonStyle(Button button) {
         buttons.applySecondary(button);
+    }
+
+    void applySecondaryButtonStyle(Button button, int opacity) {
+        buttons.applySecondary(button, opacity);
     }
 
     void applyPlayerToolStyle(Button button, boolean active) {
@@ -113,8 +126,12 @@ final class UiFactory {
     }
 
     void setSurface(View view, int color, boolean outlined) {
+        setSurface(view, color, outlined, host.dialogCardOpacity);
+    }
+
+    void setSurface(View view, int color, boolean outlined, int opacity) {
         int surfaceColor = color == host.card || color == host.panel
-                ? host.cardSurfaceColor(color)
+                ? host.cardSurfaceColor(color, opacity)
                 : color;
         view.setBackground(rounded(surfaceColor, outlined));
     }

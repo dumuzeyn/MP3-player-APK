@@ -52,7 +52,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         LinearLayout card = new LinearLayout(host);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(host.dp(10), host.dp(8), host.dp(10), host.dp(8));
-        host.setSurface(card, host.panel, false);
+        host.setSurface(card, host.panel, false, host.playlistCardOpacity);
 
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);

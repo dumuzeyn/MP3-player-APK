@@ -35,13 +35,36 @@ public class PlaybackQueueNavigatorTest {
     }
 
     @Test
+    public void repeatAllOverridesOneShotAndWrapsForever() {
+        PlaybackQueueNavigator.Decision firstWrap = decide(
+                3, 2, 2, true, PlaybackQueueNavigator.Reason.FINISHED, 0);
+        PlaybackQueueNavigator.Decision secondWrap = decide(
+                3, 2, 2, true, PlaybackQueueNavigator.Reason.FINISHED, 0);
+
+        assertPlay(firstWrap, 0, 0);
+        assertPlay(secondWrap, 0, 0);
+    }
+
+    @Test
+    public void repeatAllNeverStopsAcrossManyCycles() {
+        int index = 0;
+        for (int transition = 0; transition < 100; transition++) {
+            PlaybackQueueNavigator.Decision decision = decide(
+                    15, index, 2, false, PlaybackQueueNavigator.Reason.FINISHED, 0);
+            assertFalse(decision.stop);
+            index = decision.nextIndex;
+        }
+        assertEquals(10, index);
+    }
+
+    @Test
     public void manualPreviousWrapsToQueueEnd() {
         assertPlay(decide(3, 0, 0, false, PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0), 2, 0);
     }
 
     @Test
     public void oneShotStopsAfterCurrentTrack() {
-        assertTrue(decide(3, 0, 2, true, PlaybackQueueNavigator.Reason.FINISHED, 0).stop);
+        assertTrue(decide(3, 0, 0, true, PlaybackQueueNavigator.Reason.FINISHED, 0).stop);
     }
 
     @Test

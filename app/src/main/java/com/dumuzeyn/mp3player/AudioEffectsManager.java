@@ -83,7 +83,7 @@ final class AudioEffectsManager {
 
     private void applyVolumeLeveling(int audioSessionId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Log.w(DEBUG_TAG, "volume_leveling_requires_api_28 sdk=" + Build.VERSION.SDK_INT);
+            applyLoudnessFallback(audioSessionId);
             return;
         }
         if (customDynamicsUnsupported) {

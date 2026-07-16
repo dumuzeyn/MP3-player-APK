@@ -190,8 +190,9 @@ final class TabsController {
     }
 
     private void keepScrollInsideMiddleCycles(int cycleWidth, int scrollX) {
-        int leftBoundary = cycleWidth * 8;
-        int rightBoundary = cycleWidth * 12;
+        int middleCycle = MainActivityCore.TAB_CYCLES / 2;
+        int leftBoundary = cycleWidth * Math.max(0, middleCycle - 1);
+        int rightBoundary = cycleWidth * Math.min(MainActivityCore.TAB_CYCLES - 1, middleCycle + 1);
         if (scrollX < leftBoundary) {
             host.tabsScroll.scrollTo(scrollX + cycleWidth, 0);
         } else if (scrollX > rightBoundary) {
@@ -306,7 +307,7 @@ final class TabsController {
     }
 
     private int centeredCycleTargetLeft(int targetIndex) {
-        int childIndex = (host.tabs.length * 10) + targetIndex;
+        int childIndex = (host.tabs.length * (MainActivityCore.TAB_CYCLES / 2)) + targetIndex;
         if (childIndex >= host.tabRow.getChildCount()) {
             return -1;
         }

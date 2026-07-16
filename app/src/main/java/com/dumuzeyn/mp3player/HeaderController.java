@@ -16,7 +16,7 @@ final class HeaderController {
 
     void buildAppHeader() {
         FrameLayout header = new FrameLayout(host);
-        host.applyCardStyle(header);
+        host.applyCardStyle(header, host.headerCardOpacity);
         header.setPadding(host.dp(12), 0, host.dp(12), 0);
         LinearLayout row = host.row();
         ImageView icon = new ImageView(host);

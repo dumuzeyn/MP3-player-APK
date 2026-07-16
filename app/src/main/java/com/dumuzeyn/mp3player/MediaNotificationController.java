@@ -15,14 +15,20 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.LruCache;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 final class MediaNotificationController {
     private static final String CHANNEL_ID = "playback";
@@ -30,6 +36,10 @@ final class MediaNotificationController {
 
     private final Context context;
     private final MediaSession mediaSession;
+    private final CoverReadyCallback coverReadyCallback;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService coverExecutor = Executors.newSingleThreadExecutor();
+    private final Set<String> pendingCovers = new HashSet<>();
     private final LruCache<String, Bitmap> coverCache = new LruCache<String, Bitmap>(8 * 1024) {
         @Override
         protected int sizeOf(String key, Bitmap value) {
@@ -38,11 +48,14 @@ final class MediaNotificationController {
     };
     private String styledCoverKey = "";
     private Bitmap styledCover;
-    private Bitmap lightAppIcon;
-    private Bitmap darkAppIcon;
+    private Bitmap appIcon;
+    private String appIconKey = "";
+    private boolean released;
 
-    MediaNotificationController(Context context, MediaSession.Callback callback) {
+    MediaNotificationController(Context context, MediaSession.Callback callback,
+            CoverReadyCallback coverReadyCallback) {
         this.context = context.getApplicationContext();
+        this.coverReadyCallback = coverReadyCallback;
         createChannel();
         mediaSession = new MediaSession(context, "MP3 Player");
         mediaSession.setCallback(callback);
@@ -72,7 +85,8 @@ final class MediaNotificationController {
                 ? android.R.drawable.ic_media_pause
                 : android.R.drawable.ic_media_play;
         Bitmap cover = notificationCover(track, circularCover);
-        Bitmap themedIcon = themedAppIcon(darkTheme);
+        Bitmap themedIcon = themedAppIcon(darkTheme, "custom".equals(theme),
+                customBackground, accentColor);
         builder.setSmallIcon(context.getResources().getIdentifier(
                         "ic_notification_music", "drawable", context.getPackageName()))
                 .setContentTitle(track.title)
@@ -102,11 +116,15 @@ final class MediaNotificationController {
     }
 
     void release() {
+        released = true;
+        coverExecutor.shutdownNow();
+        mainHandler.removeCallbacksAndMessages(null);
+        pendingCovers.clear();
         mediaSession.release();
         coverCache.evictAll();
         clearStyledCover();
-        lightAppIcon = null;
-        darkAppIcon = null;
+        appIcon = null;
+        appIconKey = "";
     }
 
     private void updateMediaSession(Track track, Bitmap cover, Bitmap themedIcon,
@@ -160,11 +178,34 @@ final class MediaNotificationController {
         if (cached != null) {
             return cached;
         }
-        Bitmap cover = readCover(track);
-        if (cover != null) {
-            coverCache.put(track.uri, cover);
+        scheduleCoverRead(track);
+        return null;
+    }
+
+    private void scheduleCoverRead(Track track) {
+        final String uri = track.uri;
+        if (released || !pendingCovers.add(uri)) {
+            return;
         }
-        return cover;
+        try {
+            coverExecutor.execute(() -> {
+                final Bitmap cover = readCover(track);
+                mainHandler.post(() -> {
+                    if (released) {
+                        return;
+                    }
+                    pendingCovers.remove(uri);
+                    if (cover != null) {
+                        coverCache.put(uri, cover);
+                    }
+                    if (coverReadyCallback != null) {
+                        coverReadyCallback.onCoverReady(uri);
+                    }
+                });
+            });
+        } catch (RejectedExecutionException ignored) {
+            pendingCovers.remove(uri);
+        }
     }
 
     private Bitmap readCover(Track track) {
@@ -213,25 +254,17 @@ final class MediaNotificationController {
         return output;
     }
 
-    private Bitmap themedAppIcon(boolean darkTheme) {
-        Bitmap cached = darkTheme ? darkAppIcon : lightAppIcon;
-        if (cached != null && !cached.isRecycled()) {
-            return cached;
+    private Bitmap themedAppIcon(boolean darkTheme, boolean custom,
+            int backgroundColor, int foregroundColor) {
+        String key = darkTheme + ":" + custom + ":" + backgroundColor + ":" + foregroundColor;
+        if (key.equals(appIconKey) && appIcon != null && !appIcon.isRecycled()) {
+            return appIcon;
         }
         try {
-            Drawable drawable = context.getResources().getDrawable(
-                    darkTheme ? R.mipmap.ic_launcher_dark : R.mipmap.ic_launcher_home);
-            int size = 128;
-            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            drawable.setBounds(0, 0, size, size);
-            drawable.draw(canvas);
-            if (darkTheme) {
-                darkAppIcon = bitmap;
-            } else {
-                lightAppIcon = bitmap;
-            }
-            return bitmap;
+            appIcon = ThemeIconBitmap.create(context, darkTheme, custom,
+                    backgroundColor, foregroundColor, 128);
+            appIconKey = key;
+            return appIcon;
         } catch (RuntimeException error) {
             return null;
         }
@@ -270,5 +303,9 @@ final class MediaNotificationController {
     private void clearStyledCover() {
         styledCover = null;
         styledCoverKey = "";
+    }
+
+    interface CoverReadyCallback {
+        void onCoverReady(String uri);
     }
 }

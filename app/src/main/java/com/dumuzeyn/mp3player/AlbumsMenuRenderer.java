@@ -14,4 +14,9 @@ final class AlbumsMenuRenderer extends TrackGroupMenuRenderer {
     String unknownGroupName() {
         return host.tr("Unknown album", "Неизвестный альбом");
     }
+
+    @Override
+    int cardOpacity() {
+        return host.albumCardOpacity;
+    }
 }

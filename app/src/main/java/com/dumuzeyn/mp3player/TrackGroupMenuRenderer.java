@@ -22,6 +22,8 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
 
     abstract String unknownGroupName();
 
+    abstract int cardOpacity();
+
     @Override
     public boolean needsMiniSpacer() {
         return true;
@@ -74,7 +76,7 @@ abstract class TrackGroupMenuRenderer implements MenuRenderer {
     private LinearLayout groupCard(final String name, final ArrayList<Track> tracks) {
         LinearLayout row = host.row();
         row.setPadding(host.dp(6), host.dp(4), host.dp(8), host.dp(4));
-        host.setSurface(row, host.panel, false);
+        host.setSurface(row, host.panel, false, cardOpacity());
 
         ImageView cover = host.coverView();
         int fallback = host.dark ? 28 : 235;

@@ -46,7 +46,7 @@ final class PlaybackQueueNavigator {
         if (reason == Reason.ERROR && loopMode == 1 && loopOneErrorRetries == 0) {
             return Decision.play(normalize(currentIndex, queueSize), 1);
         }
-        if (oneShot && reason == Reason.FINISHED) {
+        if (oneShot && loopMode == 0 && reason == Reason.FINISHED) {
             return Decision.stop();
         }
         if (loopMode == 0 && reason == Reason.FINISHED && currentIndex >= queueSize - 1) {

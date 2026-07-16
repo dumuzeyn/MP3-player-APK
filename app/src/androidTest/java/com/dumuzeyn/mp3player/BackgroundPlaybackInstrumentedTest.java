@@ -39,6 +39,10 @@ public class BackgroundPlaybackInstrumentedTest {
     public void setUp() throws Exception {
         context = ApplicationProvider.getApplicationContext();
         instrumentation = InstrumentationRegistry.getInstrumentation();
+        context.getSharedPreferences("mp3_player_ui", Context.MODE_PRIVATE).edit()
+                .putBoolean("particlesEnabled", false)
+                .putBoolean("animations", false)
+                .commit();
         if (Build.VERSION.SDK_INT >= 33) {
             InstrumentedTestSupport.runShellCommand(instrumentation,
                     "pm grant " + context.getPackageName() + " "
@@ -86,7 +90,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 .putExtra(PlayerService.EXTRA_INDEX, 0)
                 .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
                 .putExtra(PlayerService.EXTRA_SHUFFLE, false)
-                .putExtra(PlayerService.EXTRA_LOOP_MODE, 0);
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 1);
         startPlaybackService(playIntent);
 
         InstrumentedTestSupport.waitFor("PlayerService did not start playback", 15000L,
@@ -114,7 +118,7 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     @Test
-    public void playlistWithSleepTimerAdvancesAfterTaskIsRemoved() {
+    public void repeatingPlaylistWithSleepTimerKeepsPlayingAfterTaskIsRemoved() {
         Intent activityIntent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         activity = instrumentation.startActivitySync(activityIntent);
@@ -129,7 +133,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 .putExtra(PlayerService.EXTRA_ONE_SHOT, false)
                 .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
                 .putExtra(PlayerService.EXTRA_SHUFFLE, false)
-                .putExtra(PlayerService.EXTRA_LOOP_MODE, 0);
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 2);
         startPlaybackService(playIntent);
 
         InstrumentedTestSupport.waitFor("First playlist track did not start", 10000L,
@@ -145,7 +149,59 @@ public class BackgroundPlaybackInstrumentedTest {
         InstrumentedTestSupport.waitFor(
                 "Playlist did not advance after the task was removed", 12000L,
                 () -> PlayerService.lastPlaying && queue.get(1).equals(PlayerService.lastUri));
+        InstrumentedTestSupport.waitFor(
+                "Repeating playlist did not wrap after the task was removed", 12000L,
+                () -> PlayerService.lastPlaying && queue.get(0).equals(PlayerService.lastUri));
         assertTrue(PlayerService.getSleepTimerEndsAt(context) > System.currentTimeMillis());
+    }
+
+    @Test
+    public void repeatAllKeepsCyclingWhileActivityIsInBackground() {
+        Intent activityIntent = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        activity = instrumentation.startActivitySync(activityIntent);
+        instrumentation.waitForIdleSync();
+
+        ArrayList<String> queue = new ArrayList<>();
+        queue.add(Uri.fromFile(waveFile).toString());
+        queue.add(Uri.fromFile(secondWaveFile).toString());
+        startPlaybackService(new Intent(context, PlayerService.class)
+                .setAction(PlayerService.ACTION_PLAY_INDEX)
+                .putExtra(PlayerService.EXTRA_INDEX, 0)
+                .putExtra(PlayerService.EXTRA_ONE_SHOT, false)
+                .putStringArrayListExtra(PlayerService.EXTRA_QUEUE_URIS, queue)
+                .putExtra(PlayerService.EXTRA_SHUFFLE, false)
+                .putExtra(PlayerService.EXTRA_LOOP_MODE, 2));
+
+        waitForPlayingUri("First repeat track did not start", queue.get(0));
+        instrumentation.runOnMainSync(() -> activity.moveTaskToBack(true));
+        instrumentation.waitForIdleSync();
+
+        waitForPlayingUri("Repeat queue did not reach the second track", queue.get(1));
+        waitForPlayingUri("Repeat queue did not wrap to the first track", queue.get(0));
+        waitForPlayingUri("Repeat queue stopped during its second cycle", queue.get(1));
+        assertTrue(PlayerService.hasPlaybackSession());
+        assertTrue(PlayerService.lastPlaying);
+        assertEquals(2, PlayerService.lastLoopMode);
+    }
+
+    @Test
+    public void closingActivityWithFullPlayerDoesNotUseClosedCoverLoader() {
+        Intent activityIntent = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        activity = instrumentation.startActivitySync(activityIntent);
+        instrumentation.waitForIdleSync();
+
+        MainActivityCore host = (MainActivityCore) activity;
+        instrumentation.runOnMainSync(() -> {
+            host.currentIndex = 0;
+            host.openFullPlayer();
+            activity.finish();
+        });
+        activity = null;
+        instrumentation.waitForIdleSync();
+        SystemClock.sleep(1200L);
+        assertFalse(PlayerService.hasPlaybackSession());
     }
 
     @Test
@@ -185,6 +241,13 @@ public class BackgroundPlaybackInstrumentedTest {
         } else {
             context.startService(intent);
         }
+    }
+
+    private void waitForPlayingUri(String message, String uri) {
+        InstrumentedTestSupport.waitFor(message, 10000L, () -> {
+            PlayerService.refreshSnapshot();
+            return PlayerService.lastPlaying && uri.equals(PlayerService.lastUri);
+        });
     }
 
     private void stopPlayback() {

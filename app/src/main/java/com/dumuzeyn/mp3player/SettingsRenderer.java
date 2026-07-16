@@ -81,7 +81,7 @@ final class SettingsRenderer {
         button.setTextSize(17.0f);
         button.setGravity(8388627);
         button.setPadding(host.dp(18), 0, host.dp(12), 0);
-        host.applySecondaryButtonStyle(button);
+        host.applySecondaryButtonStyle(button, host.settingsCardOpacity);
         String lower = label.toLowerCase(Locale.ROOT);
         if (lower.contains("delete") || lower.contains("удал")) {
             button.setTextColor(Color.rgb(190, 45, 45));
