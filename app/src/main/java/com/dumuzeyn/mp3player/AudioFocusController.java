@@ -26,7 +26,7 @@ final class AudioFocusController {
         void setPlayerVolume(float volume);
     }
 
-    private static final String TAG = "MP3PlayerService";
+    private static final String TAG = "VoltuneService";
 
     private final Context context;
     private final Callback callback;

@@ -32,7 +32,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 final class MediaNotificationController {
     private static final String CHANNEL_ID = "playback";
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
 
     private final Context context;
     private final MediaSession mediaSession;

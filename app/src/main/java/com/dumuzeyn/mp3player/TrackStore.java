@@ -18,7 +18,7 @@ import java.util.Locale;
 
 public final class TrackStore {
     private static final int MAX_TEXT_LENGTH = 160;
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
 
     private TrackStore() {
     }

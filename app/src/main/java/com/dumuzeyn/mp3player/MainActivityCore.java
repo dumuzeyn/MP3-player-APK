@@ -26,7 +26,7 @@ import java.util.Locale;
 class MainActivityCore extends AppState {
     private static final String CUSTOM_TIMER = "customTimer";
     private static final String ANIMATIONS = "animations";
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
     private static final String LANGUAGE = "language";
     static final int COVER_FULL_SIZE = 1024;
     private static final String PREFS = "mp3_player_ui";

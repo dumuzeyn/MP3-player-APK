@@ -12,7 +12,7 @@ import android.os.Build;
 import android.util.Log;
 
 final class AudioEffectsManager {
-    private static final String DEBUG_TAG = "MP3PlayerDebug";
+    private static final String DEBUG_TAG = "VoltuneDebug";
 
     private final Context context;
     private Equalizer equalizer;
