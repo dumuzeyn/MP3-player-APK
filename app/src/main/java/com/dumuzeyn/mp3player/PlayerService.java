@@ -104,8 +104,15 @@ public class PlayerService extends Service {
                     Log.w(TAG, "repeat_watchdog_restoring_player");
                     playIndex(currentIndex < 0 ? 0 : currentIndex);
                 } else if (!playerPreparing && !waitingForAudioFocus && !safeIsPlaying()) {
-                    Log.w(TAG, "repeat_watchdog_restarting_playback");
-                    play();
+                    int duration = safeDuration();
+                    int position = safePosition();
+                    if (duration > 0 && position >= Math.max(0, duration - 250)) {
+                        Log.w(TAG, "repeat_watchdog_advancing_finished_track");
+                        advanceQueue(PlaybackQueueNavigator.Reason.FINISHED, 0);
+                    } else {
+                        Log.w(TAG, "repeat_watchdog_restarting_playback");
+                        play();
+                    }
                 }
             }
             timerHandler.postDelayed(this, 2500L);
@@ -698,7 +705,6 @@ public class PlayerService extends Service {
 
     private void releasePlayer() {
         this.timerHandler.removeCallbacks(this.audioFocusRetry);
-        this.timerHandler.removeCallbacks(this.playbackWatchdog);
         this.waitingForAudioFocus = false;
         this.audioEffectsManager.release();
         if (this.player == null) {
@@ -857,6 +863,7 @@ public class PlayerService extends Service {
             updateState();
             saveResumeState(true, true);
         }
+        this.timerHandler.removeCallbacks(this.playbackWatchdog);
         releasePlayer();
         this.timerHandler.removeCallbacks(this.sleepTimerStop);
         this.timerHandler.removeCallbacks(this.audioFocusRetry);
