@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload verification reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verification-reports
           if-no-files-found: ignore
@@ -114,7 +114,7 @@ jobs:
         run: cp app/build/outputs/apk/release/app-release.apk MP3-Player-Voltune.apk
 
       - name: Upload signed release APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: MP3-Player-Voltune-release
           path: MP3-Player-Voltune.apk

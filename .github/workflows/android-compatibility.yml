@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload Android ${{ matrix.android }} reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: android-${{ matrix.android }}-api-${{ matrix.api }}-reports
           if-no-files-found: warn
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload tablet reports and screenshot
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: tablet-pixel-c-api-35-reports
           if-no-files-found: warn
