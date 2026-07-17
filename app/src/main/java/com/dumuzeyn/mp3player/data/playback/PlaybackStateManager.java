@@ -1,14 +1,15 @@
-package com.dumuzeyn.mp3player;
+package com.dumuzeyn.mp3player.data.playback;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import com.dumuzeyn.mp3player.Track;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
 
 /** Persists the playback session independently from the service and UI. */
-final class PlaybackStateRepository {
-    static final String PREFS = "player_resume";
+public final class PlaybackStateManager {
+    public static final String PREFS = "player_resume";
     private static final String DURATION = "duration";
     private static final String INDEX = "index";
     private static final String LOOP_MODE = "loopMode";
@@ -22,11 +23,12 @@ final class PlaybackStateRepository {
     private final SharedPreferences preferences;
     private String lastSavedQueueJson = "";
 
-    PlaybackStateRepository(Context context) {
-        preferences = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    public PlaybackStateManager(Context context) {
+        preferences = context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    State load() {
+    public State load() {
         return new State(
                 preferences.getString(URI, ""),
                 Math.max(0, preferences.getInt(POSITION, 0)),
@@ -39,7 +41,7 @@ final class PlaybackStateRepository {
                 queueUris(preferences.getString(QUEUE, "[]")));
     }
 
-    void save(Snapshot snapshot, boolean includeQueue) {
+    public void save(Snapshot snapshot, boolean includeQueue) {
         String queueJson = queueJson(snapshot.queueUris);
         SharedPreferences.Editor editor = preferences.edit()
                 .putString(URI, snapshot.uri)
@@ -57,21 +59,21 @@ final class PlaybackStateRepository {
         editor.apply();
     }
 
-    void clear() {
+    public void clear() {
         lastSavedQueueJson = "";
         preferences.edit().clear().apply();
     }
 
-    static final class State {
-        final String uri;
-        final int position;
-        final int duration;
-        final int index;
-        final int loopMode;
-        final boolean playing;
-        final boolean shuffle;
-        final long savedAt;
-        final ArrayList<String> queueUris;
+    public static final class State {
+        public final String uri;
+        public final int position;
+        public final int duration;
+        public final int index;
+        public final int loopMode;
+        public final boolean playing;
+        public final boolean shuffle;
+        public final long savedAt;
+        public final ArrayList<String> queueUris;
 
         State(String uri, int position, int duration, int index, int loopMode, boolean playing,
                 boolean shuffle, long savedAt, ArrayList<String> queueUris) {
@@ -87,7 +89,7 @@ final class PlaybackStateRepository {
         }
     }
 
-    static final class Snapshot {
+    public static final class Snapshot {
         final String uri;
         final int position;
         final int duration;
@@ -97,8 +99,8 @@ final class PlaybackStateRepository {
         final boolean shuffle;
         final ArrayList<String> queueUris;
 
-        Snapshot(String uri, int position, int duration, int index, int loopMode, boolean playing,
-                boolean shuffle, List<Track> queue) {
+        public Snapshot(String uri, int position, int duration, int index, int loopMode,
+                boolean playing, boolean shuffle, List<Track> queue) {
             this.uri = uri == null ? "" : uri;
             this.position = position;
             this.duration = duration;

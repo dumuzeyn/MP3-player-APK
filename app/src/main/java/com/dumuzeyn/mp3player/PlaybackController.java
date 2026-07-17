@@ -1,5 +1,7 @@
 package com.dumuzeyn.mp3player;
 
+import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
+
 import android.content.Intent;
 import android.os.Build;
 import java.util.ArrayList;
@@ -93,13 +95,13 @@ final class PlaybackController {
         int loopMode = PlayerService.lastLoopMode;
         boolean wasPlaying = PlayerService.lastPlaying;
         if (current == null) {
-            PlaybackStateRepository.State savedState = new PlaybackStateRepository(host).load();
+            PlaybackStateManager.State savedState = new PlaybackStateManager(host).load();
             current = restoreFromSavedResume(savedState);
             position = savedState.position;
             loopMode = savedState.loopMode;
             wasPlaying = savedState.playing;
         } else if (host.playbackQueue.isEmpty()) {
-            restoreQueueFromSavedState(new PlaybackStateRepository(host).load(), current);
+            restoreQueueFromSavedState(new PlaybackStateManager(host).load(), current);
         }
         if (current == null) {
             return false;
@@ -114,7 +116,7 @@ final class PlaybackController {
         return host.currentIndex >= 0;
     }
 
-    private Track restoreFromSavedResume(PlaybackStateRepository.State savedState) {
+    private Track restoreFromSavedResume(PlaybackStateManager.State savedState) {
         long savedAt = savedState.savedAt;
         if (host.resumeWindowMinutes > 0 && savedAt > 0 && System.currentTimeMillis() - savedAt > ((long) host.resumeWindowMinutes) * 60000L) {
             return null;
@@ -124,7 +126,7 @@ final class PlaybackController {
         return current;
     }
 
-    private void restoreQueueFromSavedState(PlaybackStateRepository.State savedState, Track fallback) {
+    private void restoreQueueFromSavedState(PlaybackStateManager.State savedState, Track fallback) {
         host.playbackQueue.clear();
         host.playbackQueue.addAll(PlaybackQueueResolver.restore(
                 host.tracks,
@@ -188,7 +190,7 @@ final class PlaybackController {
         PlayerService.lastDuration = 0;
         PlayerService.lastPosition = 0;
         PlayerService.lastUri = "";
-        new PlaybackStateRepository(host).clear();
+        new PlaybackStateManager(host).clear();
         Intent intent = new Intent(host, (Class<?>) PlayerService.class);
         intent.setAction(PlayerService.ACTION_STOP);
         startService(intent);
