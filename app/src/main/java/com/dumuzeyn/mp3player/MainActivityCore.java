@@ -19,6 +19,7 @@ import android.widget.TextView;
 import com.dumuzeyn.mp3player.library.SongDiagnostics;
 import com.dumuzeyn.mp3player.ui.permissions.NotificationPermissionController;
 import com.dumuzeyn.mp3player.ui.player.PlaybackTimeFormatter;
+import com.dumuzeyn.mp3player.ui.layout.ResponsiveLayoutController;
 import java.util.ArrayList;
 
 class MainActivityCore extends AppState {
@@ -84,6 +85,8 @@ class MainActivityCore extends AppState {
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
     private final UiPreferencesStore uiPreferencesStore = new UiPreferencesStore(this);
+    final ResponsiveLayoutController responsiveLayoutController =
+            new ResponsiveLayoutController(this);
     Button sourcePlayButton;
 
     interface InputDone {
@@ -253,8 +256,13 @@ class MainActivityCore extends AppState {
         }
         this.page = new LinearLayout(this);
         this.page.setOrientation(LinearLayout.VERTICAL);
-        this.page.setPadding(dp(8), dp(14), dp(8), 0);
-        this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
+        int pagePadding = this.responsiveLayoutController.pageHorizontalPadding();
+        this.page.setPadding(
+                pagePadding,
+                this.responsiveLayoutController.pageTopPadding(),
+                pagePadding,
+                0);
+        this.root.addView(this.page, this.responsiveLayoutController.mainPageParams());
         buildHeader();
         this.tabsController.buildTabs();
         this.contentHost = new FrameLayout(this);
@@ -763,13 +771,11 @@ class MainActivityCore extends AppState {
     }
 
     FrameLayout.LayoutParams centerParams(int i, int i2) {
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(i, i2, 17);
-        layoutParams.setMargins(dp(14), dp(14), dp(14), dp(14));
-        return layoutParams;
+        return this.responsiveLayoutController.centeredPanelParams(i, i2);
     }
 
     FrameLayout.LayoutParams bottomParams() {
-        return new FrameLayout.LayoutParams(-1, (int) (getResources().getDisplayMetrics().heightPixels * 0.78f), 80);
+        return this.responsiveLayoutController.bottomPanelParams();
     }
 
     int dp(int i) {

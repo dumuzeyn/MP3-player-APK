@@ -1,23 +1,23 @@
-# MP3 Player Voltune 2.4.3
+# MP3 Player Voltune 2.5
 
 ## Русский
 
-Локальный музыкальный плеер для Android с фоновым воспроизведением, плейлистами, очередью, темами, эквалайзером и таймером сна.
+Локальный музыкальный плеер для Android с автоматически адаптируемым интерфейсом телефона и планшета.
 
-- Приложение и APK теперь называются MP3 Player Voltune.
-- Настройки расположены в более понятном порядке.
-- Состояние анимаций и частиц отображается прямо в списке.
-- Все всплывающие панели закрываются свайпом влево или вправо.
-- Добавлена добровольная и безвозмездная поддержка автора через CloudTips.
-- При первом запуске 2.4.3 настройки возвращаются к исходным значениям без удаления песен, избранного и плейлистов.
+- Планшет определяется автоматически по размеру экрана, включать режим вручную не нужно.
+- Библиотека, вкладки, мини-плеер, большой плеер и всплывающие панели получают удобную ограниченную ширину на больших экранах.
+- Размер обложки большого плеера подстраивается под портретную и альбомную ориентацию планшета.
+- Выбранные песни при добавлении в избранное или плейлист больше не скрывают кнопки на карточке.
+- Фоновое воспроизведение разделено на отдельные компоненты движка, команд, состояния, таймера и восстановления после ошибок.
+- Релизный процесс проверяет версию из Gradle, зависимости и целостность Gradle Wrapper.
 
 ## English
 
-A local Android music player with background playback, playlists, queue management, themes, equalizer, and a sleep timer.
+A local Android music player with an interface that adapts automatically to phones and tablets.
 
-- The application and APK are now named MP3 Player Voltune.
-- Settings use a clearer order.
-- Animation and particle states are visible directly in the settings list.
-- Every modal panel can be dismissed with a left or right swipe.
-- Added optional voluntary support through CloudTips.
-- The first 2.4.3 launch restores default settings without deleting songs, favorites, or playlists.
+- Tablets are detected from screen size automatically; no manual mode is required.
+- The library, tabs, mini-player, full player, and modal panels use comfortable constrained widths on large screens.
+- Full-player artwork scales for tablet portrait and landscape dimensions.
+- Selected songs remain readable while adding them to favorites or playlists.
+- Background playback is separated into engine, command, state, timer, and error-recovery components.
+- The release pipeline validates the Gradle version, dependencies, and Gradle Wrapper integrity.

@@ -175,7 +175,7 @@ final class OverlayController {
         LinearLayout panel = host.panelCard();
         LinearLayout header = host.row();
         header.addView(host.text(title, 20, true), new LinearLayout.LayoutParams(0, host.dp(58), 1.0f));
-        Button complete = host.icon("✓");
+        Button complete = host.icon("✔");
         complete.setOnClickListener(view -> {
             host.overlayHost.removeView(shade);
             done.done(selected);
@@ -212,20 +212,27 @@ final class OverlayController {
             if (!normalized.isEmpty() && !host.matchesTrackSearch(track, normalized)) {
                 continue;
             }
+            boolean isSelected = selected.contains(track.uri);
+            int selectedSurface = host.dark ? host.purpleDark : host.purpleSoft;
+            int selectedContent = ThemeManager.readableOn(selectedSurface);
             LinearLayout row = host.row();
             row.setPadding(host.dp(10), host.dp(8), host.dp(10), host.dp(8));
-            host.setSurface(row, selected.contains(track.uri) ? host.fg : host.panel, false);
+            host.setSurface(row, isSelected ? selectedSurface : host.panel, false);
             ImageView cover = host.coverView();
-            int fallback = selected.contains(track.uri) ? host.bg : Color.rgb(host.dark ? 28 : 235, host.dark ? 28 : 235, host.dark ? 28 : 235);
+            int fallback = isSelected
+                    ? selectedSurface
+                    : Color.rgb(host.dark ? 28 : 235, host.dark ? 28 : 235,
+                            host.dark ? 28 : 235);
             host.loadCover(cover, track, fallback);
             row.addView(cover, host.square(58));
             TextView title = host.text(track.title, 17, true);
             title.setSingleLine(true);
             title.setEllipsize(TextUtils.TruncateAt.END);
-            title.setTextColor(selected.contains(track.uri) ? host.bg : host.fg);
+            title.setTextColor(isSelected ? selectedContent : host.fg);
             title.setPadding(host.dp(12), 0, host.dp(8), 0);
             row.addView(title, new LinearLayout.LayoutParams(0, host.dp(70), 1.0f));
-            Button mark = host.icon(selected.contains(track.uri) ? "✓" : "+");
+            Button mark = host.icon(isSelected ? "✔" : "+");
+            host.applyPlainIconStyle(mark, isSelected ? selectedContent : host.purple);
             mark.setOnClickListener(view -> {
                 if (!selected.add(track.uri)) {
                     selected.remove(track.uri);
@@ -234,6 +241,7 @@ final class OverlayController {
             });
             row.addView(mark, host.square(48));
             Button play = host.icon(host.isCurrent(track) && host.playing ? "Ⅱ" : "▶");
+            host.applyPlainIconStyle(play, isSelected ? selectedContent : host.purple);
             play.setOnClickListener(view -> {
                 if (host.isCurrent(track)) {
                     host.toggleCurrent();

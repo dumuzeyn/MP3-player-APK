@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5 - Adaptive tablet interface
+
+- Detect tablets automatically at 600 dp smallest width without adding a separate setting.
+- Constrain and center the main library, mini-player, dialogs, bottom panels, and full-player content on large screens.
+- Scale full-player artwork for tablet portrait and landscape dimensions while preserving phone sizing.
+- Keep selected song cards and their action buttons readable when adding tracks to favorites or playlists.
+- Split playback responsibilities into focused engine, command, state, timer, and error-recovery components.
+- Add dependency review, Dependabot, contribution guidelines, security reporting, and dynamic release metadata.
+
 ## 2.4.3 - Voltune identity and settings cleanup
 
 - Rename the application and distributed APK to MP3 Player Voltune.

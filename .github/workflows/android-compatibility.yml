@@ -72,3 +72,60 @@ jobs:
             app/build/reports/androidTests/connected/**
             app/build/outputs/androidTest-results/connected/**
             build/reports/emulator/**
+
+  tablet:
+    name: Tablet layout (Pixel C, API 35)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant script permissions
+        run: chmod +x ./gradlew ./.github/scripts/run-instrumentation-tests.sh
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Verify adaptive tablet layout
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_VERSION: tablet
+          API_LEVEL: 35
+          REQUIRE_TABLET: true
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+            -no-boot-anim -camera-back none
+          script: ./.github/scripts/run-instrumentation-tests.sh
+
+      - name: Upload tablet reports and screenshot
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: tablet-pixel-c-api-35-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/connected/**
+            build/reports/emulator/android-tablet-api-35/**

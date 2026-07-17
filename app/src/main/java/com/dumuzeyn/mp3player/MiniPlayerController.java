@@ -53,9 +53,7 @@ final class MiniPlayerController {
         });
         host.miniPlayer.addView(host.miniButton, host.square(52));
 
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(-1, host.dp(74), 80);
-        layoutParams.setMargins(host.dp(10), 0, host.dp(10), host.dp(10));
-        host.root.addView(host.miniPlayer, layoutParams);
+        host.root.addView(host.miniPlayer, host.responsiveLayoutController.miniPlayerParams());
     }
 
     void updateState() {

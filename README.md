@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4.3-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -23,6 +23,7 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Светлая, тёмная и пользовательская темы, настраиваемые градиенты и прозрачность карточек.
 - Скруглённые или вращающиеся круглые обложки, анимации и настраиваемые частицы.
 - Русский и английский интерфейс.
+- Автоматически адаптированный интерфейс для планшетов без отдельной настройки.
 - Локальные отчёты о сбоях без URI и путей к музыкальным файлам.
 
 Все возможности приложения бесплатны. Приложение не содержит подписки и платных функций.
@@ -108,7 +109,7 @@ flowchart TD
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.4.3-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player-voltune">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -129,6 +130,7 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Light, dark, and custom themes with configurable gradients and card opacity.
 - Rounded or rotating circular artwork, animations, and configurable particles.
 - Russian and English interface.
+- Automatic tablet layout with no separate setting required.
 - Local crash reports that exclude music URIs and storage paths.
 
 All application features are free. There are no subscriptions or paid features.
