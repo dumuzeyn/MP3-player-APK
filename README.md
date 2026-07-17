@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.4.3-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -23,6 +23,7 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Светлая, тёмная и пользовательская темы, настраиваемые градиенты и прозрачность карточек.
 - Скруглённые или вращающиеся круглые обложки, анимации и настраиваемые частицы.
 - Русский и английский интерфейс.
+- Автоматически адаптированный интерфейс для планшетов без отдельной настройки.
 - Локальные отчёты о сбоях без URI и путей к музыкальным файлам.
 
 Все возможности приложения бесплатны. Приложение не содержит подписки и платных функций.
@@ -39,25 +40,32 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 
 ```mermaid
 flowchart TD
-    ACT["MainActivityCore<br/>жизненный цикл и общее состояние"]
-    UI["MainRenderer и MenuRenderer<br/>экраны библиотеки"]
-    SONGS["SongsRenderer<br/>списки песен и восстановление"]
-    PLAYER["PlayerUiController<br/>MiniPlayerController<br/>FullPlayerController"]
-    SERVICE["PlayerService<br/>фоновое воспроизведение"]
-    AUDIO["PlaybackQueueManager<br/>AudioFocusController<br/>AudioEffectsManager"]
+    ACT["MainActivityCore<br/>координатор жизненного цикла"]
+    UI["MainRenderer и контроллеры плеера<br/>экраны, мини-плеер, большой плеер"]
+    SONGS["SongsRenderer<br/>списки и восстановление библиотеки"]
+    SERVICE["PlayerService<br/>Android foreground service"]
+    COMMANDS["PlaybackCommandHandler<br/>команды воспроизведения"]
+    ENGINE["PlaybackEngine<br/>MediaPlayer и источники content URI"]
+    STATE["data/playback/PlaybackStateManager<br/>очередь, позиция и режим повтора"]
+    RECOVERY["PlaybackErrorRecovery и PlaybackSleepTimer<br/>ошибки и таймер сна"]
     DATA["LibraryDatabase и TrackStore<br/>песни, избранное, плейлисты"]
     STYLE["ThemeController и UiFactory<br/>темы, диалоги, элементы интерфейса"]
+    PREFS["UiPreferencesStore<br/>настройки интерфейса"]
 
     ACT --> UI
     ACT --> SONGS
-    ACT --> PLAYER
+    ACT --> PREFS
     SONGS --> DATA
-    PLAYER --> SERVICE
-    SERVICE --> AUDIO
-    SERVICE --> DATA
+    UI --> SERVICE
+    SERVICE --> COMMANDS
+    SERVICE --> ENGINE
+    SERVICE --> STATE
+    SERVICE --> RECOVERY
+    STATE --> DATA
     UI --> STYLE
-    PLAYER --> STYLE
 ```
+
+Новые независимые части размещаются по назначению: состояние — в `data/playback`, низкоуровневое воспроизведение — в `playback/service`, UI-утилиты — в `ui`, диагностика библиотеки — в `library`. Остальные классы переносятся постепенно, чтобы не ломать рабочие сценарии.
 
 Основные точки расширения:
 
@@ -67,6 +75,7 @@ flowchart TD
 - Изменение карточек песен: `SongsRenderer`, `UiFactory` и `ButtonFactory`.
 - Изменение большого или мини-плеера: `FullPlayerController` или `MiniPlayerController`.
 - Работа с библиотекой: `TrackStore`, `LibraryDatabase` и `PlaylistController`.
+- Состояние фонового воспроизведения: `PlaybackStateManager`; подготовка аудио: `PlaybackEngine`.
 
 ## Сборка
 
@@ -77,6 +86,12 @@ flowchart TD
 ```
 
 Официальная release-сборка подписывается закрытым ключом через GitHub Actions. Готовый APK публикуется только в [GitHub Releases](../../releases/latest).
+
+Правила участия описаны в [CONTRIBUTING.md](CONTRIBUTING.md), порядок сообщения об уязвимостях — в [SECURITY.md](SECURITY.md).
+
+## Лицензия
+
+Исходный код доступен для личного, образовательного и некоммерческого использования. Коммерческое применение требует разрешения автора. Это source-available проект с некоммерческой лицензией, а не лицензия OSI Open Source.
 
 ## Автор
 
@@ -94,7 +109,7 @@ flowchart TD
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.4.3-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player-voltune">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -115,6 +130,7 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Light, dark, and custom themes with configurable gradients and card opacity.
 - Rounded or rotating circular artwork, animations, and configurable particles.
 - Russian and English interface.
+- Automatic tablet layout with no separate setting required.
 - Local crash reports that exclude music URIs and storage paths.
 
 All application features are free. There are no subscriptions or paid features.
@@ -131,25 +147,32 @@ All application features are free. There are no subscriptions or paid features.
 
 ```mermaid
 flowchart TD
-    ACT["MainActivityCore<br/>lifecycle and shared state"]
-    UI["MainRenderer and MenuRenderer<br/>library screens"]
-    SONGS["SongsRenderer<br/>song lists and restoration"]
-    PLAYER["PlayerUiController<br/>MiniPlayerController<br/>FullPlayerController"]
-    SERVICE["PlayerService<br/>background playback"]
-    AUDIO["PlaybackQueueManager<br/>AudioFocusController<br/>AudioEffectsManager"]
+    ACT["MainActivityCore<br/>lifecycle coordinator"]
+    UI["MainRenderer and player controllers<br/>screens, mini-player, full player"]
+    SONGS["SongsRenderer<br/>library lists and restoration"]
+    SERVICE["PlayerService<br/>Android foreground service"]
+    COMMANDS["PlaybackCommandHandler<br/>playback commands"]
+    ENGINE["PlaybackEngine<br/>MediaPlayer and content URI sources"]
+    STATE["data/playback/PlaybackStateManager<br/>queue, position, and repeat mode"]
+    RECOVERY["PlaybackErrorRecovery and PlaybackSleepTimer<br/>errors and sleep timer"]
     DATA["LibraryDatabase and TrackStore<br/>songs, favorites, playlists"]
     STYLE["ThemeController and UiFactory<br/>themes, dialogs, UI elements"]
+    PREFS["UiPreferencesStore<br/>UI preferences"]
 
     ACT --> UI
     ACT --> SONGS
-    ACT --> PLAYER
+    ACT --> PREFS
     SONGS --> DATA
-    PLAYER --> SERVICE
-    SERVICE --> AUDIO
-    SERVICE --> DATA
+    UI --> SERVICE
+    SERVICE --> COMMANDS
+    SERVICE --> ENGINE
+    SERVICE --> STATE
+    SERVICE --> RECOVERY
+    STATE --> DATA
     UI --> STYLE
-    PLAYER --> STYLE
 ```
+
+New independent components are grouped by responsibility: state in `data/playback`, low-level playback in `playback/service`, UI utilities in `ui`, and library diagnostics in `library`. Remaining classes are moved incrementally to protect existing user workflows.
 
 Common extension points:
 
@@ -159,6 +182,7 @@ Common extension points:
 - Song card changes: use `SongsRenderer`, `UiFactory`, and `ButtonFactory`.
 - Full-player or mini-player changes: use `FullPlayerController` or `MiniPlayerController`.
 - Library persistence: use `TrackStore`, `LibraryDatabase`, and `PlaylistController`.
+- Background playback state: use `PlaybackStateManager`; audio preparation: use `PlaybackEngine`.
 
 ## Build
 
@@ -169,6 +193,12 @@ JDK 17 and the Android SDK are required:
 ```
 
 Official release builds are signed with a private key through GitHub Actions. The APK is published only in [GitHub Releases](../../releases/latest).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before contributing and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+
+## License
+
+The source code is available for personal, educational, and non-commercial use. Commercial use requires the author's permission. This is a source-available project under a non-commercial license, not an OSI Open Source license.
 
 ## Author
 

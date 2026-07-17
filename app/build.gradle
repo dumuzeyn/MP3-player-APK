@@ -30,8 +30,8 @@ android {
         applicationId "com.dumuzeyn.mp3player"
         minSdk 23
         targetSdk 35
-        versionCode 27
-        versionName "2.4.3"
+        versionCode 28
+        versionName "2.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -77,4 +77,10 @@ dependencies {
     androidTestImplementation "androidx.test:core:1.6.1"
     androidTestImplementation "androidx.test:runner:1.6.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"
+}
+
+tasks.register("printVersionName") {
+    doLast {
+        println android.defaultConfig.versionName
+    }
 }

@@ -1,14 +1,10 @@
 package com.dumuzeyn.mp3player;
 
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -20,44 +16,15 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import com.dumuzeyn.mp3player.library.SongDiagnostics;
+import com.dumuzeyn.mp3player.ui.permissions.NotificationPermissionController;
+import com.dumuzeyn.mp3player.ui.player.PlaybackTimeFormatter;
+import com.dumuzeyn.mp3player.ui.layout.ResponsiveLayoutController;
 import java.util.ArrayList;
-import java.util.Locale;
 
 class MainActivityCore extends AppState {
-    private static final String CUSTOM_TIMER = "customTimer";
-    private static final String ANIMATIONS = "animations";
-    private static final String DEBUG_TAG = "VoltuneDebug";
-    private static final String LANGUAGE = "language";
     static final int COVER_FULL_SIZE = 1024;
-    private static final String PREFS = "mp3_player_ui";
-    private static final String RESUME_WINDOW_MINUTES = "resumeWindowMinutes";
-    private static final String PARTICLE_FREQUENCY = "particleFrequency";
-    private static final String PARTICLE_SIZE = "particleSize";
-    private static final String PARTICLE_LIFETIME = "particleLifetime";
-    private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
-    private static final String CARD_OPACITY = "cardOpacity";
-    private static final String SONG_CARD_OPACITY = "songCardOpacity";
-    private static final String FAVORITE_CARD_OPACITY = "favoriteCardOpacity";
-    private static final String PLAYLIST_CARD_OPACITY = "playlistCardOpacity";
-    private static final String GENRE_CARD_OPACITY = "genreCardOpacity";
-    private static final String ARTIST_CARD_OPACITY = "artistCardOpacity";
-    private static final String ALBUM_CARD_OPACITY = "albumCardOpacity";
-    private static final String SETTINGS_CARD_OPACITY = "settingsCardOpacity";
-    private static final String MINI_PLAYER_CARD_OPACITY = "miniPlayerCardOpacity";
-    private static final String HEADER_CARD_OPACITY = "headerCardOpacity";
-    private static final String DIALOG_CARD_OPACITY = "dialogCardOpacity";
-    private static final String PARTICLES_ENABLED = "particlesEnabled";
-    private static final String PLAYER_GRADIENT = "playerGradient";
-    private static final String CIRCULAR_COVERS = "circularCovers";
-    private static final String MAIN_GRADIENT = "mainGradient";
-    private static final String MAIN_GRADIENT_START = "mainGradientStart";
-    private static final String MAIN_GRADIENT_END = "mainGradientEnd";
-    private static final String PLAYER_GRADIENT_START = "playerGradientStart";
-    private static final String PLAYER_GRADIENT_END = "playerGradientEnd";
     static final int TAB_CYCLES = 5;
-    private static final String THEME = "theme";
-    private static final String CUSTOM_BG = "customBg";
-    private static final String CUSTOM_FG = "customFg";
     int bg;
     int fg;
     int line;
@@ -80,7 +47,6 @@ class MainActivityCore extends AppState {
     FrameLayout overlayHost;
     LinearLayout page;
     int panel;
-    private SharedPreferences prefs;
     FrameLayout root;
     LinearLayout tabRow;
     String[] tabs;
@@ -118,6 +84,9 @@ class MainActivityCore extends AppState {
     final LibraryListController libraryListController = new LibraryListController(this);
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
+    private final UiPreferencesStore uiPreferencesStore = new UiPreferencesStore(this);
+    final ResponsiveLayoutController responsiveLayoutController =
+            new ResponsiveLayoutController(this);
     Button sourcePlayButton;
 
     interface InputDone {
@@ -128,43 +97,9 @@ class MainActivityCore extends AppState {
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         SettingsDefaults.resetForVersion243(this);
-        this.prefs = getSharedPreferences(PREFS, 0);
-        this.themeController.load(this.prefs);
-        this.animations = this.prefs.getBoolean(ANIMATIONS, true);
-        this.language = this.prefs.getString(LANGUAGE, "en");
-        if (!"en".equals(this.language) && !"ru".equals(this.language)) {
-            this.language = "en";
-        }
-        this.customTimerMinutes = this.prefs.getInt(CUSTOM_TIMER, 10);
+        this.uiPreferencesStore.load();
         this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
-        this.resumeWindowMinutes = Math.max(0, this.prefs.getInt(RESUME_WINDOW_MINUTES, 120));
-        this.particleFrequency = clamp(this.prefs.getInt(PARTICLE_FREQUENCY, 45), 10, 100);
-        this.particleSize = clamp(this.prefs.getInt(PARTICLE_SIZE, 100), 60, 150);
-        this.particleLifetime = clamp(this.prefs.getInt(PARTICLE_LIFETIME, 100), 50, 180);
-        this.playlistTickerSpeed = clamp(this.prefs.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
-        this.cardOpacity = clamp(this.prefs.getInt(CARD_OPACITY, 82), 35, 100);
-        this.songCardOpacity = clamp(this.prefs.getInt(SONG_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.favoriteCardOpacity = clamp(this.prefs.getInt(FAVORITE_CARD_OPACITY, this.songCardOpacity), 35, 100);
-        this.playlistCardOpacity = clamp(this.prefs.getInt(PLAYLIST_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.genreCardOpacity = clamp(this.prefs.getInt(GENRE_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.artistCardOpacity = clamp(this.prefs.getInt(ARTIST_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.albumCardOpacity = clamp(this.prefs.getInt(ALBUM_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.settingsCardOpacity = clamp(this.prefs.getInt(SETTINGS_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.miniPlayerCardOpacity = clamp(this.prefs.getInt(MINI_PLAYER_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.headerCardOpacity = clamp(this.prefs.getInt(HEADER_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.dialogCardOpacity = clamp(this.prefs.getInt(DIALOG_CARD_OPACITY, this.cardOpacity), 35, 100);
-        this.particlesEnabled = this.prefs.getBoolean(PARTICLES_ENABLED, true);
-        this.gradientPlayerBackground = this.prefs.getBoolean(PLAYER_GRADIENT, true);
-        this.circularCovers = this.prefs.getBoolean(CIRCULAR_COVERS, false);
-        this.gradientMainBackground = this.prefs.getBoolean(MAIN_GRADIENT, false);
-        this.mainGradientStart = this.prefs.getInt(MAIN_GRADIENT_START, 0xff351b5d);
-        this.mainGradientEnd = this.prefs.getInt(MAIN_GRADIENT_END, 0xff3a3013);
-        this.playerGradientStart = this.prefs.getInt(PLAYER_GRADIENT_START, 0xff351b5d);
-        this.playerGradientEnd = this.prefs.getInt(PLAYER_GRADIENT_END, 0xff3a3013);
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 33);
-        }
+        NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
         this.songsRenderer.restoreRecentPlayback();
         this.themeController.applyPalette();
@@ -258,7 +193,7 @@ class MainActivityCore extends AppState {
     }
 
     void saveState() {
-        this.prefs.edit().putString(THEME, this.themeMode).putInt(CUSTOM_BG, this.customBg).putInt(CUSTOM_FG, this.customFg).putBoolean(ANIMATIONS, this.animations).putString(LANGUAGE, this.language).putInt(CUSTOM_TIMER, this.customTimerMinutes).putInt(RESUME_WINDOW_MINUTES, this.resumeWindowMinutes).putInt(PARTICLE_FREQUENCY, this.particleFrequency).putInt(PARTICLE_SIZE, this.particleSize).putInt(PARTICLE_LIFETIME, this.particleLifetime).putInt(PLAYLIST_TICKER_SPEED, this.playlistTickerSpeed).putInt(CARD_OPACITY, this.cardOpacity).putInt(SONG_CARD_OPACITY, this.songCardOpacity).putInt(FAVORITE_CARD_OPACITY, this.favoriteCardOpacity).putInt(PLAYLIST_CARD_OPACITY, this.playlistCardOpacity).putInt(GENRE_CARD_OPACITY, this.genreCardOpacity).putInt(ARTIST_CARD_OPACITY, this.artistCardOpacity).putInt(ALBUM_CARD_OPACITY, this.albumCardOpacity).putInt(SETTINGS_CARD_OPACITY, this.settingsCardOpacity).putInt(MINI_PLAYER_CARD_OPACITY, this.miniPlayerCardOpacity).putInt(HEADER_CARD_OPACITY, this.headerCardOpacity).putInt(DIALOG_CARD_OPACITY, this.dialogCardOpacity).putBoolean(PARTICLES_ENABLED, this.particlesEnabled).putBoolean(PLAYER_GRADIENT, this.gradientPlayerBackground).putBoolean(CIRCULAR_COVERS, this.circularCovers).putBoolean(MAIN_GRADIENT, this.gradientMainBackground).putInt(MAIN_GRADIENT_START, this.mainGradientStart).putInt(MAIN_GRADIENT_END, this.mainGradientEnd).putInt(PLAYER_GRADIENT_START, this.playerGradientStart).putInt(PLAYER_GRADIENT_END, this.playerGradientEnd).apply();
+        this.uiPreferencesStore.save();
         LibraryDatabase database = new LibraryDatabase(this);
         try {
             database.saveFavorites(this.favorites);
@@ -321,8 +256,13 @@ class MainActivityCore extends AppState {
         }
         this.page = new LinearLayout(this);
         this.page.setOrientation(LinearLayout.VERTICAL);
-        this.page.setPadding(dp(8), dp(14), dp(8), 0);
-        this.root.addView(this.page, new FrameLayout.LayoutParams(-1, -1));
+        int pagePadding = this.responsiveLayoutController.pageHorizontalPadding();
+        this.page.setPadding(
+                pagePadding,
+                this.responsiveLayoutController.pageTopPadding(),
+                pagePadding,
+                0);
+        this.root.addView(this.page, this.responsiveLayoutController.mainPageParams());
         buildHeader();
         this.tabsController.buildTabs();
         this.contentHost = new FrameLayout(this);
@@ -499,8 +439,7 @@ class MainActivityCore extends AppState {
     }
 
     String formatMs(int i) {
-        int iMax = Math.max(0, i / 1000);
-        return (iMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Integer.valueOf(iMax % 60));
+        return PlaybackTimeFormatter.formatMilliseconds(i);
     }
 
     String formatTrackDuration(Track track) {
@@ -516,8 +455,7 @@ class MainActivityCore extends AppState {
     }
 
     String formatSeconds(long j) {
-        long jMax = Math.max(0L, j);
-        return (jMax / 60) + ":" + String.format(Locale.ROOT, "%02d", Long.valueOf(jMax % 60));
+        return PlaybackTimeFormatter.formatSeconds(j);
     }
 
     void timerDialog() {
@@ -801,33 +739,14 @@ class MainActivityCore extends AppState {
     }
 
     void openSongDiagnostics() {
-        int available = 0;
-        int unavailable = 0;
-        int withDuration = 0;
-        int withoutDuration = 0;
-        StringBuilder broken = new StringBuilder();
-        for (Track track : this.tracks) {
-            boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
-            if (canOpen) {
-                available++;
-            } else {
-                unavailable++;
-                if (broken.length() < 500) {
-                    broken.append("\n- ").append(track.title);
-                }
-            }
-            if (track.durationMs > 0) {
-                withDuration++;
-            } else {
-                withoutDuration++;
-            }
-        }
-        String message = tr("Available: ", "Доступно: ") + available
-                + "\n" + tr("Unavailable: ", "Недоступно: ") + unavailable
-                + "\n" + tr("With duration: ", "С длительностью: ") + withDuration
-                + "\n" + tr("Without duration: ", "Без длительности: ") + withoutDuration
-                + (broken.length() > 0 ? "\n" + tr("Problem tracks:", "Проблемные треки:") + broken : "");
-        Log.i(DEBUG_TAG, "song_diagnostics available=" + available + " unavailable=" + unavailable + " withDuration=" + withDuration + " withoutDuration=" + withoutDuration);
+        SongDiagnostics.Result result = SongDiagnostics.inspect(this, this.tracks);
+        String message = tr("Available: ", "Доступно: ") + result.available
+                + "\n" + tr("Unavailable: ", "Недоступно: ") + result.unavailable
+                + "\n" + tr("With duration: ", "С длительностью: ") + result.withDuration
+                + "\n" + tr("Without duration: ", "Без длительности: ") + result.withoutDuration
+                + (result.problemTitles.isEmpty()
+                        ? ""
+                        : "\n" + tr("Problem tracks:", "Проблемные треки:") + result.problemTitles);
         showConfirmPanel(tr("Song check", "Проверка песен"), message, new Runnable() {
             @Override
             public void run() {
@@ -852,13 +771,11 @@ class MainActivityCore extends AppState {
     }
 
     FrameLayout.LayoutParams centerParams(int i, int i2) {
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(i, i2, 17);
-        layoutParams.setMargins(dp(14), dp(14), dp(14), dp(14));
-        return layoutParams;
+        return this.responsiveLayoutController.centeredPanelParams(i, i2);
     }
 
     FrameLayout.LayoutParams bottomParams() {
-        return new FrameLayout.LayoutParams(-1, (int) (getResources().getDisplayMetrics().heightPixels * 0.78f), 80);
+        return this.responsiveLayoutController.bottomPanelParams();
     }
 
     int dp(int i) {

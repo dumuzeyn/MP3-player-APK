@@ -26,4 +26,20 @@ adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 
-./gradlew connectedDebugAndroidTest --stacktrace
+GRADLE_ARGUMENTS=(connectedDebugAndroidTest --stacktrace)
+if [[ "${REQUIRE_TABLET:-false}" == "true" ]]; then
+  GRADLE_ARGUMENTS+=("-Pandroid.testInstrumentationRunnerArguments.requireTablet=true")
+fi
+
+./gradlew "${GRADLE_ARGUMENTS[@]}"
+TEST_STATUS=$?
+
+if [[ "${REQUIRE_TABLET:-false}" == "true" ]]; then
+  ./gradlew installDebug
+  adb shell monkey -p "$PACKAGE_NAME" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep 2
+  adb exec-out screencap -p > "$REPORT_DIR/tablet-layout.png"
+  adb shell dumpsys activity top > "$REPORT_DIR/tablet-activity.txt" 2>&1
+fi
+
+exit "$TEST_STATUS"

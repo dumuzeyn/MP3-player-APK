@@ -8,9 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: GitHub Release tag to create or update
+        description: Release tag matching Gradle version (for example MP3PlayerVoltune2.4.4)
         required: true
-        default: MP3PlayerVoltune2.4.3
 
 permissions:
   contents: read
@@ -29,6 +28,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@v6
+
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
@@ -40,6 +42,9 @@ jobs:
 
       - name: Compile instrumentation tests
         run: ./gradlew assembleDebugAndroidTest
+
+      - name: Build verification APK
+        run: ./gradlew assembleDebug
 
       - name: Upload verification reports
         if: always()
@@ -69,8 +74,23 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@v6
+
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
+
+      - name: Resolve and validate release metadata
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: |
+          VERSION_NAME="$(./gradlew -q :app:printVersionName | tail -n 1)"
+          EXPECTED_TAG="MP3PlayerVoltune${VERSION_NAME}"
+          if [ -z "$VERSION_NAME" ] || [ "$RELEASE_TAG" != "$EXPECTED_TAG" ]; then
+            echo "Release tag must be $EXPECTED_TAG, received: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          echo "RELEASE_NAME=MP3 Player Voltune $VERSION_NAME" >> "$GITHUB_ENV"
 
       - name: Restore release keystore
         env:
@@ -99,20 +119,11 @@ jobs:
           name: MP3-Player-Voltune-release
           path: MP3-Player-Voltune.apk
 
-      - name: Validate release tag
-        env:
-          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
-        run: |
-          if [ -z "$RELEASE_TAG" ]; then
-            echo "release_tag is missing" >&2
-            exit 1
-          fi
-
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
-          name: MP3 Player Voltune 2.4.3
+          name: ${{ env.RELEASE_NAME }}
           body_path: RELEASE_NOTES.md
           files: MP3-Player-Voltune.apk
           fail_on_unmatched_files: true

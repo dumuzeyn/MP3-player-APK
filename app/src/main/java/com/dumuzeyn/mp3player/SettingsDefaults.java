@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
 
 /** Applies the requested 2.4.3 settings reset once without touching the SQLite library. */
 final class SettingsDefaults {
@@ -25,7 +26,7 @@ final class SettingsDefaults {
         clear(context, "mp3_player_ui");
         clear(context, UninterruptedPlaybackController.PREFS);
         clear(context, EqualizerController.PREFS);
-        clear(context, PlaybackStateRepository.PREFS);
+        clear(context, PlaybackStateManager.PREFS);
         clear(context, "player_sleep_timer");
         resetLauncherAlias(context);
         migrations.edit().putBoolean(RESET_2_4_3, true).commit();

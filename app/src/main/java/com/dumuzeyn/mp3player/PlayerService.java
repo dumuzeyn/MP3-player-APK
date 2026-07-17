@@ -4,16 +4,18 @@ import android.app.Notification;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.AssetFileDescriptor;
-import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.util.Log;
+import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
+import com.dumuzeyn.mp3player.playback.service.PlaybackCommandHandler;
+import com.dumuzeyn.mp3player.playback.service.PlaybackEngine;
+import com.dumuzeyn.mp3player.playback.service.PlaybackErrorRecovery;
+import com.dumuzeyn.mp3player.playback.service.PlaybackSleepTimer;
 import java.util.ArrayList;
 
 public class PlayerService extends Service {
@@ -37,8 +39,6 @@ public class PlayerService extends Service {
     public static final String EXTRA_TIMER_MS = "timerMs";
     private static final String TAG = "VoltuneService";
     private static final String DEBUG_TAG = "VoltuneDebug";
-    private static final String TIMER_PREFS = "player_sleep_timer";
-    private static final String TIMER_ENDS_AT = "endsAt";
     private static final int NOTIFICATION_ID = 7;
     private static PlayerService instance;
 
@@ -50,6 +50,7 @@ public class PlayerService extends Service {
     public static String lastUri = "";
 
     private final PlaybackQueueManager queueManager = new PlaybackQueueManager();
+    private final PlaybackCommandHandler commandHandler = new PlaybackCommandHandler();
     private MediaPlayer player;
     private AudioEffectsManager audioEffectsManager;
     private AudioFocusController audioFocusController;
@@ -58,31 +59,16 @@ public class PlayerService extends Service {
     private boolean playWhenPrepared = true;
     private boolean waitingForAudioFocus = false;
     private long lastResumePositionSavedAt = 0L;
-    private PlaybackStateRepository playbackStateRepository;
+    private PlaybackStateManager playbackStateManager;
     private int currentIndex = -1;
     private boolean oneShot = false;
     private boolean shuffle = false;
     private int loopMode = 0;
     private boolean pausedByUser = false;
     private boolean pausedForInterruption = false;
-    private int loopOneErrorRetries = 0;
-    private int consecutivePlaybackErrors = 0;
+    private final PlaybackErrorRecovery errorRecovery = new PlaybackErrorRecovery();
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
-    private long sleepTimerEndsAt = 0L;
-    private final Runnable sleepTimerStop = new Runnable() {
-        @Override
-        public void run() {
-            if (sleepTimerEndsAt <= 0L || System.currentTimeMillis() < sleepTimerEndsAt) {
-                scheduleSleepTimer();
-                return;
-            }
-            Log.i(DEBUG_TAG, "sleep_timer_expired");
-            sleepTimerEndsAt = 0L;
-            persistSleepTimer();
-            stopPlayback(true);
-            stopSelf();
-        }
-    };
+    private PlaybackSleepTimer sleepTimer;
     private final Runnable audioFocusRetry = new Runnable() {
         @Override
         public void run() {
@@ -125,11 +111,15 @@ public class PlayerService extends Service {
         instance = this;
         this.audioEffectsManager = new AudioEffectsManager(this);
         this.audioFocusController = new AudioFocusController(this, new AudioFocusCallback());
-        this.playbackStateRepository = new PlaybackStateRepository(this);
+        this.playbackStateManager = new PlaybackStateManager(this);
+        this.sleepTimer = new PlaybackSleepTimer(this, () -> {
+            stopPlayback(true);
+            stopSelf();
+        });
         this.notificationController = new MediaNotificationController(
                 this, new SessionCallback(), this::onNotificationCoverReady);
         this.queueManager.replace(TrackStore.load(this));
-        restoreSleepTimer();
+        this.sleepTimer.restore();
         this.timerHandler.postDelayed(this.playbackWatchdog, 2500L);
         Log.i(TAG, "service_created");
     }
@@ -137,111 +127,124 @@ public class PlayerService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIFICATION_ID, currentNotification());
-        if (intent == null) {
-            restorePlaybackAfterProcessDeath();
-            return START_STICKY;
-        }
-        String action = intent.getAction();
-        if (ACTION_TIMER_START.equals(action)) {
-            startSleepTimer(intent.getLongExtra(EXTRA_TIMER_MS, 0L));
-            return START_STICKY;
-        }
-        if (ACTION_TIMER_CANCEL.equals(action)) {
-            cancelSleepTimer();
-            if (this.player == null) {
-                stopForeground(true);
-                stopSelf();
-            }
-            return START_STICKY;
-        }
-        if (ACTION_PLAY_INDEX.equals(action)) {
-            this.playWhenPrepared = true;
-            this.waitingForAudioFocus = false;
-            this.pausedForInterruption = false;
-            this.oneShot = intent.getBooleanExtra(EXTRA_ONE_SHOT, false);
-            this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, false);
-            this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
-            lastLoopMode = this.loopMode;
-            this.pausedByUser = false;
-            this.audioFocusController.resetInterruptionState();
-            saveResumeState(true, true);
-            playIndex(intent.getIntExtra(EXTRA_INDEX, 0), intent.getStringArrayListExtra(EXTRA_QUEUE_URIS), intent.getIntExtra(EXTRA_POSITION, 0), 0);
-            return START_STICKY;
-        }
-        if (ACTION_TOGGLE.equals(action)) {
-            if (this.player == null || this.currentIndex < 0 || this.queueManager.isEmpty()) {
-                prepareToggleQueue(intent);
-            }
-            toggle();
-            return START_STICKY;
-        }
-        if (ACTION_NEXT.equals(action)) {
-            this.playWhenPrepared = true;
-            this.pausedForInterruption = false;
-            this.oneShot = false;
-            this.pausedByUser = false;
-            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_NEXT, 0);
-            return START_STICKY;
-        }
-        if (ACTION_PREV.equals(action)) {
-            this.playWhenPrepared = true;
-            this.pausedForInterruption = false;
-            this.oneShot = false;
-            this.pausedByUser = false;
-            advanceQueue(PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS, 0);
-            return START_STICKY;
-        }
-        if (ACTION_SEEK.equals(action)) {
-            seekTo(intent.getIntExtra(EXTRA_POSITION, 0));
-            return START_STICKY;
-        }
-        if (ACTION_LOOP.equals(action)) {
-            this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, 0);
-            if (this.loopMode != 0) {
-                this.oneShot = false;
-            }
-            lastLoopMode = this.loopMode;
-            saveResumeState(true, true);
-            logPlaybackState("loop_changed");
-            startForeground(NOTIFICATION_ID, currentNotification());
-            return START_STICKY;
-        }
-        if (ACTION_AUDIO_EFFECTS.equals(action)) {
-            applyAudioEffects(this.player);
-            if (this.player == null) {
-                stopForeground(true);
-                stopSelf();
-            } else {
-                startForeground(NOTIFICATION_ID, currentNotification());
-            }
-            return START_STICKY;
-        }
-        if (ACTION_UPDATE_QUEUE.equals(action)) {
-            String playingUri = currentUri();
-            rebuildQueue(intent.getStringArrayListExtra(EXTRA_QUEUE_URIS));
-            if (this.queueManager.isEmpty()) {
+        handleCommand(this.commandHandler.read(intent));
+        return START_STICKY;
+    }
+
+    private void handleCommand(PlaybackCommandHandler.Command command) {
+        switch (command.type) {
+            case RESTORE:
+                restorePlaybackAfterProcessDeath();
+                break;
+            case TIMER_START:
+                this.sleepTimer.start(command.timerMs);
+                break;
+            case TIMER_CANCEL:
+                this.sleepTimer.cancel();
+                stopIfIdle();
+                break;
+            case PLAY_INDEX:
+                startQueueCommand(command);
+                break;
+            case TOGGLE:
+                if (this.player == null || this.currentIndex < 0 || this.queueManager.isEmpty()) {
+                    prepareToggleQueue(command);
+                }
+                toggle();
+                break;
+            case NEXT:
+                startManualTransition(PlaybackQueueNavigator.Reason.MANUAL_NEXT);
+                break;
+            case PREVIOUS:
+                startManualTransition(PlaybackQueueNavigator.Reason.MANUAL_PREVIOUS);
+                break;
+            case SEEK:
+                seekTo(command.position);
+                break;
+            case LOOP:
+                updateLoopMode(command.loopMode == Integer.MIN_VALUE ? 0 : command.loopMode);
+                break;
+            case AUDIO_EFFECTS:
+                applyAudioEffects(this.player);
+                if (this.player == null) {
+                    stopIfIdle();
+                } else {
+                    startForeground(NOTIFICATION_ID, currentNotification());
+                }
+                break;
+            case UPDATE_QUEUE:
+                updateQueue(command.queueUris);
+                break;
+            case STOP:
+                Log.i(TAG, "explicit_stop");
                 stopPlayback(true);
                 stopSelf();
-                return START_STICKY;
-            }
-            int updatedIndex = this.queueManager.indexOfUri(playingUri);
-            if (updatedIndex >= 0) {
-                this.currentIndex = updatedIndex;
-                saveResumeState(true, true);
-            } else if (this.player != null) {
-                int replacementIndex = normalizeIndex(this.currentIndex);
-                this.playWhenPrepared = true;
-                playIndex(replacementIndex, null, 0, 0);
-            }
-            return START_STICKY;
+                break;
+            case UNKNOWN:
+                Log.w(TAG, "unknown_command");
+                break;
         }
-        if (ACTION_STOP.equals(action)) {
-            Log.i(TAG, "explicit_stop");
+    }
+
+    private void startQueueCommand(PlaybackCommandHandler.Command command) {
+        this.playWhenPrepared = true;
+        this.waitingForAudioFocus = false;
+        this.pausedForInterruption = false;
+        this.oneShot = command.oneShot;
+        this.shuffle = command.shuffle;
+        if (command.loopMode != Integer.MIN_VALUE) {
+            this.loopMode = command.loopMode;
+        }
+        lastLoopMode = this.loopMode;
+        this.pausedByUser = false;
+        this.audioFocusController.resetInterruptionState();
+        saveResumeState(true, true);
+        playIndex(command.index, command.queueUris, command.position, 0);
+    }
+
+    private void startManualTransition(PlaybackQueueNavigator.Reason reason) {
+        this.playWhenPrepared = true;
+        this.pausedForInterruption = false;
+        this.oneShot = false;
+        this.pausedByUser = false;
+        advanceQueue(reason, 0);
+    }
+
+    private void updateLoopMode(int mode) {
+        this.loopMode = mode;
+        if (this.loopMode != 0) {
+            this.oneShot = false;
+        }
+        lastLoopMode = this.loopMode;
+        saveResumeState(true, true);
+        logPlaybackState("loop_changed");
+        startForeground(NOTIFICATION_ID, currentNotification());
+    }
+
+    private void updateQueue(ArrayList<String> queueUris) {
+        String playingUri = currentUri();
+        rebuildQueue(queueUris);
+        if (this.queueManager.isEmpty()) {
             stopPlayback(true);
             stopSelf();
-            return START_STICKY;
+            return;
         }
-        return START_STICKY;
+        int updatedIndex = this.queueManager.indexOfUri(playingUri);
+        if (updatedIndex >= 0) {
+            this.currentIndex = updatedIndex;
+            saveResumeState(true, true);
+        } else if (this.player != null) {
+            int replacementIndex = normalizeIndex(this.currentIndex);
+            this.playWhenPrepared = true;
+            playIndex(replacementIndex, null, 0, 0);
+        }
+    }
+
+    private void stopIfIdle() {
+        if (this.player == null) {
+            stopForeground(true);
+            stopSelf();
+        }
     }
 
     @Override
@@ -269,8 +272,9 @@ public class PlayerService extends Service {
             return;
         }
         if (attempts >= this.queueManager.size()
-                || this.consecutivePlaybackErrors >= this.queueManager.size()) {
-            Log.e(DEBUG_TAG, "all_queue_items_failed errors=" + this.consecutivePlaybackErrors
+                || this.errorRecovery.exhausted(this.queueManager.size())) {
+            Log.e(DEBUG_TAG, "all_queue_items_failed errors="
+                    + this.errorRecovery.consecutiveErrors()
                     + " queue=" + this.queueManager.size());
             stopPlayback(false);
             stopSelf();
@@ -281,27 +285,25 @@ public class PlayerService extends Service {
         boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
         Log.i(DEBUG_TAG, "start_track index=" + this.currentIndex + " title=" + track.title + " uri=" + track.uri + " canOpen=" + canOpen + " attempt=" + attempts);
         if (!canOpen) {
-            this.consecutivePlaybackErrors++;
-            Log.e(DEBUG_TAG, "start_track_unavailable uri=" + track.uri + " errors=" + this.consecutivePlaybackErrors);
-            if (this.consecutivePlaybackErrors >= this.queueManager.size()) {
+            int errors = this.errorRecovery.recordError();
+            Log.e(DEBUG_TAG, "start_track_unavailable uri=" + track.uri + " errors=" + errors);
+            if (this.errorRecovery.exhausted(this.queueManager.size())) {
                 stopPlayback(false);
                 stopSelf();
             } else {
-                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
+                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, errors);
             }
             return;
         }
         releasePlayer();
         this.player = new MediaPlayer();
         try {
-            this.player.setAudioAttributes(new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build());
-            this.player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-            String dataSourceMode = setPlayerDataSource(this.player, track);
+            String dataSourceMode = PlaybackEngine.configure(this, this.player, track);
             Log.i(DEBUG_TAG, "data_source_ready mode=" + dataSourceMode + " uri=" + track.uri);
             this.player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    consecutivePlaybackErrors = 0;
+                    errorRecovery.resetConsecutiveErrors();
                     logPlaybackState("track_finished");
                     advanceQueue(PlaybackQueueNavigator.Reason.FINISHED, 0);
                 }
@@ -310,13 +312,15 @@ public class PlayerService extends Service {
                 @Override
                 public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
                     playerPreparing = false;
-                    consecutivePlaybackErrors++;
-                    Log.e(DEBUG_TAG, "media_error what=" + what + " extra=" + extra + " index=" + currentIndex + " uri=" + currentUri() + " errors=" + consecutivePlaybackErrors);
-                    if (consecutivePlaybackErrors >= queueManager.size()) {
+                    int errors = errorRecovery.recordError();
+                    Log.e(DEBUG_TAG, "media_error what=" + what + " extra=" + extra
+                            + " index=" + currentIndex + " uri=" + currentUri()
+                            + " errors=" + errors);
+                    if (errorRecovery.exhausted(queueManager.size())) {
                         stopPlayback(false);
                         stopSelf();
                     } else {
-                        advanceQueue(PlaybackQueueNavigator.Reason.ERROR, consecutivePlaybackErrors);
+                        advanceQueue(PlaybackQueueNavigator.Reason.ERROR, errors);
                     }
                     return true;
                 }
@@ -336,44 +340,13 @@ public class PlayerService extends Service {
             logPlaybackState("track_preparing");
         } catch (Exception e) {
             this.playerPreparing = false;
-            this.consecutivePlaybackErrors++;
+            int errors = this.errorRecovery.recordError();
             Log.e(DEBUG_TAG, "prepare_failed index=" + this.currentIndex + " uri=" + track.uri + " error=" + e.getMessage(), e);
-            if (this.consecutivePlaybackErrors >= this.queueManager.size()) {
+            if (this.errorRecovery.exhausted(this.queueManager.size())) {
                 stopPlayback(false);
                 stopSelf();
             } else {
-                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
-            }
-        }
-    }
-
-    private String setPlayerDataSource(MediaPlayer targetPlayer, Track track) throws Exception {
-        try {
-            targetPlayer.setDataSource(this, track.asUri());
-            return "context_uri";
-        } catch (Exception directError) {
-            Log.w(DEBUG_TAG, "set_data_source_direct_failed uri=" + track.uri + " error=" + directError.getMessage());
-        }
-        AssetFileDescriptor descriptor = null;
-        try {
-            descriptor = getContentResolver().openAssetFileDescriptor(track.asUri(), "r");
-            if (descriptor == null) {
-                throw new IllegalStateException("openAssetFileDescriptor returned null");
-            }
-            long declaredLength = descriptor.getDeclaredLength();
-            if (declaredLength >= 0) {
-                targetPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), declaredLength);
-                return "asset_fd_range";
-            } else {
-                targetPlayer.setDataSource(descriptor.getFileDescriptor());
-                return "asset_fd";
-            }
-        } finally {
-            if (descriptor != null) {
-                try {
-                    descriptor.close();
-                } catch (Exception ignored) {
-                }
+                advanceQueue(PlaybackQueueNavigator.Reason.ERROR, errors);
             }
         }
     }
@@ -384,7 +357,7 @@ public class PlayerService extends Service {
         }
         this.playerPreparing = false;
         try {
-            this.consecutivePlaybackErrors = 0;
+            this.errorRecovery.resetConsecutiveErrors();
             applyAudioEffects(preparedPlayer);
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
@@ -397,9 +370,9 @@ public class PlayerService extends Service {
             }
             attemptStartReadyPlayer(preparedPlayer);
         } catch (Exception e) {
-            this.consecutivePlaybackErrors++;
+            int errors = this.errorRecovery.recordError();
             Log.e(DEBUG_TAG, "start_prepared_failed index=" + this.currentIndex + " uri=" + currentUri() + " error=" + e.getMessage(), e);
-            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
+            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, errors);
         }
     }
 
@@ -421,7 +394,7 @@ public class PlayerService extends Service {
         try {
             preparedPlayer.start();
             this.audioFocusController.applyPlaybackVolume();
-            this.loopOneErrorRetries = 0;
+            this.errorRecovery.resetRepeatOneRetries();
             updateState();
             TrackStore.updateDuration(this, currentUri(), safeDuration());
             saveResumeState(true, true);
@@ -429,10 +402,10 @@ public class PlayerService extends Service {
             startForeground(NOTIFICATION_ID, currentNotification());
             logPlaybackState("track_started");
         } catch (RuntimeException error) {
-            this.consecutivePlaybackErrors++;
+            int errors = this.errorRecovery.recordError();
             Log.e(DEBUG_TAG, "start_ready_failed index=" + this.currentIndex
                     + " uri=" + currentUri() + " error=" + error.getMessage(), error);
-            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, this.consecutivePlaybackErrors);
+            advanceQueue(PlaybackQueueNavigator.Reason.ERROR, errors);
         }
     }
 
@@ -442,25 +415,29 @@ public class PlayerService extends Service {
                 + " oneShot=" + this.oneShot + " shuffle=" + this.shuffle);
     }
 
-    private void prepareToggleQueue(Intent intent) {
-        this.shuffle = intent.getBooleanExtra(EXTRA_SHUFFLE, this.shuffle);
-        this.loopMode = intent.getIntExtra(EXTRA_LOOP_MODE, this.loopMode);
+    private void prepareToggleQueue(PlaybackCommandHandler.Command command) {
+        if (command.hasShuffle) {
+            this.shuffle = command.shuffle;
+        }
+        if (command.loopMode != Integer.MIN_VALUE) {
+            this.loopMode = command.loopMode;
+        }
         lastLoopMode = this.loopMode;
-        ArrayList<String> queueUris = intent.getStringArrayListExtra(EXTRA_QUEUE_URIS);
+        ArrayList<String> queueUris = command.queueUris;
         if (queueUris != null && !queueUris.isEmpty()) {
             rebuildQueue(queueUris);
         } else if (this.queueManager.isEmpty()) {
             restoreQueueForToggle();
         }
-        if (intent.hasExtra(EXTRA_INDEX)) {
-            this.currentIndex = normalizeIndex(intent.getIntExtra(EXTRA_INDEX, this.currentIndex));
+        if (command.hasIndex) {
+            this.currentIndex = normalizeIndex(command.index);
         } else if (this.currentIndex < 0) {
-            this.currentIndex = normalizeIndex(this.playbackStateRepository.load().index);
+            this.currentIndex = normalizeIndex(this.playbackStateManager.load().index);
         }
     }
 
     private void restoreQueueForToggle() {
-        PlaybackStateRepository.State savedState = this.playbackStateRepository.load();
+        PlaybackStateManager.State savedState = this.playbackStateManager.load();
         ArrayList<String> uris = new ArrayList<>(savedState.queueUris);
         if (uris.isEmpty()) {
             String uri = savedState.uri;
@@ -479,8 +456,8 @@ public class PlayerService extends Service {
     private void advanceQueue(PlaybackQueueNavigator.Reason reason, int attempts) {
         PlaybackQueueNavigator.Decision decision = PlaybackQueueNavigator.decide(
                 this.queueManager.size(), this.currentIndex, this.loopMode, this.oneShot,
-                reason, this.loopOneErrorRetries);
-        this.loopOneErrorRetries = decision.loopOneErrorRetries;
+                reason, this.errorRecovery.repeatOneRetries());
+        this.errorRecovery.setRepeatOneRetries(decision.loopOneErrorRetries);
         if (decision.stop) {
             stopPlayback(false);
             stopSelf();
@@ -501,7 +478,7 @@ public class PlayerService extends Service {
         if (this.player != null) {
             return;
         }
-        PlaybackStateRepository.State savedState = this.playbackStateRepository.load();
+        PlaybackStateManager.State savedState = this.playbackStateManager.load();
         if (!savedState.playing) {
             return;
         }
@@ -629,7 +606,7 @@ public class PlayerService extends Service {
     private void stopPlayback(boolean explicit) {
         this.playWhenPrepared = false;
         this.waitingForAudioFocus = false;
-        cancelSleepTimer();
+        this.sleepTimer.cancel();
         releasePlayer();
         if (explicit) {
             this.currentIndex = -1;
@@ -637,7 +614,7 @@ public class PlayerService extends Service {
             lastUri = "";
             lastPosition = 0;
             lastDuration = 0;
-            this.playbackStateRepository.clear();
+            this.playbackStateManager.clear();
         } else {
             updateState();
             saveResumeState(true, true);
@@ -648,59 +625,11 @@ public class PlayerService extends Service {
         logPlaybackState(explicit ? "stop_explicit" : "stop_queue_end");
     }
 
-    private void startSleepTimer(long delayMs) {
-        long safeDelayMs = Math.max(1000L, delayMs);
-        this.sleepTimerEndsAt = System.currentTimeMillis() + safeDelayMs;
-        persistSleepTimer();
-        scheduleSleepTimer();
-        Log.i(DEBUG_TAG, "sleep_timer_started delayMs=" + safeDelayMs
-                + " endsAt=" + this.sleepTimerEndsAt);
-    }
-
-    private void restoreSleepTimer() {
-        this.sleepTimerEndsAt = getSharedPreferences(TIMER_PREFS, MODE_PRIVATE)
-                .getLong(TIMER_ENDS_AT, 0L);
-        if (this.sleepTimerEndsAt <= 0L) {
-            return;
-        }
-        if (this.sleepTimerEndsAt <= System.currentTimeMillis()) {
-            this.sleepTimerEndsAt = 0L;
-            persistSleepTimer();
-            return;
-        }
-        scheduleSleepTimer();
-        Log.i(DEBUG_TAG, "sleep_timer_restored endsAt=" + this.sleepTimerEndsAt);
-    }
-
-    private void scheduleSleepTimer() {
-        this.timerHandler.removeCallbacks(this.sleepTimerStop);
-        if (this.sleepTimerEndsAt <= 0L) {
-            return;
-        }
-        long remainingMs = this.sleepTimerEndsAt - System.currentTimeMillis();
-        this.timerHandler.postDelayed(this.sleepTimerStop, Math.max(1000L, remainingMs));
-    }
-
-    private void cancelSleepTimer() {
-        this.sleepTimerEndsAt = 0L;
-        this.timerHandler.removeCallbacks(this.sleepTimerStop);
-        persistSleepTimer();
-        Log.i(DEBUG_TAG, "sleep_timer_cancelled");
-    }
-
-    private void persistSleepTimer() {
-        getSharedPreferences(TIMER_PREFS, MODE_PRIVATE).edit()
-                .putLong(TIMER_ENDS_AT, this.sleepTimerEndsAt)
-                .commit();
-    }
-
     static long getSleepTimerEndsAt(Context context) {
         if (instance != null) {
-            return instance.sleepTimerEndsAt;
+            return instance.sleepTimer.getEndsAt();
         }
-        return context.getApplicationContext()
-                .getSharedPreferences(TIMER_PREFS, Context.MODE_PRIVATE)
-                .getLong(TIMER_ENDS_AT, 0L);
+        return PlaybackSleepTimer.readEndsAt(context);
     }
 
     private void releasePlayer() {
@@ -711,18 +640,7 @@ public class PlayerService extends Service {
             return;
         }
         this.playerPreparing = false;
-        try {
-            this.player.setOnPreparedListener(null);
-            this.player.setOnCompletionListener(null);
-            this.player.setOnErrorListener(null);
-            this.player.stop();
-        } catch (Exception e) {
-        }
-        try {
-            this.player.release();
-        } catch (Exception e) {
-            Log.e(TAG, "release_failed", e);
-        }
+        PlaybackEngine.release(this.player);
         this.player = null;
     }
 
@@ -759,7 +677,7 @@ public class PlayerService extends Service {
         if (this.currentIndex < 0 || this.currentIndex >= this.queueManager.size()) {
             return;
         }
-        this.playbackStateRepository.save(new PlaybackStateRepository.Snapshot(
+        this.playbackStateManager.save(new PlaybackStateManager.Snapshot(
                 this.queueManager.get(this.currentIndex).uri, lastPosition, lastDuration,
                 this.currentIndex, this.loopMode, lastPlaying, this.shuffle,
                 this.queueManager.tracks()), includeQueue);
@@ -807,40 +725,16 @@ public class PlayerService extends Service {
     }
 
     private int safeDuration() {
-        if (this.player == null || this.playerPreparing) {
-            return currentTrackDurationFallback();
-        }
-        try {
-            int duration = this.player.getDuration();
-            return duration > 0 ? duration : currentTrackDurationFallback();
-        } catch (Exception e) {
-            return currentTrackDurationFallback();
-        }
+        return PlaybackEngine.duration(
+                this.player, this.playerPreparing, currentTrackDurationFallback());
     }
 
     private int safePosition() {
-        if (this.player == null) {
-            return 0;
-        }
-        if (this.playerPreparing) {
-            return 0;
-        }
-        try {
-            return this.player.getCurrentPosition();
-        } catch (Exception e) {
-            return lastPosition;
-        }
+        return PlaybackEngine.position(this.player, this.playerPreparing, lastPosition);
     }
 
     private boolean safeIsPlaying() {
-        if (this.player == null || this.playerPreparing) {
-            return false;
-        }
-        try {
-            return this.player.isPlaying();
-        } catch (Exception e) {
-            return false;
-        }
+        return PlaybackEngine.isPlaying(this.player, this.playerPreparing);
     }
 
     private int currentTrackDurationFallback() {
@@ -865,7 +759,7 @@ public class PlayerService extends Service {
         }
         this.timerHandler.removeCallbacks(this.playbackWatchdog);
         releasePlayer();
-        this.timerHandler.removeCallbacks(this.sleepTimerStop);
+        this.sleepTimer.close();
         this.timerHandler.removeCallbacks(this.audioFocusRetry);
         this.audioFocusController.stop();
         this.notificationController.release();

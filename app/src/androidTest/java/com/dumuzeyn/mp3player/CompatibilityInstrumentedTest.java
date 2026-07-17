@@ -4,14 +4,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,5 +39,35 @@ public class CompatibilityInstrumentedTest {
                     & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) != 0);
         }
         assertTrue(Build.VERSION.SDK_INT >= 26);
+    }
+
+    @Test
+    public void tabletProfileUsesCenteredResponsiveLayout() {
+        boolean tabletRequired = Boolean.parseBoolean(
+                InstrumentationRegistry.getArguments().getString("requireTablet", "false"));
+        if (!tabletRequired) {
+            return;
+        }
+
+        Context context = ApplicationProvider.getApplicationContext();
+        int smallestWidthDp = context.getResources().getConfiguration().smallestScreenWidthDp;
+        assertTrue("Tablet CI profile must report at least 600 dp", smallestWidthDp >= 600);
+
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Intent activityIntent = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Activity activity = instrumentation.startActivitySync(activityIntent);
+        try {
+            instrumentation.waitForIdleSync();
+            MainActivityCore host = (MainActivityCore) activity;
+            assertTrue(host.responsiveLayoutController.isTablet());
+            assertTrue("Tablet page must be narrower than the full display",
+                    host.page.getWidth() < host.root.getWidth());
+            int maximumPageWidth = Math.round(
+                    960 * context.getResources().getDisplayMetrics().density);
+            assertTrue(host.page.getWidth() <= maximumPageWidth);
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
     }
 }

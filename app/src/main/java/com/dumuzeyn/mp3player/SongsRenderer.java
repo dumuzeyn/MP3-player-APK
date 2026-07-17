@@ -1,5 +1,7 @@
 package com.dumuzeyn.mp3player;
 
+import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
+
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -32,7 +34,7 @@ final class SongsRenderer {
         if (!liveSession && host.resumeWindowMinutes <= 0) {
             return;
         }
-        PlaybackStateRepository.State savedState = new PlaybackStateRepository(host).load();
+        PlaybackStateManager.State savedState = new PlaybackStateManager(host).load();
         long savedAt = savedState.savedAt;
         long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
         if (!liveSession && (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow)) {

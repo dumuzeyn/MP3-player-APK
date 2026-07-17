@@ -59,7 +59,7 @@ final class FullPlayerController {
         LinearLayout content = new LinearLayout(host);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(host.dp(16), host.dp(18), host.dp(16), host.dp(20));
-        sheet.addView(content, new FrameLayout.LayoutParams(-1, -1));
+        sheet.addView(content, host.responsiveLayoutController.fullPlayerContentParams());
 
         addHeader(content, sheet);
         addCoverAndTitle(content, track);
@@ -200,7 +200,7 @@ final class FullPlayerController {
         host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
         float density = host.getResources().getDisplayMetrics().density;
         int screenHeightDp = Math.round(host.getResources().getDisplayMetrics().heightPixels / density);
-        int coverSizeDp = screenHeightDp < 760 ? 225 : 260;
+        int coverSizeDp = host.responsiveLayoutController.fullPlayerCoverSizeDp(screenHeightDp);
         LinearLayout.LayoutParams coverParams = new LinearLayout.LayoutParams(host.dp(coverSizeDp), host.dp(coverSizeDp));
         coverParams.gravity = 1;
         content.addView(cover, coverParams);
