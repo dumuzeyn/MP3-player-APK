@@ -265,9 +265,6 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     private void stopPlayback() {
-        if (!PlayerService.hasPlaybackSession()) {
-            return;
-        }
         try {
             Intent stopIntent = new Intent(context, PlayerService.class)
                     .setAction(PlayerService.ACTION_STOP);
@@ -276,5 +273,6 @@ public class BackgroundPlaybackInstrumentedTest {
         }
         InstrumentedTestSupport.waitFor("PlayerService did not stop", 3000L,
                 () -> !PlayerService.hasPlaybackSession());
+        SystemClock.sleep(250L);
     }
 }
