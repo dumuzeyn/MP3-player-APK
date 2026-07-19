@@ -102,10 +102,18 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.runOnMainSync(() -> activity.finish());
         activity = null;
         instrumentation.waitForIdleSync();
-        SystemClock.sleep(1500L);
-        PlayerService.refreshSnapshot();
-        assertTrue("Playback stopped when Activity closed", PlayerService.lastPlaying);
-        assertTrue("Playback position did not advance", PlayerService.lastPosition > 0);
+        InstrumentedTestSupport.waitFor(
+                "Playback stopped when Activity closed", PLAYBACK_TRANSITION_TIMEOUT_MS,
+                () -> {
+                    PlayerService.refreshSnapshot();
+                    return PlayerService.lastPlaying;
+                });
+        InstrumentedTestSupport.waitFor(
+                "Playback position did not advance", PLAYBACK_TRANSITION_TIMEOUT_MS,
+                () -> {
+                    PlayerService.refreshSnapshot();
+                    return PlayerService.lastPlaying && PlayerService.lastPosition > 0;
+                });
 
         Intent pauseIntent = new Intent(context, PlayerService.class)
                 .setAction(PlayerService.ACTION_TOGGLE);
