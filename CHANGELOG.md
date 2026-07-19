@@ -15,6 +15,7 @@
 - Add two independently selectable particle colors while retaining theme colors as the default palette.
 - Add an independent text color plus an optional configurable outline for readable text on any background.
 - Stabilize Android 15/16 background playback tests by observing confirmed playback state instead of transient queue preparation snapshots.
+- Keep the tablet CI job focused on application configuration and responsive-layout checks; background audio remains covered on Android 8 and Android 16.
 
 ## 2.5 - Adaptive tablet interface
 

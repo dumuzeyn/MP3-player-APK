@@ -18,6 +18,7 @@
 - Для частиц можно независимо выбрать два цвета, сохранив цвета темы как исходный вариант.
 - Цвет текста настраивается отдельно от темы и акцента; при необходимости включается контур с собственным цветом.
 - Фоновые тесты Android 15/16 теперь проверяют подтверждённое воспроизведение и не принимают краткий переход между треками за остановку.
+- Планшетная проверка CI отделена от аудиотестов и проверяет только конфигурацию приложения и адаптивную разметку.
 
 ## English
 
@@ -37,3 +38,4 @@ An update focused on playback stability, sound, and visual customization.
 - Two particle colors can be selected independently while theme colors remain the default palette.
 - Text color is independent from theme and accent colors, with an optional configurable outline for contrast.
 - Android 15/16 background tests now observe confirmed playback instead of treating a brief track transition as a stop.
+- Tablet CI is separated from audio scenarios and focuses on application configuration and responsive layout.
