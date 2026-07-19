@@ -78,6 +78,8 @@ class MainActivityCore extends AppState {
     final ParticleSettingsController particleSettingsController = new ParticleSettingsController(this);
     final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
     final StableVolumeController stableVolumeController = new StableVolumeController(this);
+    final BackgroundPlaybackSettingsController backgroundPlaybackSettingsController =
+            new BackgroundPlaybackSettingsController(this);
     final PlaylistTickerSettingsController playlistTickerSettingsController = new PlaylistTickerSettingsController(this);
     final CardTransparencyController cardTransparencyController = new CardTransparencyController(this);
     final GradientSettingsController gradientSettingsController = new GradientSettingsController(this);
@@ -108,6 +110,8 @@ class MainActivityCore extends AppState {
             this.playbackController.startPlaybackWatcher();
         }
         this.songsRenderer.refreshMissingMetadataAsync();
+        this.uiHandler.postDelayed(
+                this.backgroundPlaybackSettingsController::maybePromptOnce, 900L);
     }
 
     @Override
@@ -238,6 +242,7 @@ class MainActivityCore extends AppState {
                 return MainActivityCore.this.purpleSoft;
             }
         });
+        this.playlistController.refreshPlaybackState();
         if (this.sourcePlayButton != null) {
             this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
         }
@@ -625,6 +630,9 @@ class MainActivityCore extends AppState {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (this.backgroundPlaybackSettingsController.handleActivityResult(requestCode)) {
+            return;
+        }
         this.audioImportController.handleActivityResult(requestCode, resultCode, data);
     }
 

@@ -1,14 +1,19 @@
 package com.dumuzeyn.mp3player;
 
+import android.view.View;
+import android.widget.Button;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Set;
 
 final class PlaylistController {
     private final MainActivityCore host;
     private final ArrayList<PreviewBinding> previewBindings = new ArrayList<>();
+    private final ArrayList<PlaybackBinding> playbackBindings = new ArrayList<>();
     private int previewGeneration = -1;
+    private int playbackGeneration = -1;
     private boolean previewTickerScheduled;
     private final Runnable previewTicker = new Runnable() {
         @Override
@@ -27,6 +32,34 @@ final class PlaylistController {
 
     PlaylistController(MainActivityCore host) {
         this.host = host;
+    }
+
+    void beginPlaybackBindings(int generation) {
+        if (playbackGeneration == generation) {
+            return;
+        }
+        playbackGeneration = generation;
+        playbackBindings.clear();
+    }
+
+    void bindPlaybackState(Button playButton, View marker, ArrayList<Track> tracks, int generation) {
+        beginPlaybackBindings(generation);
+        PlaybackBinding binding = new PlaybackBinding(
+                playButton, marker, new ArrayList<>(tracks), generation);
+        playbackBindings.add(binding);
+        binding.apply();
+    }
+
+    void refreshPlaybackState() {
+        Iterator<PlaybackBinding> iterator = playbackBindings.iterator();
+        while (iterator.hasNext()) {
+            PlaybackBinding binding = iterator.next();
+            if (!binding.isCurrentGeneration()) {
+                iterator.remove();
+                continue;
+            }
+            binding.apply();
+        }
     }
 
     ArrayList<Playlist> filteredPlaylists(String query) {
@@ -80,7 +113,7 @@ final class PlaylistController {
         ticker.bindTracks(sortedTracks);
         cover.bindPlaylistTracks(sortedTracks);
         cover.bindTrack(sortedTracks.get(0), generation);
-        if (sortedTracks.size() <= 1) {
+        if (sortedTracks.size() <= 1 || host.playlistTickerSpeed <= 0) {
             return;
         }
         previewBindings.add(new PreviewBinding(ticker, cover, sortedTracks, generation));
@@ -88,6 +121,11 @@ final class PlaylistController {
     }
 
     private void schedulePreviewTicker() {
+        if (host.playlistTickerSpeed <= 0) {
+            host.uiHandler.removeCallbacks(previewTicker);
+            previewTickerScheduled = false;
+            return;
+        }
         if (previewTickerScheduled || previewBindings.isEmpty()) {
             return;
         }
@@ -118,6 +156,31 @@ final class PlaylistController {
                 cover.bindTrack(tracks.get(index), generation);
                 index = (index + 1) % tracks.size();
             }
+        }
+    }
+
+    private final class PlaybackBinding {
+        private final Button playButton;
+        private final View marker;
+        private final ArrayList<Track> tracks;
+        private final int generation;
+
+        PlaybackBinding(Button playButton, View marker, ArrayList<Track> tracks, int generation) {
+            this.playButton = playButton;
+            this.marker = marker;
+            this.tracks = tracks;
+            this.generation = generation;
+        }
+
+        boolean isCurrentGeneration() {
+            return generation == playbackGeneration
+                    && generation == host.songRenderGeneration;
+        }
+
+        void apply() {
+            marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
+            SongRowStateRegistry.applyPlayState(
+                    playButton, host.isPlayingCollection(tracks));
         }
     }
 

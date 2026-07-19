@@ -118,7 +118,7 @@ final class AudioEffectsManager {
     private void applyLoudnessFallback(int audioSessionId) {
         try {
             LoudnessEnhancer effect = new LoudnessEnhancer(audioSessionId);
-            effect.setTargetGain(350);
+            effect.setTargetGain(150);
             effect.setEnabled(true);
             loudnessEnhancer = effect;
             Log.i(DEBUG_TAG, "volume_leveling_loudness_fallback session=" + audioSessionId);
@@ -140,16 +140,13 @@ final class AudioEffectsManager {
         }
 
         static DynamicsProcessing createCustom(int audioSessionId) {
-            DynamicsProcessing.Mbc compressor = new DynamicsProcessing.Mbc(true, true, 1);
-            compressor.setBand(0, new DynamicsProcessing.MbcBand(
-                    true, 20000.0f, 12.0f, 250.0f, 4.0f, -18.0f, 6.0f,
-                    -80.0f, 1.0f, 0.0f, 5.0f));
+            // A fast compressor audibly changes gain inside one song. Keep only a
+            // slow peak guard so the effect cannot "pump" between quiet and loud parts.
             DynamicsProcessing.Limiter limiter = new DynamicsProcessing.Limiter(
-                    true, true, 0, 2.0f, 120.0f, 10.0f, -1.0f, 0.0f);
+                    true, true, 0, 10.0f, 1500.0f, 10.0f, -1.0f, 0.0f);
             DynamicsProcessing.Config config = new DynamicsProcessing.Config.Builder(
                     DynamicsProcessing.VARIANT_FAVOR_TIME_RESOLUTION,
-                    2, false, 0, true, 1, false, 0, true)
-                    .setMbcAllChannelsTo(compressor)
+                    2, false, 0, false, 0, false, 0, true)
                     .setLimiterAllChannelsTo(limiter)
                     .build();
             DynamicsProcessing effect = new DynamicsProcessing(0, audioSessionId, config);
@@ -163,21 +160,13 @@ final class AudioEffectsManager {
                 DynamicsProcessing.Mbc compressor = effect.getMbcByChannelIndex(channel);
                 for (int band = 0; band < compressor.getBandCount(); band++) {
                     DynamicsProcessing.MbcBand settings = compressor.getBand(band);
-                    settings.setEnabled(true);
-                    settings.setAttackTime(12.0f);
-                    settings.setReleaseTime(250.0f);
-                    settings.setRatio(4.0f);
-                    settings.setThreshold(-18.0f);
-                    settings.setKneeWidth(6.0f);
-                    settings.setNoiseGateThreshold(-80.0f);
-                    settings.setExpanderRatio(1.0f);
-                    settings.setPostGain(5.0f);
+                    settings.setEnabled(false);
                     effect.setMbcBandByChannelIndex(channel, band, settings);
                 }
                 DynamicsProcessing.Limiter limiter = effect.getLimiterByChannelIndex(channel);
                 limiter.setEnabled(true);
-                limiter.setAttackTime(2.0f);
-                limiter.setReleaseTime(120.0f);
+                limiter.setAttackTime(10.0f);
+                limiter.setReleaseTime(1500.0f);
                 limiter.setRatio(10.0f);
                 limiter.setThreshold(-1.0f);
                 effect.setLimiterByChannelIndex(channel, limiter);

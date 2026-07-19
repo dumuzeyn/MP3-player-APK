@@ -27,6 +27,7 @@ final class FullPlayerController {
     private Track boundTrack;
     private Handler progressHandler;
     private Runnable progressUpdater;
+    private boolean seekTracking;
 
     FullPlayerController(MainActivityCore host) {
         this.host = host;
@@ -97,6 +98,7 @@ final class FullPlayerController {
         this.repeatButton = null;
         this.playButton = null;
         this.boundTrack = null;
+        this.seekTracking = false;
     }
 
     boolean closeIfTop(View top) {
@@ -290,6 +292,10 @@ final class FullPlayerController {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
+                    RotatingCoverImageView rotatingCover = rotatingCover();
+                    if (rotatingCover != null) {
+                        rotatingCover.updateSeekSpin(progress);
+                    }
                     elapsed.setText(host.formatMs(progress));
                     Track current = currentTrack();
                     int duration = current == null ? seekBar.getMax() : host.playbackDurationFor(current);
@@ -299,11 +305,21 @@ final class FullPlayerController {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
+                seekTracking = true;
+                RotatingCoverImageView rotatingCover = rotatingCover();
+                if (rotatingCover != null) {
+                    rotatingCover.beginSeekSpin(Math.max(0, PlayerService.lastPosition));
+                }
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                RotatingCoverImageView rotatingCover = rotatingCover();
+                if (rotatingCover != null) {
+                    rotatingCover.endSeekSpin(seekBar.getProgress());
+                }
                 host.seekTo(seekBar.getProgress());
+                seekTracking = false;
             }
         });
 
@@ -376,6 +392,7 @@ final class FullPlayerController {
         }
         this.progressUpdater = null;
         this.progressHandler = null;
+        this.seekTracking = false;
     }
 
     private void refreshFromState(boolean allowTrackChange) {
@@ -411,6 +428,10 @@ final class FullPlayerController {
         if (this.playButton != null) {
             this.playButton.setText(host.playing ? "Ⅱ" : "▶");
         }
+        RotatingCoverImageView rotatingCover = rotatingCover();
+        if (rotatingCover != null) {
+            rotatingCover.updatePlaybackState();
+        }
     }
 
     private void styleRepeatButton(Button button) {
@@ -428,6 +449,12 @@ final class FullPlayerController {
             return null;
         }
         return host.tracks.get(host.currentIndex);
+    }
+
+    private RotatingCoverImageView rotatingCover() {
+        return this.coverView instanceof RotatingCoverImageView
+                ? (RotatingCoverImageView) this.coverView
+                : null;
     }
 
     private final class ProgressUpdater implements Runnable {
@@ -474,10 +501,12 @@ final class FullPlayerController {
                 refreshFromState(false);
             }
             int displayDuration = host.playbackDurationFor(track);
-            seek.setMax(Math.max(1, displayDuration));
-            seek.setProgress(Math.max(0, PlayerService.lastPosition));
-            elapsed.setText(host.formatMs(PlayerService.lastPosition));
-            remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
+            if (!seekTracking) {
+                seek.setMax(Math.max(1, displayDuration));
+                seek.setProgress(Math.max(0, PlayerService.lastPosition));
+                elapsed.setText(host.formatMs(PlayerService.lastPosition));
+                remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
+            }
             if (timerButton != null) {
                 timerButton.setText(host.timerButtonText());
             }

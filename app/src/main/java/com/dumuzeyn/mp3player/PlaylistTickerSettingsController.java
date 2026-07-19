@@ -15,7 +15,9 @@ final class PlaylistTickerSettingsController {
 
     String settingLabel() {
         return host.tr("Playlist title speed: ", "Скорость титров плейлистов: ")
-                + host.playlistTickerSpeed + "%";
+                + (host.playlistTickerSpeed == 0
+                        ? host.tr("off", "выкл")
+                        : host.playlistTickerSpeed + "%");
     }
 
     void openDialog() {
@@ -25,14 +27,14 @@ final class PlaylistTickerSettingsController {
         TextView label = host.text(settingLabel(), 17, true);
         panel.addView(label, new LinearLayout.LayoutParams(-1, host.dp(52)));
         SeekBar seek = new SeekBar(host);
-        seek.setMax(150);
-        seek.setProgress(host.playlistTickerSpeed - 50);
+        seek.setMax(200);
+        seek.setProgress(host.playlistTickerSpeed);
         host.applySeekBarColors(seek);
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    host.playlistTickerSpeed = 50 + progress;
+                    host.playlistTickerSpeed = progress;
                     label.setText(settingLabel());
                 }
             }
