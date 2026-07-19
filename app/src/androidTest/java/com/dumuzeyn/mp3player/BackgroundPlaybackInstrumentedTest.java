@@ -237,12 +237,14 @@ public class BackgroundPlaybackInstrumentedTest {
 
         InstrumentedTestSupport.waitFor("First cover did not rotate", 3000L,
                 () -> coverHolder[0].getRotation() > 1.0f);
+        float[] resetRotation = new float[1];
         instrumentation.runOnMainSync(() -> {
             host.currentIndex = 1;
             coverHolder[0].bindTrack(host.tracks.get(1));
+            resetRotation[0] = coverHolder[0].getRotation();
         });
         assertTrue("New track cover did not reset to its initial angle",
-                Math.abs(coverHolder[0].getRotation()) < 1.0f);
+                Math.abs(resetRotation[0]) < 1.0f);
         InstrumentedTestSupport.waitFor("Second cover did not start rotating", 3000L,
                 () -> coverHolder[0].getRotation() > 1.0f);
     }
