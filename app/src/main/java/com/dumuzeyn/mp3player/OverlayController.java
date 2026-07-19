@@ -277,7 +277,7 @@ final class OverlayController {
         panel.setPadding(host.dp(12), host.dp(10), host.dp(12), host.dp(10));
         TextView title = host.text(track.title, 19, true);
         title.setTextColor(host.purple);
-        title.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         title.setPadding(host.dp(12), 0, host.dp(12), 0);
         panel.addView(title, new LinearLayout.LayoutParams(-1, host.dp(42)));
         addCompactPanelButton(panel, host.favorites.contains(track.uri)
@@ -516,7 +516,7 @@ final class OverlayController {
     private void addCompactPanelButton(LinearLayout panel, String label, Runnable action) {
         Button button = host.button(label);
         button.setTextSize(16.0f);
-        button.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setPadding(host.dp(12), 0, host.dp(12), 0);
         button.setOnClickListener(view -> action.run());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
