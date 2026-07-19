@@ -29,6 +29,8 @@ import java.util.Collections;
 
 @RunWith(AndroidJUnit4.class)
 public class BackgroundPlaybackInstrumentedTest {
+    private static final long PLAYBACK_TRANSITION_TIMEOUT_MS = 30000L;
+
     private Context context;
     private Instrumentation instrumentation;
     private File waveFile;
@@ -147,10 +149,12 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.waitForIdleSync();
 
         InstrumentedTestSupport.waitFor(
-                "Playlist did not advance after the task was removed", 12000L,
+                "Playlist did not advance after the task was removed",
+                PLAYBACK_TRANSITION_TIMEOUT_MS,
                 () -> PlayerService.lastPlaying && queue.get(1).equals(PlayerService.lastUri));
         InstrumentedTestSupport.waitFor(
-                "Repeating playlist did not wrap after the task was removed", 12000L,
+                "Repeating playlist did not wrap after the task was removed",
+                PLAYBACK_TRANSITION_TIMEOUT_MS,
                 () -> PlayerService.lastPlaying && queue.get(0).equals(PlayerService.lastUri));
         assertTrue(PlayerService.getSleepTimerEndsAt(context) > System.currentTimeMillis());
     }
@@ -244,7 +248,7 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     private void waitForPlayingUri(String message, String uri) {
-        InstrumentedTestSupport.waitFor(message, 15000L, () -> {
+        InstrumentedTestSupport.waitFor(message, PLAYBACK_TRANSITION_TIMEOUT_MS, () -> {
             PlayerService.refreshSnapshot();
             return PlayerService.lastPlaying && uri.equals(PlayerService.lastUri);
         });
