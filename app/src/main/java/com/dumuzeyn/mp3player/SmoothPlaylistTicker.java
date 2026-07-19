@@ -64,7 +64,10 @@ final class SmoothPlaylistTicker extends View {
             return;
         }
         paint.setColor(host.primaryText);
-        boolean scrolling = titles.size() > VISIBLE_LINES && host.animations && isVisibleToUser();
+        boolean scrolling = titles.size() > VISIBLE_LINES
+                && host.animations
+                && host.playlistTickerSpeed > 0
+                && isVisibleToUser();
         if (scrolling) {
             advanceScroll();
         } else {

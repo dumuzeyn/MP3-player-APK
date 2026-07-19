@@ -113,7 +113,7 @@ final class PlaylistController {
         ticker.bindTracks(sortedTracks);
         cover.bindPlaylistTracks(sortedTracks);
         cover.bindTrack(sortedTracks.get(0), generation);
-        if (sortedTracks.size() <= 1) {
+        if (sortedTracks.size() <= 1 || host.playlistTickerSpeed <= 0) {
             return;
         }
         previewBindings.add(new PreviewBinding(ticker, cover, sortedTracks, generation));
@@ -121,6 +121,11 @@ final class PlaylistController {
     }
 
     private void schedulePreviewTicker() {
+        if (host.playlistTickerSpeed <= 0) {
+            host.uiHandler.removeCallbacks(previewTicker);
+            previewTickerScheduled = false;
+            return;
+        }
         if (previewTickerScheduled || previewBindings.isEmpty()) {
             return;
         }

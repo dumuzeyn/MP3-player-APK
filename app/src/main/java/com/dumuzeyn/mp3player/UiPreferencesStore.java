@@ -55,7 +55,7 @@ final class UiPreferencesStore {
         host.particleFrequency = clamp(preferences.getInt(PARTICLE_FREQUENCY, 45), 10, 100);
         host.particleSize = clamp(preferences.getInt(PARTICLE_SIZE, 100), 60, 150);
         host.particleLifetime = clamp(preferences.getInt(PARTICLE_LIFETIME, 100), 50, 180);
-        host.playlistTickerSpeed = clamp(preferences.getInt(PLAYLIST_TICKER_SPEED, 100), 50, 200);
+        host.playlistTickerSpeed = clamp(preferences.getInt(PLAYLIST_TICKER_SPEED, 100), 0, 200);
         host.cardOpacity = clamp(preferences.getInt(CARD_OPACITY, 82), 35, 100);
         host.songCardOpacity = clamp(
                 preferences.getInt(SONG_CARD_OPACITY, host.cardOpacity), 35, 100);
