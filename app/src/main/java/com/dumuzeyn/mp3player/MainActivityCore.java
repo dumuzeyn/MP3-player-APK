@@ -351,8 +351,8 @@ class MainActivityCore extends AppState {
         this.mainRenderer.render();
     }
 
-    void renderTabPreview(LinearLayout target, int targetIndex, String targetSearch) {
-        this.mainRenderer.renderPreview(target, targetIndex, targetSearch);
+    int renderTabPreview(LinearLayout target, int targetIndex, String targetSearch) {
+        return this.mainRenderer.renderPreview(target, targetIndex, targetSearch);
     }
 
     void renderSectionHeader() {

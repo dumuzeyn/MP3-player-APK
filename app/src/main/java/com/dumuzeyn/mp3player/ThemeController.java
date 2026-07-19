@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.Locale;
 
@@ -121,46 +122,84 @@ final class ThemeController {
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
         panel.addView(host.text(host.tr("Theme", "Тема"), 22, true),
                 new LinearLayout.LayoutParams(-1, host.dp(42)));
-        addChoice(panel, host.tr("Light", "Светлая"), "light");
-        addChoice(panel, host.tr("Dark", "Темная"), "dark");
-        addChoice(panel, host.tr("Custom", "Своя"), "custom");
-        panel.addView(host.text(host.tr("Background", "Фон"), 16, true),
-                new LinearLayout.LayoutParams(-1, host.dp(30)));
-        addColorButton(panel, COLOR_BACKGROUND);
-        panel.addView(host.text(host.tr("Accent", "Акцент"), 16, true),
-                new LinearLayout.LayoutParams(-1, host.dp(30)));
-        addColorButton(panel, COLOR_ACCENT);
-        panel.addView(host.text(host.tr("Text", "Текст"), 16, true),
-                new LinearLayout.LayoutParams(-1, host.dp(30)));
-        addColorButton(panel, COLOR_TEXT);
-        if (host.customTextColor != 0) {
-            Button resetText = host.button(host.tr("Use theme text color", "Цвет текста из темы"));
-            host.applySecondaryButtonStyle(resetText);
-            resetText.setOnClickListener(view -> {
-                host.customTextColor = 0;
+        LinearLayout controls = new LinearLayout(host);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        addChoice(controls, host.tr("Light", "Светлая"), "light");
+        addChoice(controls, host.tr("Dark", "Темная"), "dark");
+        addChoice(controls, host.tr("Custom", "Своя"), "custom");
+        if ("custom".equals(host.themeMode)) {
+            controls.addView(host.text(host.tr("Background", "Фон"), 16, true),
+                    new LinearLayout.LayoutParams(-1, host.dp(30)));
+            addColorButton(controls, COLOR_BACKGROUND);
+            controls.addView(host.text(host.tr("Accent", "Акцент"), 16, true),
+                    new LinearLayout.LayoutParams(-1, host.dp(30)));
+            addColorButton(controls, COLOR_ACCENT);
+            controls.addView(host.text(host.tr("Text", "Текст"), 16, true),
+                    new LinearLayout.LayoutParams(-1, host.dp(30)));
+            addColorButton(controls, COLOR_TEXT);
+            if (host.customTextColor != 0) {
+                Button resetText = host.button(host.tr("Use theme text color", "Цвет текста из темы"));
+                host.applySecondaryButtonStyle(resetText);
+                resetText.setOnClickListener(view -> {
+                    host.customTextColor = 0;
+                    applyTheme(host.themeMode);
+                });
+                controls.addView(resetText, new LinearLayout.LayoutParams(-1, host.dp(44)));
+            }
+            Button outlineToggle = host.button(host.tr("Text outline: ", "Контур текста: ")
+                    + host.tr(host.textOutlineEnabled ? "on" : "off",
+                    host.textOutlineEnabled ? "вкл" : "выкл"));
+            if (host.textOutlineEnabled) {
+                host.applyPrimaryButtonStyle(outlineToggle);
+            } else {
+                host.applySecondaryButtonStyle(outlineToggle);
+            }
+            outlineToggle.setOnClickListener(view -> {
+                host.textOutlineEnabled = !host.textOutlineEnabled;
                 applyTheme(host.themeMode);
             });
-            panel.addView(resetText, new LinearLayout.LayoutParams(-1, host.dp(44)));
-        }
-        Button outlineToggle = host.button(host.tr("Text outline: ", "Контур текста: ")
-                + host.tr(host.textOutlineEnabled ? "on" : "off",
-                host.textOutlineEnabled ? "вкл" : "выкл"));
-        if (host.textOutlineEnabled) {
-            host.applyPrimaryButtonStyle(outlineToggle);
+            LinearLayout.LayoutParams outlineParams = new LinearLayout.LayoutParams(-1, host.dp(46));
+            outlineParams.setMargins(0, host.dp(8), 0, host.dp(8));
+            controls.addView(outlineToggle, outlineParams);
+            if (host.textOutlineEnabled) {
+                TextView outlineLabel = host.text(host.tr("Outline color", "Цвет контура"), 16, true);
+                LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-1, host.dp(32));
+                labelParams.setMargins(0, host.dp(4), 0, host.dp(2));
+                controls.addView(outlineLabel, labelParams);
+                addColorButton(controls, COLOR_OUTLINE);
+            }
+            Button resetOutline = host.button(host.tr("Default outline", "Контур по умолчанию"));
+            host.applySecondaryButtonStyle(resetOutline);
+            resetOutline.setOnClickListener(view -> {
+                host.textOutlineEnabled = false;
+                host.textOutlineColor = 0;
+                applyTheme(host.themeMode);
+            });
+            controls.addView(resetOutline, new LinearLayout.LayoutParams(-1, host.dp(44)));
+            ScrollView scroll = new ScrollView(host);
+            scroll.addView(controls, new ScrollView.LayoutParams(-1, -2));
+            panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
         } else {
-            host.applySecondaryButtonStyle(outlineToggle);
+            panel.addView(controls, new LinearLayout.LayoutParams(-1, -2));
         }
-        outlineToggle.setOnClickListener(view -> {
-            host.textOutlineEnabled = !host.textOutlineEnabled;
-            applyTheme(host.themeMode);
+        Button done = host.button(host.tr("Done", "Готово"));
+        host.applyPrimaryButtonStyle(done);
+        done.setOnClickListener(view -> {
+            if (shade.getParent() != null) {
+                host.overlayHost.removeView(shade);
+            }
+            host.updateMini();
         });
-        panel.addView(outlineToggle, new LinearLayout.LayoutParams(-1, host.dp(44)));
-        if (host.textOutlineEnabled) {
-            panel.addView(host.text(host.tr("Outline color", "Цвет контура"), 16, true),
-                    new LinearLayout.LayoutParams(-1, host.dp(30)));
-            addColorButton(panel, COLOR_OUTLINE);
+        LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(-1, host.dp(48));
+        doneParams.setMargins(0, host.dp(8), 0, 0);
+        panel.addView(done, doneParams);
+        if ("custom".equals(host.themeMode)) {
+            int maxHeight = Math.min(host.dp(650),
+                    host.getResources().getDisplayMetrics().heightPixels - host.dp(44));
+            shade.addView(panel, host.centerParams(host.dp(340), maxHeight));
+        } else {
+            shade.addView(panel, host.centerParams(host.dp(340), -2));
         }
-        shade.addView(panel, host.centerParams(host.dp(340), -2));
         host.overlayHost.addView(shade);
         host.updateMini();
     }
@@ -190,7 +229,9 @@ final class ThemeController {
             host.overlayHost.removeAllViews();
             openColorPicker(target);
         });
-        parent.addView(button, new LinearLayout.LayoutParams(-1, host.dp(46)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(36));
+        params.setMargins(0, host.dp(2), 0, host.dp(2));
+        parent.addView(button, params);
     }
 
     private void openColorPicker(final int target) {
@@ -269,13 +310,12 @@ final class ThemeController {
     }
 
     void applyTextOutline(TextView text) {
-        if (!host.textOutlineEnabled) {
-            text.setShadowLayer(0.0f, 0.0f, 0.0f, Color.TRANSPARENT);
-            return;
+        text.setShadowLayer(0.0f, 0.0f, 0.0f, Color.TRANSPARENT);
+        if (text instanceof OutlinedTextView) {
+            float width = host.getResources().getDisplayMetrics().density * 0.55f;
+            ((OutlinedTextView) text).setTextOutline(
+                    host.textOutlineEnabled, effectiveOutlineColor(), width);
         }
-        float radius = Math.max(1.4f,
-                host.getResources().getDisplayMetrics().density * 1.15f);
-        text.setShadowLayer(radius, 0.0f, 0.0f, effectiveOutlineColor());
     }
 
     private int effectiveOutlineColor() {
@@ -292,6 +332,7 @@ final class ThemeController {
             host.overlayHost.removeAllViews();
         }
         host.rebuildUiForTheme();
+        openDialog();
         launcherUpdatePending = true;
     }
 

@@ -1,5 +1,8 @@
 package com.dumuzeyn.mp3player;
 
+import android.view.View;
+import android.view.ViewTreeObserver;
+import android.widget.ScrollView;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -72,23 +75,45 @@ final class MainRenderer {
         if (host.tabIndex <= 1) {
             host.songsRenderer.prepareForScrollRestore(scrollY);
         }
-        host.contentScroll.post(() -> {
-            if (host.contentScroll != null && targetKey.equals(menuKey(host.tabIndex, host.search))) {
-                host.contentScroll.scrollTo(0, scrollY);
-            }
-        });
+        final ScrollView targetScroll = host.contentScroll;
+        if (scrollY <= 0) {
+            targetScroll.scrollTo(0, 0);
+            targetScroll.setVisibility(View.VISIBLE);
+            return;
+        }
+        targetScroll.setVisibility(View.INVISIBLE);
+        targetScroll.getViewTreeObserver().addOnPreDrawListener(
+                new ViewTreeObserver.OnPreDrawListener() {
+                    @Override
+                    public boolean onPreDraw() {
+                        ViewTreeObserver observer = targetScroll.getViewTreeObserver();
+                        if (observer.isAlive()) {
+                            observer.removeOnPreDrawListener(this);
+                        }
+                        if (host.contentScroll != targetScroll
+                                || !targetKey.equals(menuKey(host.tabIndex, host.search))) {
+                            targetScroll.setVisibility(View.VISIBLE);
+                            return true;
+                        }
+                        targetScroll.scrollTo(0, scrollY);
+                        targetScroll.setVisibility(View.VISIBLE);
+                        return false;
+                    }
+                });
     }
 
     private String menuKey(int tabIndex, String search) {
         return tabIndex + "\n" + (search == null ? "" : search);
     }
 
-    void renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {
+    int renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {
         android.widget.LinearLayout previousList = host.list;
         ButtonState previousButton = new ButtonState(host.sourcePlayButton);
+        SongsRenderer.BatchState previousBatchState = host.songsRenderer.captureBatchState();
         int previousTab = host.tabIndex;
         String previousSearch = host.search;
         boolean previousPreview = host.renderingTabPreview;
+        int scrollY = scrollPositionFor(targetIndex, targetSearch);
         try {
             host.list = target;
             host.tabIndex = targetIndex;
@@ -97,14 +122,28 @@ final class MainRenderer {
             host.sourcePlayButton = null;
             target.removeAllViews();
             host.renderSectionHeader();
-            rendererForTab(targetIndex).render();
+            MenuRenderer renderer = rendererForTab(targetIndex);
+            renderer.render();
+            if (targetIndex <= 1) {
+                host.songsRenderer.prepareForScrollRestore(scrollY);
+            }
+            if (renderer.needsMiniSpacer()) {
+                host.addMiniSpacerIfNeeded();
+            }
         } finally {
             host.list = previousList;
             host.tabIndex = previousTab;
             host.search = previousSearch;
             host.renderingTabPreview = previousPreview;
             host.sourcePlayButton = previousButton.button;
+            host.songsRenderer.restoreBatchState(previousBatchState);
         }
+        return scrollY;
+    }
+
+    private int scrollPositionFor(int tabIndex, String search) {
+        Integer position = scrollPositions.get(menuKey(tabIndex, search));
+        return position == null ? 0 : Math.max(0, position);
     }
 
     private MenuRenderer rendererForTab() {

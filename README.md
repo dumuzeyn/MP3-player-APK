@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5.1-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5.2-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -21,13 +21,13 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Мини-плеер и большой плеер с качественной обложкой, перемоткой и управлением очередью.
 - Плейлисты, избранное, эквалайзер с готовыми профилями и собственной сохраняемой настройкой.
 - Анализ треков и плавное выравнивание воспринимаемой громкости без резких скачков внутри песни.
-- Светлая, тёмная и пользовательская темы, отдельный цвет текста, настраиваемый контур и цвет контура.
+- Светлая, тёмная и пользовательская темы, отдельный цвет текста и чёткий настраиваемый контур без размытия.
 - Однотонные и градиентные фоны, а также безопасные изображения или GIF с регулируемым размытием.
 - Отдельный фон для основного интерфейса и большого плеера, настраиваемая прозрачность карточек.
 - Скруглённые или вращающиеся круглые обложки с регулируемой скоростью диска в большом плеере.
 - Анимации и частицы с настраиваемыми частотой, размером, временем жизни и двумя цветами.
 - Перемотка вращающейся обложки как диска: направление зависит от движения вперёд или назад, а пауза останавливает вращение.
-- Восстановление позиции прокрутки в разделах, памяти мини-плеера, очереди и текущего состояния воспроизведения.
+- Незаметное восстановление позиции прокрутки в разделах без движения списка сверху, а также памяти мини-плеера, очереди и текущего состояния воспроизведения.
 - Русский и английский интерфейс.
 - Автоматически адаптированный интерфейс для планшетов без отдельной настройки.
 - Локальные отчёты о сбоях без URI и путей к музыкальным файлам.
@@ -125,7 +125,7 @@ flowchart TD
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.5.1-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.5.2-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player-voltune">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -144,13 +144,13 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Mini-player and full player with high-quality artwork, seeking, and queue controls.
 - Playlists, favorites, an equalizer with built-in presets, and a remembered custom profile.
 - Per-track analysis and smooth perceived-volume leveling without abrupt changes inside a song.
-- Light, dark, and custom themes with an independent text color, optional outline, and configurable outline color.
+- Light, dark, and custom themes with an independent text color and a crisp configurable outline without blur.
 - Solid colors, gradients, or validated image and GIF backgrounds with adjustable blur.
 - Independent backgrounds for the main interface and full player, plus per-section card opacity.
 - Rounded or rotating circular artwork with adjustable full-player disc speed.
 - Animations and particles with configurable frequency, size, lifetime, and two-color palette.
 - Turntable-style artwork seeking that follows forward and backward movement and stops while playback is paused.
-- Restored scroll positions, mini-player memory, queue, and current playback state.
+- Invisible section scroll restoration without a jump from the top, plus mini-player memory, queue, and current playback state.
 - Russian and English interface.
 - Automatic tablet layout with no separate setting required.
 - Local crash reports that exclude music URIs and storage paths.

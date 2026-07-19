@@ -31,7 +31,7 @@ final class UiFactory {
     }
 
     TextView text(String value, int size, boolean bold) {
-        TextView text = new TextView(host);
+        TextView text = new OutlinedTextView(host);
         text.setText(value);
         text.setTextColor(host.fg);
         text.setTextSize(size);

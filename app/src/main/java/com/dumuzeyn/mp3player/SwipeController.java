@@ -2,6 +2,7 @@ package com.dumuzeyn.mp3player;
 
 import android.animation.ValueAnimator;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -142,9 +143,15 @@ final class SwipeController {
         transitionDistance = width + host.dp(12);
         LinearLayout previewList = new LinearLayout(host);
         previewList.setOrientation(LinearLayout.VERTICAL);
-        host.renderTabPreview(previewList, targetIndex, targetSearch);
+        int previewScrollY = host.renderTabPreview(previewList, targetIndex, targetSearch);
         previewScroll = new ScrollView(host);
         previewScroll.addView(previewList, new FrameLayout.LayoutParams(-1, -2));
+        int previewHeight = Math.max(1, host.contentHost.getHeight());
+        previewScroll.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(previewHeight, View.MeasureSpec.EXACTLY));
+        previewScroll.layout(0, 0, width, previewHeight);
+        previewScroll.scrollTo(0, previewScrollY);
         previewScroll.setTranslationX(direction * transitionDistance);
         host.contentHost.addView(previewScroll, 0, new FrameLayout.LayoutParams(-1, -1));
         host.tabAnimating = true;

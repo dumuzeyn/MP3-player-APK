@@ -68,7 +68,13 @@ final class BackgroundSettingsController {
 
         int maxHeight = Math.min(host.dp(650),
                 host.getResources().getDisplayMetrics().heightPixels - host.dp(44));
-        shade.addView(panel, host.centerParams(host.dp(360), maxHeight));
+        int contentWidth = host.dp(360) - panel.getPaddingLeft() - panel.getPaddingRight();
+        rows.measure(
+                View.MeasureSpec.makeMeasureSpec(contentWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int desiredHeight = panel.getPaddingTop() + panel.getPaddingBottom()
+                + host.dp(44) + rows.getMeasuredHeight() + host.dp(56);
+        shade.addView(panel, host.centerParams(host.dp(360), Math.min(maxHeight, desiredHeight)));
         host.overlayHost.addView(shade);
         host.updateMini();
     }
@@ -109,6 +115,7 @@ final class BackgroundSettingsController {
                 }
                 host.saveState();
                 host.rebuildUi();
+                openDialog();
             });
         });
         return true;
