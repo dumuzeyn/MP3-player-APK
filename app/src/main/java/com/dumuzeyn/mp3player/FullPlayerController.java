@@ -51,9 +51,14 @@ final class FullPlayerController {
         this.boundTrack = track;
         FrameLayout sheet = createSheet();
         this.currentSheet = sheet;
-        sheet.setBackgroundColor(host.bg);
-        if (host.gradientPlayerBackground) {
+        sheet.setBackgroundColor(host.playerSolidBackground == 0 ? host.bg : host.playerSolidBackground);
+        if (host.playerBackgroundMode == BackgroundSettingsController.MODE_GRADIENT) {
             sheet.addView(new PlayerGradientBackground(host, host.playerGradientStart, host.playerGradientEnd),
+                    new FrameLayout.LayoutParams(-1, -1));
+        } else if (host.playerBackgroundMode == BackgroundSettingsController.MODE_MEDIA
+                && !host.playerBackgroundMediaUri.isEmpty()) {
+            sheet.addView(new BackgroundMediaView(host, host.playerBackgroundMediaUri,
+                            host.playerBackgroundBlur),
                     new FrameLayout.LayoutParams(-1, -1));
         }
 
@@ -199,6 +204,10 @@ final class FullPlayerController {
     private void addCoverAndTitle(LinearLayout content, Track track) {
         ImageView cover = host.coverView();
         this.coverView = cover;
+        if (cover instanceof RotatingCoverImageView) {
+            ((RotatingCoverImageView) cover).setRotationSpeedPercent(
+                    host.fullPlayerRotationSpeed);
+        }
         host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
         float density = host.getResources().getDisplayMetrics().density;
         int screenHeightDp = Math.round(host.getResources().getDisplayMetrics().heightPixels / density);
@@ -274,6 +283,18 @@ final class FullPlayerController {
 
     private void addSeekBar(LinearLayout content, FrameLayout sheet, Track track) {
         SeekBar seek = new SeekBar(host);
+        final boolean[] seekDragged = {false};
+        final float[] seekTouchX = {0.0f};
+        seek.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                seekTouchX[0] = event.getX();
+                seekDragged[0] = false;
+            } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE
+                    && Math.abs(event.getX() - seekTouchX[0]) > host.dp(8)) {
+                seekDragged[0] = true;
+            }
+            return false;
+        });
         host.applySeekBarColors(seek);
         int displayDuration = host.playbackDurationFor(track);
         seek.setMax(Math.max(1, displayDuration));
@@ -293,7 +314,7 @@ final class FullPlayerController {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
                     RotatingCoverImageView rotatingCover = rotatingCover();
-                    if (rotatingCover != null) {
+                    if (rotatingCover != null && seekDragged[0]) {
                         rotatingCover.updateSeekSpin(progress);
                     }
                     elapsed.setText(host.formatMs(progress));
@@ -316,7 +337,7 @@ final class FullPlayerController {
             public void onStopTrackingTouch(SeekBar seekBar) {
                 RotatingCoverImageView rotatingCover = rotatingCover();
                 if (rotatingCover != null) {
-                    rotatingCover.endSeekSpin(seekBar.getProgress());
+                    rotatingCover.endSeekSpin(seekBar.getProgress(), !seekDragged[0]);
                 }
                 host.seekTo(seekBar.getProgress());
                 seekTracking = false;

@@ -13,9 +13,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import java.util.Locale;
 
 final class ThemeController {
+    private static final int COLOR_BACKGROUND = 0;
+    private static final int COLOR_ACCENT = 1;
+    private static final int COLOR_TEXT = 2;
+    private static final int COLOR_OUTLINE = 3;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
     private static final String CUSTOM_FG = "customFg";
@@ -90,6 +95,11 @@ final class ThemeController {
             host.yellowDark = Color.rgb(231, 185, 0);
             host.yellowSoft = Color.rgb(255, 245, 190);
         }
+        if (host.customTextColor != 0) {
+            host.fg = host.customTextColor;
+            host.primaryText = host.customTextColor;
+            host.secondaryText = mixColor(host.customTextColor, host.bg, 0.58f);
+        }
         host.muted = host.secondaryText;
         host.line = host.cardStroke;
         host.panel = host.card;
@@ -110,16 +120,46 @@ final class ThemeController {
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
         panel.addView(host.text(host.tr("Theme", "Тема"), 22, true),
-                new LinearLayout.LayoutParams(-1, host.dp(46)));
+                new LinearLayout.LayoutParams(-1, host.dp(42)));
         addChoice(panel, host.tr("Light", "Светлая"), "light");
         addChoice(panel, host.tr("Dark", "Темная"), "dark");
         addChoice(panel, host.tr("Custom", "Своя"), "custom");
         panel.addView(host.text(host.tr("Background", "Фон"), 16, true),
-                new LinearLayout.LayoutParams(-1, host.dp(34)));
-        addColorButton(panel, true);
-        panel.addView(host.text(host.tr("Text and accent", "Текст и акцент"), 16, true),
-                new LinearLayout.LayoutParams(-1, host.dp(34)));
-        addColorButton(panel, false);
+                new LinearLayout.LayoutParams(-1, host.dp(30)));
+        addColorButton(panel, COLOR_BACKGROUND);
+        panel.addView(host.text(host.tr("Accent", "Акцент"), 16, true),
+                new LinearLayout.LayoutParams(-1, host.dp(30)));
+        addColorButton(panel, COLOR_ACCENT);
+        panel.addView(host.text(host.tr("Text", "Текст"), 16, true),
+                new LinearLayout.LayoutParams(-1, host.dp(30)));
+        addColorButton(panel, COLOR_TEXT);
+        if (host.customTextColor != 0) {
+            Button resetText = host.button(host.tr("Use theme text color", "Цвет текста из темы"));
+            host.applySecondaryButtonStyle(resetText);
+            resetText.setOnClickListener(view -> {
+                host.customTextColor = 0;
+                applyTheme(host.themeMode);
+            });
+            panel.addView(resetText, new LinearLayout.LayoutParams(-1, host.dp(44)));
+        }
+        Button outlineToggle = host.button(host.tr("Text outline: ", "Контур текста: ")
+                + host.tr(host.textOutlineEnabled ? "on" : "off",
+                host.textOutlineEnabled ? "вкл" : "выкл"));
+        if (host.textOutlineEnabled) {
+            host.applyPrimaryButtonStyle(outlineToggle);
+        } else {
+            host.applySecondaryButtonStyle(outlineToggle);
+        }
+        outlineToggle.setOnClickListener(view -> {
+            host.textOutlineEnabled = !host.textOutlineEnabled;
+            applyTheme(host.themeMode);
+        });
+        panel.addView(outlineToggle, new LinearLayout.LayoutParams(-1, host.dp(44)));
+        if (host.textOutlineEnabled) {
+            panel.addView(host.text(host.tr("Outline color", "Цвет контура"), 16, true),
+                    new LinearLayout.LayoutParams(-1, host.dp(30)));
+            addColorButton(panel, COLOR_OUTLINE);
+        }
         shade.addView(panel, host.centerParams(host.dp(340), -2));
         host.overlayHost.addView(shade);
         host.updateMini();
@@ -136,44 +176,47 @@ final class ThemeController {
             host.applySecondaryButtonStyle(button);
         }
         button.setOnClickListener(view -> applyTheme(mode));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(54));
-        params.setMargins(0, host.dp(5), 0, host.dp(5));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(48));
+        params.setMargins(0, host.dp(3), 0, host.dp(3));
         parent.addView(button, params);
     }
 
-    private void addColorButton(LinearLayout parent, final boolean background) {
-        int color = background ? host.customBg : host.customFg;
+    private void addColorButton(LinearLayout parent, final int target) {
+        int color = colorForTarget(target);
         Button button = host.button(colorHex(color));
         button.setTextColor(ThemeManager.readableOn(color));
         host.setSurface(button, color, false);
         button.setOnClickListener(view -> {
             host.overlayHost.removeAllViews();
-            openColorPicker(background);
+            openColorPicker(target);
         });
-        parent.addView(button, new LinearLayout.LayoutParams(-1, host.dp(52)));
+        parent.addView(button, new LinearLayout.LayoutParams(-1, host.dp(46)));
     }
 
-    private void openColorPicker(final boolean background) {
+    private void openColorPicker(final int target) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
         panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
-        panel.addView(host.text(background
-                        ? host.tr("Background", "Фон")
-                        : host.tr("Text and accent", "Текст и акцент"), 22, true),
+        panel.addView(host.text(colorTargetName(target), 22, true),
                 new LinearLayout.LayoutParams(-1, host.dp(46)));
         final View preview = new View(host);
-        preview.setBackgroundColor(background ? host.customBg : host.customFg);
+        preview.setBackgroundColor(colorForTarget(target));
         panel.addView(preview, new LinearLayout.LayoutParams(-1, host.dp(34)));
 
         ThemeColorWheelView wheel = new ThemeColorWheelView(
                 host,
-                background ? host.customBg : host.customFg,
+                colorForTarget(target),
                 color -> {
-                    host.themeMode = "custom";
-                    if (background) {
+                    if (target == COLOR_BACKGROUND) {
+                        host.themeMode = "custom";
                         host.customBg = color;
-                    } else {
+                    } else if (target == COLOR_ACCENT) {
+                        host.themeMode = "custom";
                         host.customFg = color;
+                    } else if (target == COLOR_OUTLINE) {
+                        host.textOutlineColor = color;
+                    } else {
+                        host.customTextColor = color;
                     }
                     preview.setBackgroundColor(color);
                 });
@@ -190,11 +233,54 @@ final class ThemeController {
         actions.addView(back, new LinearLayout.LayoutParams(0, host.dp(54), 1.0f));
         Button done = host.button(host.tr("Done", "Готово"));
         host.applyPrimaryButtonStyle(done);
-        done.setOnClickListener(view -> applyTheme("custom"));
+        done.setOnClickListener(view -> applyTheme(
+                target == COLOR_BACKGROUND || target == COLOR_ACCENT
+                        ? "custom" : host.themeMode));
         actions.addView(done, new LinearLayout.LayoutParams(0, host.dp(54), 1.0f));
         panel.addView(actions);
         shade.addView(panel, host.centerParams(host.dp(340), -2));
         host.overlayHost.addView(shade);
+    }
+
+    private int colorForTarget(int target) {
+        if (target == COLOR_BACKGROUND) {
+            return host.customBg;
+        }
+        if (target == COLOR_ACCENT) {
+            return host.customFg;
+        }
+        if (target == COLOR_OUTLINE) {
+            return effectiveOutlineColor();
+        }
+        return host.customTextColor != 0 ? host.customTextColor : host.primaryText;
+    }
+
+    private String colorTargetName(int target) {
+        if (target == COLOR_BACKGROUND) {
+            return host.tr("Background", "Фон");
+        }
+        if (target == COLOR_ACCENT) {
+            return host.tr("Accent", "Акцент");
+        }
+        if (target == COLOR_OUTLINE) {
+            return host.tr("Outline color", "Цвет контура");
+        }
+        return host.tr("Text", "Текст");
+    }
+
+    void applyTextOutline(TextView text) {
+        if (!host.textOutlineEnabled) {
+            text.setShadowLayer(0.0f, 0.0f, 0.0f, Color.TRANSPARENT);
+            return;
+        }
+        float radius = Math.max(1.4f,
+                host.getResources().getDisplayMetrics().density * 1.15f);
+        text.setShadowLayer(radius, 0.0f, 0.0f, effectiveOutlineColor());
+    }
+
+    private int effectiveOutlineColor() {
+        return host.textOutlineColor != 0
+                ? host.textOutlineColor : ThemeManager.readableOn(host.primaryText);
     }
 
     private void applyTheme(String mode) {

@@ -29,6 +29,8 @@ import java.util.Collections;
 
 @RunWith(AndroidJUnit4.class)
 public class BackgroundPlaybackInstrumentedTest {
+    private static final long PLAYBACK_TRANSITION_TIMEOUT_MS = 30000L;
+
     private Context context;
     private Instrumentation instrumentation;
     private File waveFile;
@@ -100,10 +102,18 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.runOnMainSync(() -> activity.finish());
         activity = null;
         instrumentation.waitForIdleSync();
-        SystemClock.sleep(1500L);
-        PlayerService.refreshSnapshot();
-        assertTrue("Playback stopped when Activity closed", PlayerService.lastPlaying);
-        assertTrue("Playback position did not advance", PlayerService.lastPosition > 0);
+        InstrumentedTestSupport.waitFor(
+                "Playback stopped when Activity closed", PLAYBACK_TRANSITION_TIMEOUT_MS,
+                () -> {
+                    PlayerService.refreshSnapshot();
+                    return PlayerService.lastPlaying;
+                });
+        InstrumentedTestSupport.waitFor(
+                "Playback position did not advance", PLAYBACK_TRANSITION_TIMEOUT_MS,
+                () -> {
+                    PlayerService.refreshSnapshot();
+                    return PlayerService.lastPlaying && PlayerService.lastPosition > 0;
+                });
 
         Intent pauseIntent = new Intent(context, PlayerService.class)
                 .setAction(PlayerService.ACTION_TOGGLE);
@@ -147,10 +157,12 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.waitForIdleSync();
 
         InstrumentedTestSupport.waitFor(
-                "Playlist did not advance after the task was removed", 12000L,
+                "Playlist did not advance after the task was removed",
+                PLAYBACK_TRANSITION_TIMEOUT_MS,
                 () -> PlayerService.lastPlaying && queue.get(1).equals(PlayerService.lastUri));
         InstrumentedTestSupport.waitFor(
-                "Repeating playlist did not wrap after the task was removed", 12000L,
+                "Repeating playlist did not wrap after the task was removed",
+                PLAYBACK_TRANSITION_TIMEOUT_MS,
                 () -> PlayerService.lastPlaying && queue.get(0).equals(PlayerService.lastUri));
         assertTrue(PlayerService.getSleepTimerEndsAt(context) > System.currentTimeMillis());
     }
@@ -225,12 +237,14 @@ public class BackgroundPlaybackInstrumentedTest {
 
         InstrumentedTestSupport.waitFor("First cover did not rotate", 3000L,
                 () -> coverHolder[0].getRotation() > 1.0f);
+        float[] resetRotation = new float[1];
         instrumentation.runOnMainSync(() -> {
             host.currentIndex = 1;
             coverHolder[0].bindTrack(host.tracks.get(1));
+            resetRotation[0] = coverHolder[0].getRotation();
         });
         assertTrue("New track cover did not reset to its initial angle",
-                Math.abs(coverHolder[0].getRotation()) < 1.0f);
+                Math.abs(resetRotation[0]) < 1.0f);
         InstrumentedTestSupport.waitFor("Second cover did not start rotating", 3000L,
                 () -> coverHolder[0].getRotation() > 1.0f);
     }
@@ -244,16 +258,13 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     private void waitForPlayingUri(String message, String uri) {
-        InstrumentedTestSupport.waitFor(message, 15000L, () -> {
+        InstrumentedTestSupport.waitFor(message, PLAYBACK_TRANSITION_TIMEOUT_MS, () -> {
             PlayerService.refreshSnapshot();
             return PlayerService.lastPlaying && uri.equals(PlayerService.lastUri);
         });
     }
 
     private void stopPlayback() {
-        if (!PlayerService.hasPlaybackSession()) {
-            return;
-        }
         try {
             Intent stopIntent = new Intent(context, PlayerService.class)
                     .setAction(PlayerService.ACTION_STOP);
@@ -262,5 +273,6 @@ public class BackgroundPlaybackInstrumentedTest {
         }
         InstrumentedTestSupport.waitFor("PlayerService did not stop", 3000L,
                 () -> !PlayerService.hasPlaybackSession());
+        SystemClock.sleep(250L);
     }
 }

@@ -53,6 +53,7 @@ public class PlayerService extends Service {
     private final PlaybackCommandHandler commandHandler = new PlaybackCommandHandler();
     private MediaPlayer player;
     private AudioEffectsManager audioEffectsManager;
+    private TrackLoudnessNormalizer loudnessNormalizer;
     private AudioFocusController audioFocusController;
     private MediaNotificationController notificationController;
     private boolean playerPreparing = false;
@@ -66,6 +67,8 @@ public class PlayerService extends Service {
     private int loopMode = 0;
     private boolean pausedByUser = false;
     private boolean pausedForInterruption = false;
+    private float audioFocusVolume = 1.0f;
+    private float normalizationGainDb = 0.0f;
     private final PlaybackErrorRecovery errorRecovery = new PlaybackErrorRecovery();
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private PlaybackSleepTimer sleepTimer;
@@ -110,6 +113,7 @@ public class PlayerService extends Service {
         super.onCreate();
         instance = this;
         this.audioEffectsManager = new AudioEffectsManager(this);
+        this.loudnessNormalizer = new TrackLoudnessNormalizer(this);
         this.audioFocusController = new AudioFocusController(this, new AudioFocusCallback());
         this.playbackStateManager = new PlaybackStateManager(this);
         this.sleepTimer = new PlaybackSleepTimer(this, () -> {
@@ -165,6 +169,7 @@ public class PlayerService extends Service {
                 updateLoopMode(command.loopMode == Integer.MIN_VALUE ? 0 : command.loopMode);
                 break;
             case AUDIO_EFFECTS:
+                updateNormalizationForCurrentTrack();
                 applyAudioEffects(this.player);
                 if (this.player == null) {
                     stopIfIdle();
@@ -282,6 +287,8 @@ public class PlayerService extends Service {
         }
         this.currentIndex = normalizeIndex(index);
         Track track = this.queueManager.get(this.currentIndex);
+        this.normalizationGainDb = this.loudnessNormalizer.cachedGainDb(track.uri);
+        this.loudnessNormalizer.prefetch(this.queueManager.tracks(), this.currentIndex);
         boolean canOpen = TrackStore.canOpenForRead(this, track.asUri());
         Log.i(DEBUG_TAG, "start_track index=" + this.currentIndex + " title=" + track.title + " uri=" + track.uri + " canOpen=" + canOpen + " attempt=" + attempts);
         if (!canOpen) {
@@ -359,6 +366,7 @@ public class PlayerService extends Service {
         try {
             this.errorRecovery.resetConsecutiveErrors();
             applyAudioEffects(preparedPlayer);
+            applyPlayerVolume();
             if (startPosition > 0) {
                 preparedPlayer.seekTo(Math.max(0, Math.min(startPosition, safeDuration())));
             }
@@ -645,7 +653,27 @@ public class PlayerService extends Service {
     }
 
     private void applyAudioEffects(MediaPlayer targetPlayer) {
-        this.audioEffectsManager.apply(targetPlayer);
+        this.audioEffectsManager.apply(targetPlayer, this.normalizationGainDb);
+    }
+
+    private void updateNormalizationForCurrentTrack() {
+        this.normalizationGainDb = this.loudnessNormalizer.cachedGainDb(currentUri());
+        this.loudnessNormalizer.prefetch(this.queueManager.tracks(), this.currentIndex);
+        applyPlayerVolume();
+    }
+
+    private void applyPlayerVolume() {
+        if (this.player == null) {
+            return;
+        }
+        float normalizationScale = this.normalizationGainDb < 0.0f
+                ? (float) Math.pow(10.0, this.normalizationGainDb / 20.0) : 1.0f;
+        float volume = Math.max(0.0f, Math.min(1.0f,
+                this.audioFocusVolume * normalizationScale));
+        try {
+            this.player.setVolume(volume, volume);
+        } catch (RuntimeException ignored) {
+        }
     }
 
     private void updateState() {
@@ -765,6 +793,7 @@ public class PlayerService extends Service {
         this.sleepTimer.close();
         this.timerHandler.removeCallbacks(this.audioFocusRetry);
         this.audioFocusController.stop();
+        this.loudnessNormalizer.release();
         this.notificationController.release();
         instance = null;
         super.onDestroy();
@@ -815,13 +844,8 @@ public class PlayerService extends Service {
 
         @Override
         public void setPlayerVolume(float volume) {
-            if (player == null) {
-                return;
-            }
-            try {
-                player.setVolume(volume, volume);
-            } catch (RuntimeException ignored) {
-            }
+            audioFocusVolume = Math.max(0.0f, Math.min(1.0f, volume));
+            applyPlayerVolume();
         }
     }
 

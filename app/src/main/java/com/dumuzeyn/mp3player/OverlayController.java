@@ -5,6 +5,7 @@ import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -78,6 +79,17 @@ final class OverlayController {
         shade.addView(panel, host.bottomParams());
         host.overlayHost.addView(shade);
         host.updateMini();
+    }
+
+    private FrameLayout.LayoutParams compactSongActionsParams() {
+        int availableWidth = host.getResources().getDisplayMetrics().widthPixels - host.dp(28);
+        int width = Math.min(host.dp(420), Math.max(host.dp(280), availableWidth));
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                width,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        params.setMargins(host.dp(14), 0, host.dp(14), host.dp(14));
+        return params;
     }
 
     private View trackPanelRow(Track track, ArrayList<Track> source, Playlist playlist,
@@ -262,36 +274,41 @@ final class OverlayController {
     void openSongActions(Track track, Playlist sourcePlaylist) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
-        panel.addView(host.text(track.title, 20, true), new LinearLayout.LayoutParams(-1, host.dp(52)));
-        addPanelButton(panel, host.favorites.contains(track.uri)
+        panel.setPadding(host.dp(12), host.dp(10), host.dp(12), host.dp(10));
+        TextView title = host.text(track.title, 19, true);
+        title.setTextColor(host.purple);
+        title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        title.setPadding(host.dp(12), 0, host.dp(12), 0);
+        panel.addView(title, new LinearLayout.LayoutParams(-1, host.dp(42)));
+        addCompactPanelButton(panel, host.favorites.contains(track.uri)
                 ? host.tr("Remove from favorites", "Убрать из избранного")
                 : host.tr("Add to favorites", "Добавить в избранное"), () -> {
             host.toggleFavorite(track);
             close(shade);
             host.render();
         });
-        addPanelButton(panel, host.tr("Add to playlist", "Добавить в плейлист"), () -> {
+        addCompactPanelButton(panel, host.tr("Add to playlist", "Добавить в плейлист"), () -> {
             host.overlayHost.removeView(shade);
             choosePlaylist(track);
         });
-        addPanelButton(panel, host.tr("Add to queue", "Добавить в очередь"), () -> {
+        addCompactPanelButton(panel, host.tr("Add to queue", "Добавить в очередь"), () -> {
             host.addTrackToQueue(track);
             close(shade);
         });
         if (sourcePlaylist != null) {
-            addPanelButton(panel, host.tr("Remove from playlist", "Убрать из плейлиста"), () -> {
+            addCompactPanelButton(panel, host.tr("Remove from playlist", "Убрать из плейлиста"), () -> {
                 sourcePlaylist.uris.remove(track.uri);
                 host.saveState();
                 host.overlayHost.removeView(shade);
                 openPlaylist(sourcePlaylist);
             });
         }
-        addPanelButton(panel, host.tr("Remove from app", "Удалить из приложения"), () -> {
+        addCompactPanelButton(panel, host.tr("Remove from app", "Удалить из приложения"), () -> {
             host.overlayHost.removeView(shade);
             confirmDeleteTrack(track);
         });
-        addPanelButton(panel, host.tr("Close", "Закрыть"), () -> close(shade));
-        shade.addView(panel, host.bottomParams());
+        addCompactPanelButton(panel, host.tr("Close", "Закрыть"), () -> close(shade));
+        shade.addView(panel, compactSongActionsParams());
         host.overlayHost.addView(shade);
         host.updateMini();
     }
@@ -494,6 +511,17 @@ final class OverlayController {
         Button button = host.button(label);
         button.setOnClickListener(view -> action.run());
         panel.addView(button, new LinearLayout.LayoutParams(-1, host.dp(54)));
+    }
+
+    private void addCompactPanelButton(LinearLayout panel, String label, Runnable action) {
+        Button button = host.button(label);
+        button.setTextSize(16.0f);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setPadding(host.dp(12), 0, host.dp(12), 0);
+        button.setOnClickListener(view -> action.run());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
+        params.setMargins(0, host.dp(1), 0, host.dp(1));
+        panel.addView(button, params);
     }
 
     private void close(FrameLayout shade) {

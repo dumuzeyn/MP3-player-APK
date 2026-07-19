@@ -183,6 +183,16 @@ final class SongsRenderer {
         appendNextSongBatch();
     }
 
+    void prepareForScrollRestore(int scrollY) {
+        if (scrollY <= 0 || pendingTracks == null) {
+            return;
+        }
+        int approximateRows = Math.max(24, scrollY / Math.max(1, host.dp(62)) + 18);
+        while (pendingTracks != null && pendingStart < approximateRows) {
+            appendNextSongBatch();
+        }
+    }
+
     private void appendNextSongBatch() {
         if (pendingTracks == null || pendingGeneration != host.songRenderGeneration || host.tabIndex > 1) {
             pendingTracks = null;

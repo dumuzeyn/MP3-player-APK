@@ -76,13 +76,15 @@ class MainActivityCore extends AppState {
     final EqualizerController equalizerController = new EqualizerController(this);
     final VolumeLevelingController volumeLevelingController = new VolumeLevelingController(this);
     final ParticleSettingsController particleSettingsController = new ParticleSettingsController(this);
+    final CoverRotationSettingsController coverRotationSettingsController =
+            new CoverRotationSettingsController(this);
     final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
     final StableVolumeController stableVolumeController = new StableVolumeController(this);
     final BackgroundPlaybackSettingsController backgroundPlaybackSettingsController =
             new BackgroundPlaybackSettingsController(this);
     final PlaylistTickerSettingsController playlistTickerSettingsController = new PlaylistTickerSettingsController(this);
     final CardTransparencyController cardTransparencyController = new CardTransparencyController(this);
-    final GradientSettingsController gradientSettingsController = new GradientSettingsController(this);
+    final BackgroundSettingsController backgroundSettingsController = new BackgroundSettingsController(this);
     final LibraryListController libraryListController = new LibraryListController(this);
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
@@ -153,6 +155,7 @@ class MainActivityCore extends AppState {
     @Override
     protected void onDestroy() {
         this.audioImportController.close();
+        this.backgroundSettingsController.close();
         this.songsRenderer.close();
         this.uiHandler.removeCallbacksAndMessages(null);
         this.playbackHandler.removeCallbacksAndMessages(null);
@@ -254,9 +257,14 @@ class MainActivityCore extends AppState {
         this.themeController.applyWindow();
         refreshTabLabels();
         this.root = new FrameLayout(this);
-        this.root.setBackgroundColor(this.bg);
-        if (this.gradientMainBackground) {
+        this.root.setBackgroundColor(this.mainSolidBackground == 0 ? this.bg : this.mainSolidBackground);
+        if (this.mainBackgroundMode == BackgroundSettingsController.MODE_GRADIENT) {
             this.root.addView(new PlayerGradientBackground(this, this.mainGradientStart, this.mainGradientEnd),
+                    new FrameLayout.LayoutParams(-1, -1));
+        } else if (this.mainBackgroundMode == BackgroundSettingsController.MODE_MEDIA
+                && !this.mainBackgroundMediaUri.isEmpty()) {
+            this.root.addView(new BackgroundMediaView(this, this.mainBackgroundMediaUri,
+                            this.mainBackgroundBlur),
                     new FrameLayout.LayoutParams(-1, -1));
         }
         this.page = new LinearLayout(this);
@@ -290,10 +298,12 @@ class MainActivityCore extends AppState {
     }
 
     void rebuildUiForTheme() {
+        this.mainRenderer.captureScrollBeforeUiRebuild();
         buildUi();
     }
 
     void rebuildUi() {
+        this.mainRenderer.captureScrollBeforeUiRebuild();
         buildUi();
     }
 
@@ -631,6 +641,9 @@ class MainActivityCore extends AppState {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (this.backgroundPlaybackSettingsController.handleActivityResult(requestCode)) {
+            return;
+        }
+        if (this.backgroundSettingsController.handleActivityResult(requestCode, resultCode, data)) {
             return;
         }
         this.audioImportController.handleActivityResult(requestCode, resultCode, data);

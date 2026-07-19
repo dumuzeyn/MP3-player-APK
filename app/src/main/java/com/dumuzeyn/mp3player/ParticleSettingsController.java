@@ -1,10 +1,13 @@
 package com.dumuzeyn.mp3player;
 
+import android.graphics.Color;
+import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import java.util.Locale;
 
 final class ParticleSettingsController {
     private final MainActivityCore host;
@@ -25,6 +28,8 @@ final class ParticleSettingsController {
                 value -> host.particleSize = value);
         addSlider(panel, host.tr("Lifetime", "Время существования"), 50, 180, host.particleLifetime,
                 value -> host.particleLifetime = value);
+        addColorButton(panel, true);
+        addColorButton(panel, false);
 
         Button close = host.button(host.tr("Done", "Готово"));
         host.applyPrimaryButtonStyle(close);
@@ -40,6 +45,92 @@ final class ParticleSettingsController {
         shade.addView(panel, host.centerParams(host.dp(340), -2));
         host.overlayHost.addView(shade);
         host.updateMini();
+    }
+
+    private void addColorButton(LinearLayout panel, boolean primary) {
+        int color = selectedColor(primary);
+        String name = primary
+                ? host.tr("Primary color", "Основной цвет")
+                : host.tr("Secondary color", "Дополнительный цвет");
+        Button button = host.button(name + ": " + colorHex(color));
+        button.setTextColor(ThemeManager.readableOn(color));
+        host.setSurface(button, color, false);
+        button.setOnClickListener(view -> {
+            host.overlayHost.removeAllViews();
+            openColorPicker(primary);
+        });
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
+        params.setMargins(0, host.dp(3), 0, host.dp(3));
+        panel.addView(button, params);
+    }
+
+    private void openColorPicker(boolean primary) {
+        int originalColor = primary ? host.particlePrimaryColor : host.particleSecondaryColor;
+        FrameLayout shade = host.shade();
+        LinearLayout panel = host.panelCard();
+        panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
+        panel.addView(host.text(primary
+                        ? host.tr("Primary particle color", "Основной цвет частиц")
+                        : host.tr("Secondary particle color", "Дополнительный цвет частиц"),
+                21, true), new LinearLayout.LayoutParams(-1, host.dp(46)));
+
+        View preview = new View(host);
+        preview.setBackgroundColor(selectedColor(primary));
+        panel.addView(preview, new LinearLayout.LayoutParams(-1, host.dp(32)));
+
+        ThemeColorWheelView wheel = new ThemeColorWheelView(host, selectedColor(primary), color -> {
+            if (primary) {
+                host.particlePrimaryColor = color;
+            } else {
+                host.particleSecondaryColor = color;
+            }
+            preview.setBackgroundColor(color);
+            host.refreshParticleSettings();
+        });
+        LinearLayout.LayoutParams wheelParams = new LinearLayout.LayoutParams(-1, host.dp(260));
+        wheelParams.setMargins(0, host.dp(10), 0, host.dp(10));
+        panel.addView(wheel, wheelParams);
+
+        LinearLayout actions = host.row();
+        Button cancel = host.button(host.tr("Cancel", "Отмена"));
+        cancel.setOnClickListener(view -> {
+            if (primary) {
+                host.particlePrimaryColor = originalColor;
+            } else {
+                host.particleSecondaryColor = originalColor;
+            }
+            host.refreshParticleSettings();
+            host.overlayHost.removeView(shade);
+            openDialog();
+        });
+        actions.addView(cancel, new LinearLayout.LayoutParams(0, host.dp(50), 1.0f));
+
+        Button done = host.button(host.tr("Done", "Готово"));
+        host.applyPrimaryButtonStyle(done);
+        done.setOnClickListener(view -> {
+            host.saveState();
+            host.refreshParticleSettings();
+            host.overlayHost.removeView(shade);
+            openDialog();
+        });
+        actions.addView(done, new LinearLayout.LayoutParams(0, host.dp(50), 1.0f));
+        panel.addView(actions);
+
+        shade.addView(panel, host.centerParams(host.dp(340), -2));
+        host.overlayHost.addView(shade);
+    }
+
+    private int selectedColor(boolean primary) {
+        int configured = primary ? host.particlePrimaryColor : host.particleSecondaryColor;
+        if (configured != 0) {
+            return configured;
+        }
+        return primary ? host.purple : host.yellow;
+    }
+
+    private static String colorHex(int color) {
+        return String.format(Locale.ROOT, "#%02X%02X%02X",
+                Color.red(color), Color.green(color), Color.blue(color));
     }
 
     private void addSlider(LinearLayout panel, String name, int minimum, int maximum, int initial,

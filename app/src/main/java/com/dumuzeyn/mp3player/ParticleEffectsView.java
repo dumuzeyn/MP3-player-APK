@@ -171,7 +171,11 @@ final class ParticleEffectsView extends View {
         float lifetimeScale = host.particleLifetime / 100.0f;
         long baseLifetime = touchParticle ? 1200L + random.nextInt(801) : 2600L + random.nextInt(1801);
         particle.lifeMs = Math.round(baseLifetime * lifetimeScale);
-        particle.color = random.nextBoolean() ? host.purple : host.yellow;
+        int primaryColor = host.particlePrimaryColor != 0
+                ? host.particlePrimaryColor : host.purple;
+        int secondaryColor = host.particleSecondaryColor != 0
+                ? host.particleSecondaryColor : host.yellow;
+        particle.color = random.nextBoolean() ? primaryColor : secondaryColor;
         particle.maxAlpha = touchParticle ? 145 + random.nextInt(56) : 55 + random.nextInt(41);
         particle.lightning = random.nextBoolean();
         particle.filled = random.nextBoolean();

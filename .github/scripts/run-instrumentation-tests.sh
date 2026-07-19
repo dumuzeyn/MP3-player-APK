@@ -29,6 +29,7 @@ adb shell settings put global animator_duration_scale 0
 GRADLE_ARGUMENTS=(connectedDebugAndroidTest --stacktrace)
 if [[ "${REQUIRE_TABLET:-false}" == "true" ]]; then
   GRADLE_ARGUMENTS+=("-Pandroid.testInstrumentationRunnerArguments.requireTablet=true")
+  GRADLE_ARGUMENTS+=("-Pandroid.testInstrumentationRunnerArguments.class=com.dumuzeyn.mp3player.CompatibilityInstrumentedTest")
 fi
 
 ./gradlew "${GRADLE_ARGUMENTS[@]}"

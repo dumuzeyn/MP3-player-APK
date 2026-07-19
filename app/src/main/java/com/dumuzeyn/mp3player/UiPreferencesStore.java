@@ -15,6 +15,12 @@ final class UiPreferencesStore {
     private static final String PARTICLE_FREQUENCY = "particleFrequency";
     private static final String PARTICLE_SIZE = "particleSize";
     private static final String PARTICLE_LIFETIME = "particleLifetime";
+    private static final String PARTICLE_PRIMARY_COLOR = "particlePrimaryColor";
+    private static final String PARTICLE_SECONDARY_COLOR = "particleSecondaryColor";
+    private static final String FULL_PLAYER_ROTATION_SPEED = "fullPlayerRotationSpeed";
+    private static final String CUSTOM_TEXT_COLOR = "customTextColor";
+    private static final String TEXT_OUTLINE_ENABLED = "textOutlineEnabled";
+    private static final String TEXT_OUTLINE_COLOR = "textOutlineColor";
     private static final String PLAYLIST_TICKER_SPEED = "playlistTickerSpeed";
     private static final String CARD_OPACITY = "cardOpacity";
     private static final String SONG_CARD_OPACITY = "songCardOpacity";
@@ -35,6 +41,14 @@ final class UiPreferencesStore {
     private static final String MAIN_GRADIENT_END = "mainGradientEnd";
     private static final String PLAYER_GRADIENT_START = "playerGradientStart";
     private static final String PLAYER_GRADIENT_END = "playerGradientEnd";
+    private static final String MAIN_BACKGROUND_MODE = "mainBackgroundMode";
+    private static final String PLAYER_BACKGROUND_MODE = "playerBackgroundMode";
+    private static final String MAIN_SOLID_BACKGROUND = "mainSolidBackground";
+    private static final String PLAYER_SOLID_BACKGROUND = "playerSolidBackground";
+    private static final String MAIN_BACKGROUND_MEDIA_URI = "mainBackgroundMediaUri";
+    private static final String PLAYER_BACKGROUND_MEDIA_URI = "playerBackgroundMediaUri";
+    private static final String MAIN_BACKGROUND_BLUR = "mainBackgroundBlur";
+    private static final String PLAYER_BACKGROUND_BLUR = "playerBackgroundBlur";
 
     private final MainActivityCore host;
 
@@ -55,6 +69,13 @@ final class UiPreferencesStore {
         host.particleFrequency = clamp(preferences.getInt(PARTICLE_FREQUENCY, 45), 10, 100);
         host.particleSize = clamp(preferences.getInt(PARTICLE_SIZE, 100), 60, 150);
         host.particleLifetime = clamp(preferences.getInt(PARTICLE_LIFETIME, 100), 50, 180);
+        host.particlePrimaryColor = preferences.getInt(PARTICLE_PRIMARY_COLOR, 0);
+        host.particleSecondaryColor = preferences.getInt(PARTICLE_SECONDARY_COLOR, 0);
+        host.fullPlayerRotationSpeed = clamp(
+                preferences.getInt(FULL_PLAYER_ROTATION_SPEED, 100), 25, 200);
+        host.customTextColor = preferences.getInt(CUSTOM_TEXT_COLOR, 0);
+        host.textOutlineEnabled = preferences.getBoolean(TEXT_OUTLINE_ENABLED, false);
+        host.textOutlineColor = preferences.getInt(TEXT_OUTLINE_COLOR, 0);
         host.playlistTickerSpeed = clamp(preferences.getInt(PLAYLIST_TICKER_SPEED, 100), 0, 200);
         host.cardOpacity = clamp(preferences.getInt(CARD_OPACITY, 82), 35, 100);
         host.songCardOpacity = clamp(
@@ -78,9 +99,25 @@ final class UiPreferencesStore {
         host.dialogCardOpacity = clamp(
                 preferences.getInt(DIALOG_CARD_OPACITY, host.cardOpacity), 35, 100);
         host.particlesEnabled = preferences.getBoolean(PARTICLES_ENABLED, true);
-        host.gradientPlayerBackground = preferences.getBoolean(PLAYER_GRADIENT, true);
         host.circularCovers = preferences.getBoolean(CIRCULAR_COVERS, false);
-        host.gradientMainBackground = preferences.getBoolean(MAIN_GRADIENT, false);
+        host.mainBackgroundMode = preferences.contains(MAIN_BACKGROUND_MODE)
+                ? clampBackgroundMode(preferences.getInt(MAIN_BACKGROUND_MODE,
+                        BackgroundSettingsController.MODE_SOLID))
+                : preferences.getBoolean(MAIN_GRADIENT, false)
+                        ? BackgroundSettingsController.MODE_GRADIENT
+                        : BackgroundSettingsController.MODE_SOLID;
+        host.playerBackgroundMode = preferences.contains(PLAYER_BACKGROUND_MODE)
+                ? clampBackgroundMode(preferences.getInt(PLAYER_BACKGROUND_MODE,
+                        BackgroundSettingsController.MODE_GRADIENT))
+                : preferences.getBoolean(PLAYER_GRADIENT, true)
+                        ? BackgroundSettingsController.MODE_GRADIENT
+                        : BackgroundSettingsController.MODE_SOLID;
+        host.mainSolidBackground = preferences.getInt(MAIN_SOLID_BACKGROUND, 0);
+        host.playerSolidBackground = preferences.getInt(PLAYER_SOLID_BACKGROUND, 0);
+        host.mainBackgroundMediaUri = preferences.getString(MAIN_BACKGROUND_MEDIA_URI, "");
+        host.playerBackgroundMediaUri = preferences.getString(PLAYER_BACKGROUND_MEDIA_URI, "");
+        host.mainBackgroundBlur = clamp(preferences.getInt(MAIN_BACKGROUND_BLUR, 20), 0, 100);
+        host.playerBackgroundBlur = clamp(preferences.getInt(PLAYER_BACKGROUND_BLUR, 20), 0, 100);
         host.mainGradientStart = preferences.getInt(MAIN_GRADIENT_START, 0xff351b5d);
         host.mainGradientEnd = preferences.getInt(MAIN_GRADIENT_END, 0xff3a3013);
         host.playerGradientStart = preferences.getInt(PLAYER_GRADIENT_START, 0xff351b5d);
@@ -99,6 +136,12 @@ final class UiPreferencesStore {
                 .putInt(PARTICLE_FREQUENCY, host.particleFrequency)
                 .putInt(PARTICLE_SIZE, host.particleSize)
                 .putInt(PARTICLE_LIFETIME, host.particleLifetime)
+                .putInt(PARTICLE_PRIMARY_COLOR, host.particlePrimaryColor)
+                .putInt(PARTICLE_SECONDARY_COLOR, host.particleSecondaryColor)
+                .putInt(FULL_PLAYER_ROTATION_SPEED, host.fullPlayerRotationSpeed)
+                .putInt(CUSTOM_TEXT_COLOR, host.customTextColor)
+                .putBoolean(TEXT_OUTLINE_ENABLED, host.textOutlineEnabled)
+                .putInt(TEXT_OUTLINE_COLOR, host.textOutlineColor)
                 .putInt(PLAYLIST_TICKER_SPEED, host.playlistTickerSpeed)
                 .putInt(CARD_OPACITY, host.cardOpacity)
                 .putInt(SONG_CARD_OPACITY, host.songCardOpacity)
@@ -112,9 +155,15 @@ final class UiPreferencesStore {
                 .putInt(HEADER_CARD_OPACITY, host.headerCardOpacity)
                 .putInt(DIALOG_CARD_OPACITY, host.dialogCardOpacity)
                 .putBoolean(PARTICLES_ENABLED, host.particlesEnabled)
-                .putBoolean(PLAYER_GRADIENT, host.gradientPlayerBackground)
                 .putBoolean(CIRCULAR_COVERS, host.circularCovers)
-                .putBoolean(MAIN_GRADIENT, host.gradientMainBackground)
+                .putInt(MAIN_BACKGROUND_MODE, host.mainBackgroundMode)
+                .putInt(PLAYER_BACKGROUND_MODE, host.playerBackgroundMode)
+                .putInt(MAIN_SOLID_BACKGROUND, host.mainSolidBackground)
+                .putInt(PLAYER_SOLID_BACKGROUND, host.playerSolidBackground)
+                .putString(MAIN_BACKGROUND_MEDIA_URI, host.mainBackgroundMediaUri)
+                .putString(PLAYER_BACKGROUND_MEDIA_URI, host.playerBackgroundMediaUri)
+                .putInt(MAIN_BACKGROUND_BLUR, host.mainBackgroundBlur)
+                .putInt(PLAYER_BACKGROUND_BLUR, host.playerBackgroundBlur)
                 .putInt(MAIN_GRADIENT_START, host.mainGradientStart)
                 .putInt(MAIN_GRADIENT_END, host.mainGradientEnd)
                 .putInt(PLAYER_GRADIENT_START, host.playerGradientStart)
@@ -128,5 +177,10 @@ final class UiPreferencesStore {
 
     private static int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private static int clampBackgroundMode(int value) {
+        return clamp(value, BackgroundSettingsController.MODE_SOLID,
+                BackgroundSettingsController.MODE_MEDIA);
     }
 }

@@ -20,6 +20,9 @@ abstract class AppState extends Activity {
     int particleFrequency = 45;
     int particleSize = 100;
     int particleLifetime = 100;
+    int particlePrimaryColor = 0;
+    int particleSecondaryColor = 0;
+    int fullPlayerRotationSpeed = 100;
     int playlistTickerSpeed = 100;
     int cardOpacity = 82;
     int songCardOpacity = 82;
@@ -37,8 +40,14 @@ abstract class AppState extends Activity {
     boolean dark = false;
     boolean animations = true;
     boolean particlesEnabled = true;
-    boolean gradientPlayerBackground = true;
-    boolean gradientMainBackground = false;
+    int playerBackgroundMode = BackgroundSettingsController.MODE_GRADIENT;
+    int mainBackgroundMode = BackgroundSettingsController.MODE_SOLID;
+    int mainSolidBackground = 0;
+    int playerSolidBackground = 0;
+    String mainBackgroundMediaUri = "";
+    String playerBackgroundMediaUri = "";
+    int mainBackgroundBlur = 20;
+    int playerBackgroundBlur = 20;
     boolean circularCovers = false;
     int mainGradientStart = 0xff351b5d;
     int mainGradientEnd = 0xff3a3013;
@@ -49,6 +58,9 @@ abstract class AppState extends Activity {
     String themeMode = "light";
     int customBg = -1;
     int customFg = -16777216;
+    int customTextColor = 0;
+    boolean textOutlineEnabled = false;
+    int textOutlineColor = 0;
     int preferredTabDirection = 0;
     boolean tabAnimating = false;
     String search = "";

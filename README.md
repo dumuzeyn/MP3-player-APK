@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5.1-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -19,9 +19,15 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Фоновое воспроизведение и управление из системной медиапанели.
 - Повтор песни или всей очереди до ручной остановки либо срабатывания таймера сна.
 - Мини-плеер и большой плеер с качественной обложкой, перемоткой и управлением очередью.
-- Плейлисты, избранное, эквалайзер и выравнивание воспринимаемой громкости.
-- Светлая, тёмная и пользовательская темы, настраиваемые градиенты и прозрачность карточек.
-- Скруглённые или вращающиеся круглые обложки, анимации и настраиваемые частицы.
+- Плейлисты, избранное, эквалайзер с готовыми профилями и собственной сохраняемой настройкой.
+- Анализ треков и плавное выравнивание воспринимаемой громкости без резких скачков внутри песни.
+- Светлая, тёмная и пользовательская темы, отдельный цвет текста, настраиваемый контур и цвет контура.
+- Однотонные и градиентные фоны, а также безопасные изображения или GIF с регулируемым размытием.
+- Отдельный фон для основного интерфейса и большого плеера, настраиваемая прозрачность карточек.
+- Скруглённые или вращающиеся круглые обложки с регулируемой скоростью диска в большом плеере.
+- Анимации и частицы с настраиваемыми частотой, размером, временем жизни и двумя цветами.
+- Перемотка вращающейся обложки как диска: направление зависит от движения вперёд или назад, а пауза останавливает вращение.
+- Восстановление позиции прокрутки в разделах, памяти мини-плеера, очереди и текущего состояния воспроизведения.
 - Русский и английский интерфейс.
 - Автоматически адаптированный интерфейс для планшетов без отдельной настройки.
 - Локальные отчёты о сбоях без URI и путей к музыкальным файлам.
@@ -50,6 +56,8 @@ flowchart TD
     RECOVERY["PlaybackErrorRecovery и PlaybackSleepTimer<br/>ошибки и таймер сна"]
     DATA["LibraryDatabase и TrackStore<br/>песни, избранное, плейлисты"]
     STYLE["ThemeController и UiFactory<br/>темы, диалоги, элементы интерфейса"]
+    BACKGROUND["BackgroundSettingsController и BackgroundMediaView<br/>цвет, градиент, изображение, GIF и размытие"]
+    AUDIO["AudioEffectsManager и TrackLoudnessNormalizer<br/>эквалайзер и выравнивание громкости"]
     PREFS["UiPreferencesStore<br/>настройки интерфейса"]
 
     ACT --> UI
@@ -61,8 +69,12 @@ flowchart TD
     SERVICE --> ENGINE
     SERVICE --> STATE
     SERVICE --> RECOVERY
+    SERVICE --> AUDIO
     STATE --> DATA
     UI --> STYLE
+    UI --> BACKGROUND
+    BACKGROUND --> PREFS
+    AUDIO --> PREFS
 ```
 
 Новые независимые части размещаются по назначению: состояние — в `data/playback`, низкоуровневое воспроизведение — в `playback/service`, UI-утилиты — в `ui`, диагностика библиотеки — в `library`. Остальные классы переносятся постепенно, чтобы не ломать рабочие сценарии.
@@ -76,6 +88,10 @@ flowchart TD
 - Изменение большого или мини-плеера: `FullPlayerController` или `MiniPlayerController`.
 - Работа с библиотекой: `TrackStore`, `LibraryDatabase` и `PlaylistController`.
 - Состояние фонового воспроизведения: `PlaybackStateManager`; подготовка аудио: `PlaybackEngine`.
+- Фоны приложения и большого плеера: `BackgroundSettingsController`, проверка файлов — `BackgroundMediaValidator`, отображение — `BackgroundMediaView`.
+- Эквалайзер и выравнивание громкости: `EqualizerController`, `AudioEffectsManager` и `TrackLoudnessNormalizer`.
+- Цвет текста и контура: `ThemeController`; общая отрисовка текста: `UiFactory` и `ButtonFactory`.
+- Частицы и скорость диска: `ParticleSettingsController`, `ParticleEffectsView`, `CoverRotationSettingsController` и `RotatingCoverImageView`.
 
 ## Сборка
 
@@ -109,7 +125,7 @@ flowchart TD
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.5-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_2.5.1-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player-voltune">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -126,9 +142,15 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Background playback with Android system media controls.
 - Repeat one or repeat all until manually stopped or the sleep timer expires.
 - Mini-player and full player with high-quality artwork, seeking, and queue controls.
-- Playlists, favorites, equalizer, and perceived-volume leveling.
-- Light, dark, and custom themes with configurable gradients and card opacity.
-- Rounded or rotating circular artwork, animations, and configurable particles.
+- Playlists, favorites, an equalizer with built-in presets, and a remembered custom profile.
+- Per-track analysis and smooth perceived-volume leveling without abrupt changes inside a song.
+- Light, dark, and custom themes with an independent text color, optional outline, and configurable outline color.
+- Solid colors, gradients, or validated image and GIF backgrounds with adjustable blur.
+- Independent backgrounds for the main interface and full player, plus per-section card opacity.
+- Rounded or rotating circular artwork with adjustable full-player disc speed.
+- Animations and particles with configurable frequency, size, lifetime, and two-color palette.
+- Turntable-style artwork seeking that follows forward and backward movement and stops while playback is paused.
+- Restored scroll positions, mini-player memory, queue, and current playback state.
 - Russian and English interface.
 - Automatic tablet layout with no separate setting required.
 - Local crash reports that exclude music URIs and storage paths.
@@ -157,6 +179,8 @@ flowchart TD
     RECOVERY["PlaybackErrorRecovery and PlaybackSleepTimer<br/>errors and sleep timer"]
     DATA["LibraryDatabase and TrackStore<br/>songs, favorites, playlists"]
     STYLE["ThemeController and UiFactory<br/>themes, dialogs, UI elements"]
+    BACKGROUND["BackgroundSettingsController and BackgroundMediaView<br/>color, gradient, image, GIF, and blur"]
+    AUDIO["AudioEffectsManager and TrackLoudnessNormalizer<br/>equalizer and volume leveling"]
     PREFS["UiPreferencesStore<br/>UI preferences"]
 
     ACT --> UI
@@ -168,8 +192,12 @@ flowchart TD
     SERVICE --> ENGINE
     SERVICE --> STATE
     SERVICE --> RECOVERY
+    SERVICE --> AUDIO
     STATE --> DATA
     UI --> STYLE
+    UI --> BACKGROUND
+    BACKGROUND --> PREFS
+    AUDIO --> PREFS
 ```
 
 New independent components are grouped by responsibility: state in `data/playback`, low-level playback in `playback/service`, UI utilities in `ui`, and library diagnostics in `library`. Remaining classes are moved incrementally to protect existing user workflows.
@@ -183,6 +211,10 @@ Common extension points:
 - Full-player or mini-player changes: use `FullPlayerController` or `MiniPlayerController`.
 - Library persistence: use `TrackStore`, `LibraryDatabase`, and `PlaylistController`.
 - Background playback state: use `PlaybackStateManager`; audio preparation: use `PlaybackEngine`.
+- Main and full-player backgrounds: use `BackgroundSettingsController`; validation is handled by `BackgroundMediaValidator`, rendering by `BackgroundMediaView`.
+- Equalizer and loudness leveling: use `EqualizerController`, `AudioEffectsManager`, and `TrackLoudnessNormalizer`.
+- Text and outline colors: use `ThemeController`; shared text rendering lives in `UiFactory` and `ButtonFactory`.
+- Particles and disc speed: use `ParticleSettingsController`, `ParticleEffectsView`, `CoverRotationSettingsController`, and `RotatingCoverImageView`.
 
 ## Build
 

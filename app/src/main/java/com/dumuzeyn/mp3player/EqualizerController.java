@@ -13,10 +13,24 @@ final class EqualizerController {
     static final String PREFS = "audio_effects";
     static final String ENABLED = "equalizer_enabled";
     static final String BAND_PREFIX = "equalizer_band_";
+    private static final String CUSTOM_BAND_PREFIX = "equalizer_custom_band_";
+    private static final String ACTIVE_PRESET = "equalizer_preset";
+    private static final String PRESET_CUSTOM = "custom";
     static final int BAND_COUNT = 5;
     private static final String[] BAND_NAMES = {"60 Hz", "230 Hz", "910 Hz", "3.6 kHz", "14 kHz"};
     private static final int MIN_DB = -12;
     private static final int MAX_DB = 12;
+    private static final String[] PRESET_IDS = {
+            "flat", "bass", "vocal", "rock", "electronic", "classical", PRESET_CUSTOM
+    };
+    private static final int[][] PRESET_LEVELS = {
+            {0, 0, 0, 0, 0},
+            {7, 5, 1, -1, 1},
+            {-3, -1, 4, 5, 2},
+            {5, 2, -2, 3, 5},
+            {6, 3, 0, 3, 6},
+            {3, 1, -1, 2, 4}
+    };
     private final MainActivityCore host;
     private Button playerButton;
 
@@ -54,6 +68,16 @@ final class EqualizerController {
         });
         panel.addView(enabled, new LinearLayout.LayoutParams(-1, host.dp(48)));
 
+        Button preset = host.button(host.tr("Profile: ", "Профиль: ") + presetName(activePreset()));
+        host.applySecondaryButtonStyle(preset);
+        preset.setOnClickListener(view -> {
+            host.overlayHost.removeView(shade);
+            openPresetDialog();
+        });
+        LinearLayout.LayoutParams presetParams = new LinearLayout.LayoutParams(-1, host.dp(46));
+        presetParams.setMargins(0, host.dp(5), 0, host.dp(5));
+        panel.addView(preset, presetParams);
+
         for (int band = 0; band < BAND_COUNT; band++) {
             addBandControl(panel, band);
         }
@@ -64,7 +88,9 @@ final class EqualizerController {
             SharedPreferences.Editor editor = prefs().edit();
             for (int band = 0; band < BAND_COUNT; band++) {
                 editor.putInt(BAND_PREFIX + band, 0);
+                editor.putInt(CUSTOM_BAND_PREFIX + band, 0);
             }
+            editor.putString(ACTIVE_PRESET, PRESET_CUSTOM);
             editor.apply();
             dispatchSettings();
             host.overlayHost.removeView(shade);
@@ -95,7 +121,11 @@ final class EqualizerController {
                 }
                 int level = progress + MIN_DB;
                 label.setText(bandLabel(band, level));
-                prefs().edit().putInt(BAND_PREFIX + band, level).apply();
+                prefs().edit()
+                        .putString(ACTIVE_PRESET, PRESET_CUSTOM)
+                        .putInt(BAND_PREFIX + band, level)
+                        .putInt(CUSTOM_BAND_PREFIX + band, level)
+                        .apply();
             }
 
             @Override
@@ -112,6 +142,78 @@ final class EqualizerController {
 
     private String bandLabel(int band, int level) {
         return BAND_NAMES[band] + "  " + (level > 0 ? "+" : "") + level + " dB";
+    }
+
+    private void openPresetDialog() {
+        final FrameLayout shade = host.shade();
+        LinearLayout panel = host.panelCard();
+        panel.setPadding(host.dp(16), host.dp(16), host.dp(16), host.dp(16));
+        panel.addView(host.text(host.tr("Equalizer profile", "Профиль эквалайзера"), 21, true),
+                new LinearLayout.LayoutParams(-1, host.dp(46)));
+        String selected = activePreset();
+        for (String presetId : PRESET_IDS) {
+            Button choice = host.button(presetName(presetId));
+            if (presetId.equals(selected)) {
+                host.applyPrimaryButtonStyle(choice);
+            } else {
+                host.applySecondaryButtonStyle(choice);
+            }
+            choice.setOnClickListener(view -> {
+                applyPreset(presetId);
+                host.overlayHost.removeView(shade);
+                openDialog();
+            });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
+            params.setMargins(0, host.dp(2), 0, host.dp(2));
+            panel.addView(choice, params);
+        }
+        shade.addView(panel, host.centerParams(host.dp(330), -2));
+        host.overlayHost.addView(shade);
+    }
+
+    private void applyPreset(String presetId) {
+        SharedPreferences.Editor editor = prefs().edit().putString(ACTIVE_PRESET, presetId);
+        if (!PRESET_CUSTOM.equals(presetId) && PRESET_CUSTOM.equals(activePreset())) {
+            for (int band = 0; band < BAND_COUNT; band++) {
+                editor.putInt(CUSTOM_BAND_PREFIX + band, bandLevel(band));
+            }
+        }
+        if (PRESET_CUSTOM.equals(presetId)) {
+            for (int band = 0; band < BAND_COUNT; band++) {
+                editor.putInt(BAND_PREFIX + band,
+                        prefs().getInt(CUSTOM_BAND_PREFIX + band, bandLevel(band)));
+            }
+        } else {
+            int presetIndex = presetIndex(presetId);
+            for (int band = 0; band < BAND_COUNT; band++) {
+                editor.putInt(BAND_PREFIX + band, PRESET_LEVELS[presetIndex][band]);
+            }
+        }
+        editor.apply();
+        dispatchSettings();
+    }
+
+    private String activePreset() {
+        return prefs().getString(ACTIVE_PRESET, PRESET_CUSTOM);
+    }
+
+    private int presetIndex(String presetId) {
+        for (int index = 0; index < PRESET_LEVELS.length; index++) {
+            if (PRESET_IDS[index].equals(presetId)) {
+                return index;
+            }
+        }
+        return 0;
+    }
+
+    private String presetName(String presetId) {
+        if ("flat".equals(presetId)) return host.tr("Flat", "Ровный");
+        if ("bass".equals(presetId)) return host.tr("Bass", "Бас");
+        if ("vocal".equals(presetId)) return host.tr("Vocal", "Вокал");
+        if ("rock".equals(presetId)) return host.tr("Rock", "Рок");
+        if ("electronic".equals(presetId)) return host.tr("Electronic", "Электроника");
+        if ("classical".equals(presetId)) return host.tr("Classical", "Классика");
+        return host.tr("Custom", "Своя");
     }
 
     private int bandLevel(int band) {

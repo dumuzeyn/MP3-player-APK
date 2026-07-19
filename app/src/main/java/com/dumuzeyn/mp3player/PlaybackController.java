@@ -117,8 +117,12 @@ final class PlaybackController {
     }
 
     private Track restoreFromSavedResume(PlaybackStateManager.State savedState) {
+        if (host.resumeWindowMinutes <= 0) {
+            return null;
+        }
         long savedAt = savedState.savedAt;
-        if (host.resumeWindowMinutes > 0 && savedAt > 0 && System.currentTimeMillis() - savedAt > ((long) host.resumeWindowMinutes) * 60000L) {
+        if (savedAt <= 0 || System.currentTimeMillis() - savedAt
+                > ((long) host.resumeWindowMinutes) * 60000L) {
             return null;
         }
         Track current = host.findTrack(savedState.uri);
