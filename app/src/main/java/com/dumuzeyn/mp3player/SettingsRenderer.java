@@ -40,6 +40,8 @@ final class SettingsRenderer {
                 view -> host.uninterruptedPlaybackController.toggle());
         addButton(host.stableVolumeController.settingLabel(),
                 view -> host.stableVolumeController.toggle());
+        addButton(host.backgroundPlaybackSettingsController.settingLabel(),
+                view -> host.backgroundPlaybackSettingsController.openDialog());
         addButton(host.tr("Mini-player memory: ", "Память мини-плеера: ")
                         + host.settingsController.resumeWindowText(),
                 view -> host.settingsController.openResumeWindowDialog());

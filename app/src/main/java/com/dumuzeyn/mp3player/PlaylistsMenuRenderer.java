@@ -33,6 +33,7 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
 
     @Override
     public void render() {
+        host.playlistController.beginPlaybackBindings(host.songRenderGeneration);
         ArrayList<Playlist> playlists = host.playlistController.filteredPlaylists(host.search);
         if (playlists.isEmpty()) {
             TextView empty = host.text(host.tr3("No playlists yet", "Плейлистов пока нет", "∅ ▤"), 18, true);
@@ -56,7 +57,6 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
 
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);
-        marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
 
         LinearLayout header = host.row();
         LinearLayout titleColumn = new LinearLayout(host);
@@ -87,7 +87,6 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
             } else {
                 host.playList(tracks, false);
             }
-            updatePlaybackState(play, marker, tracks);
         });
         header.addView(play, host.square(44));
 
@@ -95,7 +94,6 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         host.applyPlainIconStyle(shuffle);
         shuffle.setOnClickListener(view -> {
             host.playList(tracks, true);
-            updatePlaybackState(play, marker, tracks);
         });
         header.addView(shuffle, host.square(44));
         card.addView(header);
@@ -120,11 +118,8 @@ final class PlaylistsMenuRenderer implements MenuRenderer {
         markerParams.gravity = android.view.Gravity.START;
         markerParams.setMargins(host.dp(2), host.dp(10), 0, host.dp(10));
         container.addView(marker, markerParams);
+        host.playlistController.bindPlaybackState(
+                play, marker, tracks, host.songRenderGeneration);
         return container;
-    }
-
-    private void updatePlaybackState(Button play, View marker, ArrayList<Track> tracks) {
-        marker.setVisibility(host.isCurrentCollection(tracks) ? View.VISIBLE : View.INVISIBLE);
-        SongRowStateRegistry.applyPlayState(play, host.isPlayingCollection(tracks));
     }
 }
