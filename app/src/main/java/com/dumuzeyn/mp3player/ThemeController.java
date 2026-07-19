@@ -137,23 +137,10 @@ final class ThemeController {
             controls.addView(host.text(host.tr("Text", "Текст"), 16, true),
                     new LinearLayout.LayoutParams(-1, host.dp(30)));
             addColorButton(controls, COLOR_TEXT);
-            if (host.customTextColor != 0) {
-                Button resetText = host.button(host.tr("Use theme text color", "Цвет текста из темы"));
-                host.applySecondaryButtonStyle(resetText);
-                resetText.setOnClickListener(view -> {
-                    host.customTextColor = 0;
-                    applyTheme(host.themeMode);
-                });
-                controls.addView(resetText, new LinearLayout.LayoutParams(-1, host.dp(44)));
-            }
             Button outlineToggle = host.button(host.tr("Text outline: ", "Контур текста: ")
                     + host.tr(host.textOutlineEnabled ? "on" : "off",
                     host.textOutlineEnabled ? "вкл" : "выкл"));
-            if (host.textOutlineEnabled) {
-                host.applyPrimaryButtonStyle(outlineToggle);
-            } else {
-                host.applySecondaryButtonStyle(outlineToggle);
-            }
+            host.applySecondaryButtonStyle(outlineToggle);
             outlineToggle.setOnClickListener(view -> {
                 host.textOutlineEnabled = !host.textOutlineEnabled;
                 applyTheme(host.themeMode);
@@ -168,14 +155,6 @@ final class ThemeController {
                 controls.addView(outlineLabel, labelParams);
                 addColorButton(controls, COLOR_OUTLINE);
             }
-            Button resetOutline = host.button(host.tr("Default outline", "Контур по умолчанию"));
-            host.applySecondaryButtonStyle(resetOutline);
-            resetOutline.setOnClickListener(view -> {
-                host.textOutlineEnabled = false;
-                host.textOutlineColor = 0;
-                applyTheme(host.themeMode);
-            });
-            controls.addView(resetOutline, new LinearLayout.LayoutParams(-1, host.dp(44)));
             ScrollView scroll = new ScrollView(host);
             scroll.addView(controls, new ScrollView.LayoutParams(-1, -2));
             panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));

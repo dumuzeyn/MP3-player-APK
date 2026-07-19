@@ -6,7 +6,7 @@
 - Show custom color and text controls only after selecting the Custom theme, without closing or recreating the dialog visibly.
 - Pin the Done action inside the custom-theme window while the longer settings area scrolls independently.
 - Replace blurred text shadows with a crisp configurable outline and preserve its selected color when toggled.
-- Add default actions for the text outline and all particle colors and sliders.
+- Add a default action for all particle colors and sliders while keeping the outline as a simple neutral on/off control.
 - Restore both animated tab previews and final lists at the remembered scroll position before they become visible.
 - Preserve pending batched song rendering while adjacent tabs are previewed or a swipe is cancelled.
 

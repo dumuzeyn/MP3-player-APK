@@ -8,7 +8,7 @@
 - В окне темы всегда доступны «Светлая», «Тёмная» и «Своя»; дополнительные цвета появляются только после выбора «Своя» без выхода из окна.
 - В пользовательской теме кнопка «Готово» закреплена внизу, а длинный список параметров прокручивается отдельно.
 - Размытая тень текста заменена чётким контуром с включением, выключением и выбором цвета.
-- Кнопка «По умолчанию» отключает контур и возвращает автоматический контрастный цвет.
+- Переключатель контура сохраняет нейтральный фон и меняет только состояние «вкл/выкл»; цвет выбирается отдельно.
 - В настройках частиц кнопка «По умолчанию» восстанавливает оба цвета темы, частоту, размер и время жизни.
 - Позиция длинного списка восстанавливается до его появления: при возврате в «Песни» больше не видно прокрутку сверху.
 - Анимированный предпросмотр соседней вкладки использует ту же сохранённую позицию и не сбрасывает пакетную загрузку песен.
@@ -39,7 +39,7 @@ An update focused on stable settings and library navigation.
 - Light, Dark, and Custom always remain available; additional color controls appear only after Custom is selected without leaving the dialog.
 - The Done action stays pinned while the longer custom-theme controls scroll independently.
 - Blurred text shadows are replaced with a crisp outline that can be toggled and colored.
-- A default action disables the outline and restores its automatic contrast color.
+- The outline toggle keeps a neutral background and changes only its on/off state; color remains a separate choice.
 - Particle defaults restore both theme colors as well as frequency, size, and lifetime sliders.
 - Long lists are positioned before becoming visible, so returning to Songs no longer shows a jump from the top.
 - Animated adjacent-tab previews use the same remembered position without disturbing batched song rendering.
