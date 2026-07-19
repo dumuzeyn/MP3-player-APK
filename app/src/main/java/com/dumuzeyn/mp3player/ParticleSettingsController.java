@@ -31,6 +31,23 @@ final class ParticleSettingsController {
         addColorButton(panel, true);
         addColorButton(panel, false);
 
+        Button reset = host.button(host.tr("Restore defaults", "По умолчанию"));
+        host.applySecondaryButtonStyle(reset);
+        reset.setOnClickListener(view -> {
+            host.particleFrequency = 45;
+            host.particleSize = 100;
+            host.particleLifetime = 100;
+            host.particlePrimaryColor = 0;
+            host.particleSecondaryColor = 0;
+            host.saveState();
+            host.refreshParticleSettings();
+            host.overlayHost.removeView(shade);
+            openDialog();
+        });
+        LinearLayout.LayoutParams resetParams = new LinearLayout.LayoutParams(-1, host.dp(46));
+        resetParams.setMargins(0, host.dp(8), 0, 0);
+        panel.addView(reset, resetParams);
+
         Button close = host.button(host.tr("Done", "Готово"));
         host.applyPrimaryButtonStyle(close);
         close.setOnClickListener(view -> {
@@ -59,7 +76,7 @@ final class ParticleSettingsController {
             host.overlayHost.removeAllViews();
             openColorPicker(primary);
         });
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(40));
         params.setMargins(0, host.dp(3), 0, host.dp(3));
         panel.addView(button, params);
     }

@@ -193,6 +193,28 @@ final class SongsRenderer {
         }
     }
 
+    BatchState captureBatchState() {
+        return new BatchState(pendingTracks, pendingStart, pendingGeneration);
+    }
+
+    void restoreBatchState(BatchState state) {
+        pendingTracks = state.pendingTracks;
+        pendingStart = state.pendingStart;
+        pendingGeneration = state.pendingGeneration;
+    }
+
+    static final class BatchState {
+        final ArrayList<Track> pendingTracks;
+        final int pendingStart;
+        final int pendingGeneration;
+
+        BatchState(ArrayList<Track> pendingTracks, int pendingStart, int pendingGeneration) {
+            this.pendingTracks = pendingTracks;
+            this.pendingStart = pendingStart;
+            this.pendingGeneration = pendingGeneration;
+        }
+    }
+
     private void appendNextSongBatch() {
         if (pendingTracks == null || pendingGeneration != host.songRenderGeneration || host.tabIndex > 1) {
             pendingTracks = null;

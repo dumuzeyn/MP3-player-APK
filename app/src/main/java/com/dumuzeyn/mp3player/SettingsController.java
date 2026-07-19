@@ -34,6 +34,7 @@ final class SettingsController {
                 new LinearLayout.LayoutParams(-1, host.dp(50)));
         addChoice(panel, "English", "en".equals(host.language), () -> applyLanguage("en", shade));
         addChoice(panel, "Русский", "ru".equals(host.language), () -> applyLanguage("ru", shade));
+        addDoneButton(panel, shade);
         shade.addView(panel, host.centerParams(host.dp(330), -2));
         host.overlayHost.addView(shade);
         host.updateMini();
@@ -57,8 +58,10 @@ final class SettingsController {
                 host.saveState();
                 host.overlayHost.removeView(shade);
                 host.render();
+                openResumeWindowDialog();
             });
         }
+        addDoneButton(panel, shade);
         shade.addView(panel, host.centerParams(host.dp(330), -2));
         host.overlayHost.addView(shade);
         host.updateMini();
@@ -175,6 +178,21 @@ final class SettingsController {
         host.saveState();
         host.overlayHost.removeView(shade);
         host.rebuildUi();
+        openLanguageDialog();
+    }
+
+    private void addDoneButton(LinearLayout parent, FrameLayout shade) {
+        Button done = host.button(host.tr("Done", "Готово"));
+        host.applyPrimaryButtonStyle(done);
+        done.setOnClickListener(view -> {
+            if (shade.getParent() != null) {
+                host.overlayHost.removeView(shade);
+            }
+            host.updateMini();
+        });
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(50));
+        params.setMargins(0, host.dp(8), 0, 0);
+        parent.addView(done, params);
     }
 
     private void addChoice(LinearLayout parent, String label, boolean selected, Runnable action) {

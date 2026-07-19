@@ -58,6 +58,7 @@ abstract class AppState extends Activity {
     String themeMode = "light";
     int customBg = -1;
     int customFg = -16777216;
+    int customSecondaryAccent = 0xffffd000;
     int customTextColor = 0;
     boolean textOutlineEnabled = false;
     int textOutlineColor = 0;
