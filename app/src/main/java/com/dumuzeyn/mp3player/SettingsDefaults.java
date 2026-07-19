@@ -39,14 +39,17 @@ final class SettingsDefaults {
     private static void resetLauncherAlias(Context context) {
         PackageManager manager = context.getPackageManager();
         ComponentName light = LauncherComponents.forTheme(context, false);
-        ComponentName dark = LauncherComponents.forTheme(context, true);
         try {
             manager.setComponentEnabledSetting(light,
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     PackageManager.DONT_KILL_APP);
-            manager.setComponentEnabledSetting(dark,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP);
+            for (ComponentName component : LauncherComponents.all(context)) {
+                if (!component.equals(light)) {
+                    manager.setComponentEnabledSetting(component,
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP);
+                }
+            }
         } catch (RuntimeException ignored) {
             // Some launchers postpone alias updates until the activity is no longer visible.
         }

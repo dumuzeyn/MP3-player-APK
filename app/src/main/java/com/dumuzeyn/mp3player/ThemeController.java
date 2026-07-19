@@ -20,11 +20,13 @@ import java.util.Locale;
 final class ThemeController {
     private static final int COLOR_BACKGROUND = 0;
     private static final int COLOR_ACCENT = 1;
-    private static final int COLOR_TEXT = 2;
-    private static final int COLOR_OUTLINE = 3;
+    private static final int COLOR_SECONDARY_ACCENT = 2;
+    private static final int COLOR_TEXT = 3;
+    private static final int COLOR_OUTLINE = 4;
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
     private static final String CUSTOM_FG = "customFg";
+    private static final String CUSTOM_SECONDARY_ACCENT = "customSecondaryAccent";
 
     private final MainActivityCore host;
     private boolean launcherUpdatePending;
@@ -42,6 +44,8 @@ final class ThemeController {
         }
         host.customBg = prefs.getInt(CUSTOM_BG, Color.WHITE);
         host.customFg = prefs.getInt(CUSTOM_FG, Color.BLACK);
+        host.customSecondaryAccent = prefs.getInt(
+                CUSTOM_SECONDARY_ACCENT, Color.rgb(255, 208, 0));
     }
 
     String themeName() {
@@ -66,9 +70,9 @@ final class ThemeController {
             host.purple = host.customFg;
             host.purpleDark = mixColor(host.customFg, host.customBg, 0.82f);
             host.purpleSoft = mixColor(host.customFg, host.customBg, 0.18f);
-            host.yellow = Color.rgb(255, 208, 0);
-            host.yellowDark = Color.rgb(231, 185, 0);
-            host.yellowSoft = Color.rgb(255, 245, 190);
+            host.yellow = host.customSecondaryAccent;
+            host.yellowDark = mixColor(host.customSecondaryAccent, host.customBg, 0.82f);
+            host.yellowSoft = mixColor(host.customSecondaryAccent, host.customBg, 0.18f);
         } else if (host.dark) {
             host.bg = Color.rgb(17, 16, 21);
             host.fg = Color.WHITE;
@@ -134,6 +138,9 @@ final class ThemeController {
             controls.addView(host.text(host.tr("Accent", "Акцент"), 16, true),
                     new LinearLayout.LayoutParams(-1, host.dp(30)));
             addColorButton(controls, COLOR_ACCENT);
+            controls.addView(host.text(host.tr("Second accent", "Второй акцент"), 16, true),
+                    new LinearLayout.LayoutParams(-1, host.dp(30)));
+            addColorButton(controls, COLOR_SECONDARY_ACCENT);
             controls.addView(host.text(host.tr("Text", "Текст"), 16, true),
                     new LinearLayout.LayoutParams(-1, host.dp(30)));
             addColorButton(controls, COLOR_TEXT);
@@ -233,6 +240,9 @@ final class ThemeController {
                     } else if (target == COLOR_ACCENT) {
                         host.themeMode = "custom";
                         host.customFg = color;
+                    } else if (target == COLOR_SECONDARY_ACCENT) {
+                        host.themeMode = "custom";
+                        host.customSecondaryAccent = color;
                     } else if (target == COLOR_OUTLINE) {
                         host.textOutlineColor = color;
                     } else {
@@ -255,6 +265,7 @@ final class ThemeController {
         host.applyPrimaryButtonStyle(done);
         done.setOnClickListener(view -> applyTheme(
                 target == COLOR_BACKGROUND || target == COLOR_ACCENT
+                        || target == COLOR_SECONDARY_ACCENT
                         ? "custom" : host.themeMode));
         actions.addView(done, new LinearLayout.LayoutParams(0, host.dp(54), 1.0f));
         panel.addView(actions);
@@ -269,6 +280,9 @@ final class ThemeController {
         if (target == COLOR_ACCENT) {
             return host.customFg;
         }
+        if (target == COLOR_SECONDARY_ACCENT) {
+            return host.customSecondaryAccent;
+        }
         if (target == COLOR_OUTLINE) {
             return effectiveOutlineColor();
         }
@@ -281,6 +295,9 @@ final class ThemeController {
         }
         if (target == COLOR_ACCENT) {
             return host.tr("Accent", "Акцент");
+        }
+        if (target == COLOR_SECONDARY_ACCENT) {
+            return host.tr("Second accent", "Второй акцент");
         }
         if (target == COLOR_OUTLINE) {
             return host.tr("Outline color", "Цвет контура");
@@ -325,18 +342,22 @@ final class ThemeController {
 
     void updateLauncherIcon() {
         PackageManager packageManager = host.getPackageManager();
-        ComponentName light = LauncherComponents.forTheme(host, false);
-        ComponentName dark = LauncherComponents.forTheme(host, true);
         boolean useDark = isDarkTheme(host.themeMode, host.customBg);
+        ComponentName selected = LauncherComponents.forPalette(
+                host, host.themeMode, useDark, host.purple, host.yellow);
         try {
             packageManager.setComponentEnabledSetting(
-                    useDark ? dark : light,
+                    selected,
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     PackageManager.DONT_KILL_APP);
-            packageManager.setComponentEnabledSetting(
-                    useDark ? light : dark,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP);
+            for (ComponentName component : LauncherComponents.all(host)) {
+                if (!component.equals(selected)) {
+                    packageManager.setComponentEnabledSetting(
+                            component,
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP);
+                }
+            }
         } catch (RuntimeException ignored) {
             // A launcher may reject alias changes while the task is visible.
         }
@@ -356,8 +377,8 @@ final class ThemeController {
     private Bitmap launcherPreviewIcon() {
         try {
             int size = Math.max(1, host.dp(64));
-            return ThemeIconBitmap.create(host, host.dark, "custom".equals(host.themeMode),
-                    host.customBg, host.customFg, size);
+            return ThemeIconBitmap.createTile(
+                    host, host.bg, host.purple, host.yellow, size);
         } catch (RuntimeException error) {
             return BitmapFactory.decodeResource(host.getResources(), host.getApplicationInfo().icon);
         }

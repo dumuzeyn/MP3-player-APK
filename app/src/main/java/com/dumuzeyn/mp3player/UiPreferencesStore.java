@@ -8,6 +8,7 @@ final class UiPreferencesStore {
     private static final String THEME = "theme";
     private static final String CUSTOM_BG = "customBg";
     private static final String CUSTOM_FG = "customFg";
+    private static final String CUSTOM_SECONDARY_ACCENT = "customSecondaryAccent";
     private static final String ANIMATIONS = "animations";
     private static final String LANGUAGE = "language";
     private static final String CUSTOM_TIMER = "customTimer";
@@ -129,6 +130,7 @@ final class UiPreferencesStore {
                 .putString(THEME, host.themeMode)
                 .putInt(CUSTOM_BG, host.customBg)
                 .putInt(CUSTOM_FG, host.customFg)
+                .putInt(CUSTOM_SECONDARY_ACCENT, host.customSecondaryAccent)
                 .putBoolean(ANIMATIONS, host.animations)
                 .putString(LANGUAGE, host.language)
                 .putInt(CUSTOM_TIMER, host.customTimerMinutes)

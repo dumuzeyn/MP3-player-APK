@@ -9,6 +9,8 @@
 - Add a default action for all particle colors and sliders while keeping the outline as a simple neutral on/off control.
 - Restore both animated tab previews and final lists at the remembered scroll position before they become visible.
 - Preserve pending batched song rendering while adjacent tabs are previewed or a swipe is cancelled.
+- Let the Custom theme define both accent colors instead of keeping the second accent fixed to yellow.
+- Apply the active two-color palette to the header, media-session artwork, recent-apps icon, launcher icon, and Android splash screen.
 
 ## 2.5.1 - Playback, sound, and visual customization
 

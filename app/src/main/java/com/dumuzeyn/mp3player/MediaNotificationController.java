@@ -72,7 +72,11 @@ final class MediaNotificationController {
         int accentColor = "custom".equals(theme)
                 ? uiPreferences.getInt("customFg", 0xff7c32e8)
                 : darkTheme ? 0xffa35cff : 0xff7c32e8;
-        ComponentName launcher = LauncherComponents.forTheme(context, darkTheme);
+        int secondaryAccentColor = "custom".equals(theme)
+                ? uiPreferences.getInt("customSecondaryAccent", 0xffffd000)
+                : darkTheme ? 0xffffd438 : 0xffffd000;
+        ComponentName launcher = LauncherComponents.forPalette(
+                context, theme, darkTheme, accentColor, secondaryAccentColor);
         Intent launchIntent = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(launcher);
@@ -85,8 +89,10 @@ final class MediaNotificationController {
                 ? android.R.drawable.ic_media_pause
                 : android.R.drawable.ic_media_play;
         Bitmap cover = notificationCover(track, circularCover);
-        Bitmap themedIcon = themedAppIcon(darkTheme, "custom".equals(theme),
-                customBackground, accentColor);
+        int iconBackground = "custom".equals(theme)
+                ? customBackground : darkTheme ? 0xff111015 : 0xffffffff;
+        Bitmap themedIcon = themedAppIcon(
+                iconBackground, accentColor, secondaryAccentColor);
         builder.setSmallIcon(context.getResources().getIdentifier(
                         "ic_notification_music", "drawable", context.getPackageName()))
                 .setContentTitle(track.title)
@@ -254,15 +260,15 @@ final class MediaNotificationController {
         return output;
     }
 
-    private Bitmap themedAppIcon(boolean darkTheme, boolean custom,
-            int backgroundColor, int foregroundColor) {
-        String key = darkTheme + ":" + custom + ":" + backgroundColor + ":" + foregroundColor;
+    private Bitmap themedAppIcon(int backgroundColor,
+            int primaryColor, int secondaryColor) {
+        String key = backgroundColor + ":" + primaryColor + ":" + secondaryColor;
         if (key.equals(appIconKey) && appIcon != null && !appIcon.isRecycled()) {
             return appIcon;
         }
         try {
-            appIcon = ThemeIconBitmap.create(context, darkTheme, custom,
-                    backgroundColor, foregroundColor, 128);
+            appIcon = ThemeIconBitmap.createTile(
+                    context, backgroundColor, primaryColor, secondaryColor, 128);
             appIconKey = key;
             return appIcon;
         } catch (RuntimeException error) {

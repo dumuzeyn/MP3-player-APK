@@ -20,8 +20,8 @@ final class HeaderController {
         header.setPadding(host.dp(12), 0, host.dp(12), 0);
         LinearLayout row = host.row();
         ImageView icon = new ImageView(host);
-        icon.setImageResource(host.getResources().getIdentifier(
-                "ic_music_vector_user", "drawable", host.getPackageName()));
+        icon.setImageBitmap(ThemeIconBitmap.createLogo(
+                host, host.purple, host.yellow, host.dp(42)));
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         icon.setContentDescription("MP3 Player Voltune");
         LinearLayout.LayoutParams iconParams = host.square(36);

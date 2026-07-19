@@ -20,4 +20,34 @@
         <item name="android:windowSplashScreenBackground">#000000</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_dark_splash_user</item>
     </style>
+    <style name="AppThemeCustomBlueLight" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_blue_splash</item>
+    </style>
+    <style name="AppThemeCustomBlueDark" parent="AppTheme.Dark">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_blue_splash</item>
+    </style>
+    <style name="AppThemeCustomRedLight" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_red_splash</item>
+    </style>
+    <style name="AppThemeCustomRedDark" parent="AppTheme.Dark">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_red_splash</item>
+    </style>
+    <style name="AppThemeCustomGreenLight" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_green_splash</item>
+    </style>
+    <style name="AppThemeCustomGreenDark" parent="AppTheme.Dark">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_green_splash</item>
+    </style>
+    <style name="AppThemeCustomPinkLight" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_pink_splash</item>
+    </style>
+    <style name="AppThemeCustomPinkDark" parent="AppTheme.Dark">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_pink_splash</item>
+    </style>
+    <style name="AppThemeCustomOrangeLight" parent="AppTheme">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_orange_splash</item>
+    </style>
+    <style name="AppThemeCustomOrangeDark" parent="AppTheme.Dark">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_custom_orange_splash</item>
+    </style>
 </resources>

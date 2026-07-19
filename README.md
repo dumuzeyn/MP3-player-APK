@@ -21,7 +21,7 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Мини-плеер и большой плеер с качественной обложкой, перемоткой и управлением очередью.
 - Плейлисты, избранное, эквалайзер с готовыми профилями и собственной сохраняемой настройкой.
 - Анализ треков и плавное выравнивание воспринимаемой громкости без резких скачков внутри песни.
-- Светлая, тёмная и пользовательская темы, отдельный цвет текста и чёткий настраиваемый контур без размытия.
+- Светлая, тёмная и пользовательская темы с двумя акцентными цветами; значок Voltune следует выбранной палитре. Цвет текста и чёткий контур настраиваются отдельно.
 - Однотонные и градиентные фоны, а также безопасные изображения или GIF с регулируемым размытием.
 - Отдельный фон для основного интерфейса и большого плеера, настраиваемая прозрачность карточек.
 - Скруглённые или вращающиеся круглые обложки с регулируемой скоростью диска в большом плеере.
@@ -144,7 +144,7 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Mini-player and full player with high-quality artwork, seeking, and queue controls.
 - Playlists, favorites, an equalizer with built-in presets, and a remembered custom profile.
 - Per-track analysis and smooth perceived-volume leveling without abrupt changes inside a song.
-- Light, dark, and custom themes with an independent text color and a crisp configurable outline without blur.
+- Light, dark, and custom themes with two accent colors reflected by the Voltune icon, plus independent text and crisp outline colors.
 - Solid colors, gradients, or validated image and GIF backgrounds with adjustable blur.
 - Independent backgrounds for the main interface and full player, plus per-section card opacity.
 - Rounded or rotating circular artwork with adjustable full-player disc speed.

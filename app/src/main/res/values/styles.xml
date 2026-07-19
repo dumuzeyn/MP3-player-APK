@@ -16,5 +16,15 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowBackground">#000000</item>
     </style>
+    <style name="AppThemeCustomBlueLight" parent="AppTheme" />
+    <style name="AppThemeCustomBlueDark" parent="AppTheme.Dark" />
+    <style name="AppThemeCustomRedLight" parent="AppTheme" />
+    <style name="AppThemeCustomRedDark" parent="AppTheme.Dark" />
+    <style name="AppThemeCustomGreenLight" parent="AppTheme" />
+    <style name="AppThemeCustomGreenDark" parent="AppTheme.Dark" />
+    <style name="AppThemeCustomPinkLight" parent="AppTheme" />
+    <style name="AppThemeCustomPinkDark" parent="AppTheme.Dark" />
+    <style name="AppThemeCustomOrangeLight" parent="AppTheme" />
+    <style name="AppThemeCustomOrangeDark" parent="AppTheme.Dark" />
 </resources>
 
