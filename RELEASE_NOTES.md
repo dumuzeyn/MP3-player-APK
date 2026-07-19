@@ -14,6 +14,10 @@
 - Выравнивание громкости анализирует каждый трек и меняет усиление плавно, без резких скачков внутри песни.
 - Сохраняются позиции прокрутки разделов, память мини-плеера и исходные названия песен; обложки плейлистов не загружаются заново без необходимости.
 - Окно свойств песни стало компактным: его высота определяется содержимым, а все действия выровнены единым столбцом.
+- Скорость вращения обложки-диска в большом плеере регулируется от 25% до 200%; перемотка учитывает выбранную скорость.
+- Для частиц можно независимо выбрать два цвета, сохранив цвета темы как исходный вариант.
+- Цвет текста настраивается отдельно от темы и акцента; при необходимости включается контур с собственным цветом.
+- Фоновые тесты Android 15/16 теперь проверяют подтверждённое воспроизведение и не принимают краткий переход между треками за остановку.
 
 ## English
 
@@ -29,3 +33,7 @@ An update focused on playback stability, sound, and visual customization.
 - Volume leveling analyzes each track and applies smooth gain changes without abrupt shifts inside a song.
 - Section scroll positions, mini-player memory, and original track titles are preserved; playlist artwork is retained instead of visibly reloading.
 - The song actions window is content-sized and compact, with all actions aligned in one consistent column.
+- Full-player disc rotation is adjustable from 25% to 200%, and turntable seeking follows the selected speed.
+- Two particle colors can be selected independently while theme colors remain the default palette.
+- Text color is independent from theme and accent colors, with an optional configurable outline for contrast.
+- Android 15/16 background tests now observe confirmed playback instead of treating a brief track transition as a stop.

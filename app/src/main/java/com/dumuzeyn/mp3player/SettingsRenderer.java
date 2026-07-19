@@ -23,6 +23,8 @@ final class SettingsRenderer {
                         + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
                         host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),
                 view -> toggleCoverStyle());
+        addButton(host.coverRotationSettingsController.settingLabel(),
+                view -> host.coverRotationSettingsController.openDialog());
         addButton(host.tr("Animations: ", "Анимации: ")
                         + host.tr(host.animations ? "on" : "off", host.animations ? "вкл" : "выкл"),
                 view -> toggleAnimations());

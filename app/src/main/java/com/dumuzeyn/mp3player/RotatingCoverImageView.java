@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 final class RotatingCoverImageView extends ImageView {
+    private static final long DEFAULT_ROTATION_DURATION_MS = 18000L;
+
     private final MainActivityCore host;
     private final HashSet<String> trackUris = new HashSet<>();
     private ArrayList<Track> sourceTracks = new ArrayList<>();
@@ -23,6 +25,7 @@ final class RotatingCoverImageView extends ImageView {
     private boolean seeking;
     private int seekStartPosition;
     private float seekStartRotation;
+    private long rotationDurationMs = DEFAULT_ROTATION_DURATION_MS;
 
     RotatingCoverImageView(MainActivityCore host) {
         super(host);
@@ -54,6 +57,21 @@ final class RotatingCoverImageView extends ImageView {
             this.trackUris.add(nextTrackUri);
         }
         updatePlaybackState();
+    }
+
+    void setRotationSpeedPercent(int speedPercent) {
+        int boundedSpeed = Math.max(25, Math.min(200, speedPercent));
+        long nextDuration = Math.round(DEFAULT_ROTATION_DURATION_MS * (100.0 / boundedSpeed));
+        if (nextDuration == this.rotationDurationMs) {
+            return;
+        }
+        boolean restart = this.rotationAnimator != null && this.rotationAnimator.isRunning()
+                && !this.seeking;
+        this.rotationDurationMs = nextDuration;
+        if (restart) {
+            stopRotation(false);
+            startRotation();
+        }
     }
 
     void bindTracks(ArrayList<Track> tracks) {
@@ -171,7 +189,7 @@ final class RotatingCoverImageView extends ImageView {
     }
 
     private float degreesForSeekDelta(int deltaMs) {
-        return deltaMs * (360.0f / 18000.0f);
+        return deltaMs * (360.0f / this.rotationDurationMs);
     }
 
     @Override
@@ -193,7 +211,7 @@ final class RotatingCoverImageView extends ImageView {
         }
         float start = getRotation() % 360.0f;
         this.rotationAnimator = ValueAnimator.ofFloat(start, start + 360.0f);
-        this.rotationAnimator.setDuration(18000L);
+        this.rotationAnimator.setDuration(this.rotationDurationMs);
         this.rotationAnimator.setRepeatCount(ValueAnimator.INFINITE);
         this.rotationAnimator.setInterpolator(new LinearInterpolator());
         this.rotationAnimator.addUpdateListener(animator -> setRotation((Float) animator.getAnimatedValue()));

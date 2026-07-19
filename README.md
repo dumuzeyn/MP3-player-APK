@@ -21,9 +21,11 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Мини-плеер и большой плеер с качественной обложкой, перемоткой и управлением очередью.
 - Плейлисты, избранное, эквалайзер с готовыми профилями и собственной сохраняемой настройкой.
 - Анализ треков и плавное выравнивание воспринимаемой громкости без резких скачков внутри песни.
-- Светлая, тёмная и пользовательская темы, однотонные и градиентные фоны, а также безопасные изображения или GIF с регулируемым размытием.
+- Светлая, тёмная и пользовательская темы, отдельный цвет текста, настраиваемый контур и цвет контура.
+- Однотонные и градиентные фоны, а также безопасные изображения или GIF с регулируемым размытием.
 - Отдельный фон для основного интерфейса и большого плеера, настраиваемая прозрачность карточек.
-- Скруглённые или вращающиеся круглые обложки, анимации и настраиваемые частицы.
+- Скруглённые или вращающиеся круглые обложки с регулируемой скоростью диска в большом плеере.
+- Анимации и частицы с настраиваемыми частотой, размером, временем жизни и двумя цветами.
 - Перемотка вращающейся обложки как диска: направление зависит от движения вперёд или назад, а пауза останавливает вращение.
 - Восстановление позиции прокрутки в разделах, памяти мини-плеера, очереди и текущего состояния воспроизведения.
 - Русский и английский интерфейс.
@@ -88,6 +90,8 @@ flowchart TD
 - Состояние фонового воспроизведения: `PlaybackStateManager`; подготовка аудио: `PlaybackEngine`.
 - Фоны приложения и большого плеера: `BackgroundSettingsController`, проверка файлов — `BackgroundMediaValidator`, отображение — `BackgroundMediaView`.
 - Эквалайзер и выравнивание громкости: `EqualizerController`, `AudioEffectsManager` и `TrackLoudnessNormalizer`.
+- Цвет текста и контура: `ThemeController`; общая отрисовка текста: `UiFactory` и `ButtonFactory`.
+- Частицы и скорость диска: `ParticleSettingsController`, `ParticleEffectsView`, `CoverRotationSettingsController` и `RotatingCoverImageView`.
 
 ## Сборка
 
@@ -140,9 +144,11 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Mini-player and full player with high-quality artwork, seeking, and queue controls.
 - Playlists, favorites, an equalizer with built-in presets, and a remembered custom profile.
 - Per-track analysis and smooth perceived-volume leveling without abrupt changes inside a song.
-- Light, dark, and custom themes with solid colors, gradients, or validated images and GIF backgrounds with adjustable blur.
+- Light, dark, and custom themes with an independent text color, optional outline, and configurable outline color.
+- Solid colors, gradients, or validated image and GIF backgrounds with adjustable blur.
 - Independent backgrounds for the main interface and full player, plus per-section card opacity.
-- Rounded or rotating circular artwork, animations, and configurable particles.
+- Rounded or rotating circular artwork with adjustable full-player disc speed.
+- Animations and particles with configurable frequency, size, lifetime, and two-color palette.
 - Turntable-style artwork seeking that follows forward and backward movement and stops while playback is paused.
 - Restored scroll positions, mini-player memory, queue, and current playback state.
 - Russian and English interface.
@@ -207,6 +213,8 @@ Common extension points:
 - Background playback state: use `PlaybackStateManager`; audio preparation: use `PlaybackEngine`.
 - Main and full-player backgrounds: use `BackgroundSettingsController`; validation is handled by `BackgroundMediaValidator`, rendering by `BackgroundMediaView`.
 - Equalizer and loudness leveling: use `EqualizerController`, `AudioEffectsManager`, and `TrackLoudnessNormalizer`.
+- Text and outline colors: use `ThemeController`; shared text rendering lives in `UiFactory` and `ButtonFactory`.
+- Particles and disc speed: use `ParticleSettingsController`, `ParticleEffectsView`, `CoverRotationSettingsController`, and `RotatingCoverImageView`.
 
 ## Build
 

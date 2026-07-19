@@ -76,6 +76,8 @@ class MainActivityCore extends AppState {
     final EqualizerController equalizerController = new EqualizerController(this);
     final VolumeLevelingController volumeLevelingController = new VolumeLevelingController(this);
     final ParticleSettingsController particleSettingsController = new ParticleSettingsController(this);
+    final CoverRotationSettingsController coverRotationSettingsController =
+            new CoverRotationSettingsController(this);
     final UninterruptedPlaybackController uninterruptedPlaybackController = new UninterruptedPlaybackController(this);
     final StableVolumeController stableVolumeController = new StableVolumeController(this);
     final BackgroundPlaybackSettingsController backgroundPlaybackSettingsController =

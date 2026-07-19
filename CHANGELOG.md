@@ -11,6 +11,10 @@
 - Replace fixed volume correction with per-track loudness analysis and smooth gain changes.
 - Preserve menu scroll positions, mini-player restoration, original track titles, and already loaded playlist artwork.
 - Replace the oversized song actions sheet with a compact content-sized panel and consistently aligned actions.
+- Add adjustable full-player disc rotation speed from 25% to 200% and keep seek rotation proportional to that speed.
+- Add two independently selectable particle colors while retaining theme colors as the default palette.
+- Add an independent text color plus an optional configurable outline for readable text on any background.
+- Stabilize Android 15/16 background playback tests by observing confirmed playback state instead of transient queue preparation snapshots.
 
 ## 2.5 - Adaptive tablet interface
 

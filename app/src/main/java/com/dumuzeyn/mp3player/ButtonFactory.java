@@ -27,6 +27,7 @@ final class ButtonFactory {
         button.setMinWidth(0);
         button.setMinHeight(0);
         button.setBackgroundColor(Color.TRANSPARENT);
+        host.themeController.applyTextOutline(button);
         return button;
     }
 

@@ -204,6 +204,10 @@ final class FullPlayerController {
     private void addCoverAndTitle(LinearLayout content, Track track) {
         ImageView cover = host.coverView();
         this.coverView = cover;
+        if (cover instanceof RotatingCoverImageView) {
+            ((RotatingCoverImageView) cover).setRotationSpeedPercent(
+                    host.fullPlayerRotationSpeed);
+        }
         host.loadCover(cover, track, host.dark ? Color.rgb(28, 28, 28) : Color.rgb(235, 235, 235), MainActivityCore.COVER_FULL_SIZE);
         float density = host.getResources().getDisplayMetrics().density;
         int screenHeightDp = Math.round(host.getResources().getDisplayMetrics().heightPixels / density);

@@ -38,6 +38,7 @@ final class UiFactory {
         text.setGravity(16);
         text.setTypeface(null, bold ? Typeface.BOLD : Typeface.NORMAL);
         text.setSingleLine(false);
+        host.themeController.applyTextOutline(text);
         return text;
     }
 
