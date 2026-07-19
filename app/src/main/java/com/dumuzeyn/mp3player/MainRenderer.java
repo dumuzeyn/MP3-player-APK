@@ -1,5 +1,8 @@
 package com.dumuzeyn.mp3player;
 
+import java.util.HashMap;
+import java.util.Map;
+
 final class MainRenderer {
     private final MainActivityCore host;
     private final SongsMenuRenderer songsRenderer;
@@ -9,6 +12,8 @@ final class MainRenderer {
     private final MenuRenderer artistsRenderer;
     private final MenuRenderer albumsRenderer;
     private final MenuRenderer settingsRenderer;
+    private final Map<String, Integer> scrollPositions = new HashMap<>();
+    private String renderedMenuKey;
 
     MainRenderer(MainActivityCore host) {
         this.host = host;
@@ -28,6 +33,7 @@ final class MainRenderer {
     }
 
     void render() {
+        rememberCurrentScrollPosition();
         host.refreshTabs();
         host.songRenderGeneration++;
         host.list.removeAllViews();
@@ -39,7 +45,42 @@ final class MainRenderer {
         if (renderer.needsMiniSpacer()) {
             host.addMiniSpacerIfNeeded();
         }
+        restoreCurrentScrollPosition();
         host.updateMini();
+    }
+
+    void captureScrollBeforeUiRebuild() {
+        rememberCurrentScrollPosition();
+        renderedMenuKey = null;
+    }
+
+    private void rememberCurrentScrollPosition() {
+        if (renderedMenuKey == null || host.contentScroll == null) {
+            return;
+        }
+        scrollPositions.put(renderedMenuKey, Math.max(0, host.contentScroll.getScrollY()));
+    }
+
+    private void restoreCurrentScrollPosition() {
+        renderedMenuKey = menuKey(host.tabIndex, host.search);
+        final String targetKey = renderedMenuKey;
+        if (host.contentScroll == null) {
+            return;
+        }
+        int scrollY = scrollPositions.containsKey(renderedMenuKey)
+                ? scrollPositions.get(renderedMenuKey) : 0;
+        if (host.tabIndex <= 1) {
+            host.songsRenderer.prepareForScrollRestore(scrollY);
+        }
+        host.contentScroll.post(() -> {
+            if (host.contentScroll != null && targetKey.equals(menuKey(host.tabIndex, host.search))) {
+                host.contentScroll.scrollTo(0, scrollY);
+            }
+        });
+    }
+
+    private String menuKey(int tabIndex, String search) {
+        return tabIndex + "\n" + (search == null ? "" : search);
     }
 
     void renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {

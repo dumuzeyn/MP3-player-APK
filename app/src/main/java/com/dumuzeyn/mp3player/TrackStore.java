@@ -110,7 +110,9 @@ public final class TrackStore {
         if (fresh == null) {
             return oldTrack;
         }
-        String title = isBlank(fresh.title) ? oldTrack.title : fresh.title;
+        // A metadata repair must never rename an already imported track. Some providers
+        // expose unstable or incorrectly decoded title tags between reads.
+        String title = oldTrack.title;
         String artist = isBlank(fresh.artist) ? oldTrack.artist : fresh.artist;
         String album = isBlank(fresh.album) ? oldTrack.album : fresh.album;
         String genre = isBlank(fresh.genre) ? oldTrack.genre : fresh.genre;

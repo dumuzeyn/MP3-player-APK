@@ -24,7 +24,7 @@ final class AudioEffectsManager {
         this.context = context.getApplicationContext();
     }
 
-    void apply(MediaPlayer player) {
+    void apply(MediaPlayer player, float normalizationGainDb) {
         release();
         if (player == null) {
             return;
@@ -42,6 +42,7 @@ final class AudioEffectsManager {
         }
         if (preferences.getBoolean(VolumeLevelingController.ENABLED, false)) {
             applyVolumeLeveling(audioSessionId);
+            applyFixedLoudnessGain(audioSessionId, normalizationGainDb);
         }
     }
 
@@ -83,7 +84,6 @@ final class AudioEffectsManager {
 
     private void applyVolumeLeveling(int audioSessionId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            applyLoudnessFallback(audioSessionId);
             return;
         }
         if (customDynamicsUnsupported) {
@@ -111,19 +111,23 @@ final class AudioEffectsManager {
         } catch (RuntimeException defaultConfigError) {
             Log.w(DEBUG_TAG, "volume_leveling_default_config_failed session=" + audioSessionId
                     + " error=" + defaultConfigError.getMessage());
-            applyLoudnessFallback(audioSessionId);
         }
     }
 
-    private void applyLoudnessFallback(int audioSessionId) {
+    private void applyFixedLoudnessGain(int audioSessionId, float gainDb) {
+        if (gainDb <= 0.05f) {
+            return;
+        }
         try {
             LoudnessEnhancer effect = new LoudnessEnhancer(audioSessionId);
-            effect.setTargetGain(150);
+            effect.setTargetGain(Math.round(Math.min(8.0f, gainDb) * 100.0f));
             effect.setEnabled(true);
             loudnessEnhancer = effect;
-            Log.i(DEBUG_TAG, "volume_leveling_loudness_fallback session=" + audioSessionId);
+            Log.i(DEBUG_TAG, "fixed_loudness_gain_applied session=" + audioSessionId
+                    + " gainDb=" + gainDb);
         } catch (RuntimeException error) {
-            Log.w(DEBUG_TAG, "volume_leveling_unavailable session=" + audioSessionId + " error=" + error.getMessage());
+            Log.w(DEBUG_TAG, "fixed_loudness_gain_unavailable session=" + audioSessionId
+                    + " error=" + error.getMessage());
         }
     }
 

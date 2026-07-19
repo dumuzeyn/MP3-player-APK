@@ -56,7 +56,11 @@ public final class PlaybackStateManager {
             editor.putString(QUEUE, queueJson);
             lastSavedQueueJson = queueJson;
         }
-        editor.apply();
+        if (includeQueue) {
+            editor.commit();
+        } else {
+            editor.apply();
+        }
     }
 
     public void clear() {

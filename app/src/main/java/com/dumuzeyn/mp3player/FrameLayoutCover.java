@@ -39,6 +39,15 @@ final class FrameLayoutCover extends FrameLayout {
         if (track == null || track.uri.equals(this.currentUri)) {
             return;
         }
+        if (this.currentUri.isEmpty()) {
+            this.currentUri = track.uri;
+            this.frontVisible = true;
+            this.front.setAlpha(1.0f);
+            this.back.setAlpha(0.0f);
+            host.loadCover(this.front, track, this.fallback);
+            applyPlaylistTracks(this.front);
+            return;
+        }
         this.currentUri = track.uri;
         ImageView visible = this.frontVisible ? this.front : this.back;
         ImageView incoming = this.frontVisible ? this.back : this.front;

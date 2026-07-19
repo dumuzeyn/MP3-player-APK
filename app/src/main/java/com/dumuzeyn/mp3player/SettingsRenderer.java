@@ -17,8 +17,8 @@ final class SettingsRenderer {
         addButton(host.tr("Language: ", "Язык: ") + host.languageName(),
                 view -> host.settingsController.openLanguageDialog());
         addButton(host.tr("Theme: ", "Тема: ") + host.themeName(), view -> host.openThemeDialog());
-        addButton(host.tr("Gradient backgrounds", "Градиентные фоны"),
-                view -> host.gradientSettingsController.openDialog());
+        addButton(host.tr("Background", "Фон"),
+                view -> host.backgroundSettingsController.openDialog());
         addButton(host.tr("Cover style: ", "Стиль обложек: ")
                         + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
                         host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),

@@ -37,8 +37,14 @@ abstract class AppState extends Activity {
     boolean dark = false;
     boolean animations = true;
     boolean particlesEnabled = true;
-    boolean gradientPlayerBackground = true;
-    boolean gradientMainBackground = false;
+    int playerBackgroundMode = BackgroundSettingsController.MODE_GRADIENT;
+    int mainBackgroundMode = BackgroundSettingsController.MODE_SOLID;
+    int mainSolidBackground = 0;
+    int playerSolidBackground = 0;
+    String mainBackgroundMediaUri = "";
+    String playerBackgroundMediaUri = "";
+    int mainBackgroundBlur = 20;
+    int playerBackgroundBlur = 20;
     boolean circularCovers = false;
     int mainGradientStart = 0xff351b5d;
     int mainGradientEnd = 0xff3a3013;

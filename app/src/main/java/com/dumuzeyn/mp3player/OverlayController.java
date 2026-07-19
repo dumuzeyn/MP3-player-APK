@@ -262,35 +262,36 @@ final class OverlayController {
     void openSongActions(Track track, Playlist sourcePlaylist) {
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
-        panel.addView(host.text(track.title, 20, true), new LinearLayout.LayoutParams(-1, host.dp(52)));
-        addPanelButton(panel, host.favorites.contains(track.uri)
+        panel.setPadding(host.dp(12), host.dp(10), host.dp(12), host.dp(10));
+        panel.addView(host.text(track.title, 19, true), new LinearLayout.LayoutParams(-1, host.dp(42)));
+        addCompactPanelButton(panel, host.favorites.contains(track.uri)
                 ? host.tr("Remove from favorites", "Убрать из избранного")
                 : host.tr("Add to favorites", "Добавить в избранное"), () -> {
             host.toggleFavorite(track);
             close(shade);
             host.render();
         });
-        addPanelButton(panel, host.tr("Add to playlist", "Добавить в плейлист"), () -> {
+        addCompactPanelButton(panel, host.tr("Add to playlist", "Добавить в плейлист"), () -> {
             host.overlayHost.removeView(shade);
             choosePlaylist(track);
         });
-        addPanelButton(panel, host.tr("Add to queue", "Добавить в очередь"), () -> {
+        addCompactPanelButton(panel, host.tr("Add to queue", "Добавить в очередь"), () -> {
             host.addTrackToQueue(track);
             close(shade);
         });
         if (sourcePlaylist != null) {
-            addPanelButton(panel, host.tr("Remove from playlist", "Убрать из плейлиста"), () -> {
+            addCompactPanelButton(panel, host.tr("Remove from playlist", "Убрать из плейлиста"), () -> {
                 sourcePlaylist.uris.remove(track.uri);
                 host.saveState();
                 host.overlayHost.removeView(shade);
                 openPlaylist(sourcePlaylist);
             });
         }
-        addPanelButton(panel, host.tr("Remove from app", "Удалить из приложения"), () -> {
+        addCompactPanelButton(panel, host.tr("Remove from app", "Удалить из приложения"), () -> {
             host.overlayHost.removeView(shade);
             confirmDeleteTrack(track);
         });
-        addPanelButton(panel, host.tr("Close", "Закрыть"), () -> close(shade));
+        addCompactPanelButton(panel, host.tr("Close", "Закрыть"), () -> close(shade));
         shade.addView(panel, host.bottomParams());
         host.overlayHost.addView(shade);
         host.updateMini();
@@ -494,6 +495,15 @@ final class OverlayController {
         Button button = host.button(label);
         button.setOnClickListener(view -> action.run());
         panel.addView(button, new LinearLayout.LayoutParams(-1, host.dp(54)));
+    }
+
+    private void addCompactPanelButton(LinearLayout panel, String label, Runnable action) {
+        Button button = host.button(label);
+        button.setTextSize(16.0f);
+        button.setOnClickListener(view -> action.run());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(46));
+        params.setMargins(0, host.dp(1), 0, host.dp(1));
+        panel.addView(button, params);
     }
 
     private void close(FrameLayout shade) {

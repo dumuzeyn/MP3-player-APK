@@ -35,6 +35,14 @@ final class UiPreferencesStore {
     private static final String MAIN_GRADIENT_END = "mainGradientEnd";
     private static final String PLAYER_GRADIENT_START = "playerGradientStart";
     private static final String PLAYER_GRADIENT_END = "playerGradientEnd";
+    private static final String MAIN_BACKGROUND_MODE = "mainBackgroundMode";
+    private static final String PLAYER_BACKGROUND_MODE = "playerBackgroundMode";
+    private static final String MAIN_SOLID_BACKGROUND = "mainSolidBackground";
+    private static final String PLAYER_SOLID_BACKGROUND = "playerSolidBackground";
+    private static final String MAIN_BACKGROUND_MEDIA_URI = "mainBackgroundMediaUri";
+    private static final String PLAYER_BACKGROUND_MEDIA_URI = "playerBackgroundMediaUri";
+    private static final String MAIN_BACKGROUND_BLUR = "mainBackgroundBlur";
+    private static final String PLAYER_BACKGROUND_BLUR = "playerBackgroundBlur";
 
     private final MainActivityCore host;
 
@@ -78,9 +86,25 @@ final class UiPreferencesStore {
         host.dialogCardOpacity = clamp(
                 preferences.getInt(DIALOG_CARD_OPACITY, host.cardOpacity), 35, 100);
         host.particlesEnabled = preferences.getBoolean(PARTICLES_ENABLED, true);
-        host.gradientPlayerBackground = preferences.getBoolean(PLAYER_GRADIENT, true);
         host.circularCovers = preferences.getBoolean(CIRCULAR_COVERS, false);
-        host.gradientMainBackground = preferences.getBoolean(MAIN_GRADIENT, false);
+        host.mainBackgroundMode = preferences.contains(MAIN_BACKGROUND_MODE)
+                ? clampBackgroundMode(preferences.getInt(MAIN_BACKGROUND_MODE,
+                        BackgroundSettingsController.MODE_SOLID))
+                : preferences.getBoolean(MAIN_GRADIENT, false)
+                        ? BackgroundSettingsController.MODE_GRADIENT
+                        : BackgroundSettingsController.MODE_SOLID;
+        host.playerBackgroundMode = preferences.contains(PLAYER_BACKGROUND_MODE)
+                ? clampBackgroundMode(preferences.getInt(PLAYER_BACKGROUND_MODE,
+                        BackgroundSettingsController.MODE_GRADIENT))
+                : preferences.getBoolean(PLAYER_GRADIENT, true)
+                        ? BackgroundSettingsController.MODE_GRADIENT
+                        : BackgroundSettingsController.MODE_SOLID;
+        host.mainSolidBackground = preferences.getInt(MAIN_SOLID_BACKGROUND, 0);
+        host.playerSolidBackground = preferences.getInt(PLAYER_SOLID_BACKGROUND, 0);
+        host.mainBackgroundMediaUri = preferences.getString(MAIN_BACKGROUND_MEDIA_URI, "");
+        host.playerBackgroundMediaUri = preferences.getString(PLAYER_BACKGROUND_MEDIA_URI, "");
+        host.mainBackgroundBlur = clamp(preferences.getInt(MAIN_BACKGROUND_BLUR, 20), 0, 100);
+        host.playerBackgroundBlur = clamp(preferences.getInt(PLAYER_BACKGROUND_BLUR, 20), 0, 100);
         host.mainGradientStart = preferences.getInt(MAIN_GRADIENT_START, 0xff351b5d);
         host.mainGradientEnd = preferences.getInt(MAIN_GRADIENT_END, 0xff3a3013);
         host.playerGradientStart = preferences.getInt(PLAYER_GRADIENT_START, 0xff351b5d);
@@ -112,9 +136,15 @@ final class UiPreferencesStore {
                 .putInt(HEADER_CARD_OPACITY, host.headerCardOpacity)
                 .putInt(DIALOG_CARD_OPACITY, host.dialogCardOpacity)
                 .putBoolean(PARTICLES_ENABLED, host.particlesEnabled)
-                .putBoolean(PLAYER_GRADIENT, host.gradientPlayerBackground)
                 .putBoolean(CIRCULAR_COVERS, host.circularCovers)
-                .putBoolean(MAIN_GRADIENT, host.gradientMainBackground)
+                .putInt(MAIN_BACKGROUND_MODE, host.mainBackgroundMode)
+                .putInt(PLAYER_BACKGROUND_MODE, host.playerBackgroundMode)
+                .putInt(MAIN_SOLID_BACKGROUND, host.mainSolidBackground)
+                .putInt(PLAYER_SOLID_BACKGROUND, host.playerSolidBackground)
+                .putString(MAIN_BACKGROUND_MEDIA_URI, host.mainBackgroundMediaUri)
+                .putString(PLAYER_BACKGROUND_MEDIA_URI, host.playerBackgroundMediaUri)
+                .putInt(MAIN_BACKGROUND_BLUR, host.mainBackgroundBlur)
+                .putInt(PLAYER_BACKGROUND_BLUR, host.playerBackgroundBlur)
                 .putInt(MAIN_GRADIENT_START, host.mainGradientStart)
                 .putInt(MAIN_GRADIENT_END, host.mainGradientEnd)
                 .putInt(PLAYER_GRADIENT_START, host.playerGradientStart)
@@ -128,5 +158,10 @@ final class UiPreferencesStore {
 
     private static int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private static int clampBackgroundMode(int value) {
+        return clamp(value, BackgroundSettingsController.MODE_SOLID,
+                BackgroundSettingsController.MODE_MEDIA);
     }
 }

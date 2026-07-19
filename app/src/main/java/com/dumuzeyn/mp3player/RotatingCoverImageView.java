@@ -22,7 +22,7 @@ final class RotatingCoverImageView extends ImageView {
     private String lastObservedTrackUri = "";
     private boolean seeking;
     private int seekStartPosition;
-    private int lastSeekPosition;
+    private float seekStartRotation;
 
     RotatingCoverImageView(MainActivityCore host) {
         super(host);
@@ -112,28 +112,26 @@ final class RotatingCoverImageView extends ImageView {
         }
         seeking = true;
         seekStartPosition = positionMs;
-        lastSeekPosition = positionMs;
         stopRotation(false);
+        seekStartRotation = getRotation();
     }
 
     void updateSeekSpin(int positionMs) {
         if (!seeking || !host.circularCovers) {
             return;
         }
-        int deltaMs = positionMs - lastSeekPosition;
+        int deltaMs = positionMs - seekStartPosition;
         if (deltaMs == 0) {
+            setRotation(seekStartRotation);
             return;
         }
-        float deltaDegrees = clamp(deltaMs * 0.036f, -270.0f, 270.0f);
-        setRotation(getRotation() + deltaDegrees);
-        lastSeekPosition = positionMs;
+        setRotation(seekStartRotation + degreesForSeekDelta(deltaMs));
     }
 
-    void endSeekSpin(int positionMs) {
+    void endSeekSpin(int positionMs, boolean animateTap) {
         if (!seeking) {
             return;
         }
-        updateSeekSpin(positionMs);
         seeking = false;
         if (!host.circularCovers) {
             updatePlaybackState();
@@ -141,15 +139,21 @@ final class RotatingCoverImageView extends ImageView {
         }
         int totalDeltaMs = positionMs - seekStartPosition;
         if (totalDeltaMs == 0) {
+            setRotation(seekStartRotation);
             updatePlaybackState();
             return;
         }
-        float direction = totalDeltaMs > 0 ? 1.0f : -1.0f;
-        float turns = clamp(Math.abs(totalDeltaMs) / 15000.0f, 0.45f, 3.0f);
-        float start = getRotation();
-        ValueAnimator animator = ValueAnimator.ofFloat(start, start + direction * turns * 360.0f);
+        float target = seekStartRotation + degreesForSeekDelta(totalDeltaMs);
+        if (!animateTap || !host.animations) {
+            setRotation(target % 360.0f);
+            updatePlaybackState();
+            return;
+        }
+        setRotation(seekStartRotation);
+        ValueAnimator animator = ValueAnimator.ofFloat(seekStartRotation, target);
         rotationAnimator = animator;
-        animator.setDuration((long) clamp(220.0f + turns * 150.0f, 280.0f, 720.0f));
+        float turns = Math.abs(target - seekStartRotation) / 360.0f;
+        animator.setDuration((long) clamp(180.0f + turns * 115.0f, 220.0f, 850.0f));
         animator.setInterpolator(new DecelerateInterpolator());
         animator.addUpdateListener(value -> setRotation((Float) value.getAnimatedValue()));
         animator.addListener(new AnimatorListenerAdapter() {
@@ -164,6 +168,10 @@ final class RotatingCoverImageView extends ImageView {
             }
         });
         animator.start();
+    }
+
+    private float degreesForSeekDelta(int deltaMs) {
+        return deltaMs * (360.0f / 18000.0f);
     }
 
     @Override
