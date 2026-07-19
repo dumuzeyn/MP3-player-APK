@@ -1,23 +1,31 @@
-# MP3 Player Voltune 2.5
+# MP3 Player Voltune 2.5.1
 
 ## Русский
 
-Локальный музыкальный плеер для Android с автоматически адаптируемым интерфейсом телефона и планшета.
+Обновление стабильности воспроизведения, звука и оформления.
 
-- Планшет определяется автоматически по размеру экрана, включать режим вручную не нужно.
-- Библиотека, вкладки, мини-плеер, большой плеер и всплывающие панели получают удобную ограниченную ширину на больших экранах.
-- Размер обложки большого плеера подстраивается под портретную и альбомную ориентацию планшета.
-- Выбранные песни при добавлении в избранное или плейлист больше не скрывают кнопки на карточке.
-- Фоновое воспроизведение разделено на отдельные компоненты движка, команд, состояния, таймера и восстановления после ошибок.
-- Релизный процесс проверяет версию из Gradle, зависимости и целостность Gradle Wrapper.
+- Состояние очереди, плейлиста и повтора надёжнее синхронизируется с фоновым сервисом после выхода и возвращения в приложение.
+- Исправлены индикаторы активного плейлиста, вращение его обложки и остановка диска на паузе.
+- Перемотка круглой обложки работает как диск: вперёд и назад без лишнего оборота после отпускания пальца.
+- Скорость титров плейлистов можно установить в `0`, полностью остановив прокрутку.
+- Для основного интерфейса и большого плеера можно отдельно выбрать однотонный фон, градиент, изображение или GIF и настроить размытие.
+- Медиафон проверяется до сохранения и декодируется только как растровое изображение без выполнения ссылок, скриптов и метаданных.
+- Добавлены готовые профили эквалайзера и сохранение собственной конфигурации.
+- Выравнивание громкости анализирует каждый трек и меняет усиление плавно, без резких скачков внутри песни.
+- Сохраняются позиции прокрутки разделов, память мини-плеера и исходные названия песен; обложки плейлистов не загружаются заново без необходимости.
+- Окно свойств песни стало компактным: его высота определяется содержимым, а все действия выровнены единым столбцом.
 
 ## English
 
-A local Android music player with an interface that adapts automatically to phones and tablets.
+An update focused on playback stability, sound, and visual customization.
 
-- Tablets are detected from screen size automatically; no manual mode is required.
-- The library, tabs, mini-player, full player, and modal panels use comfortable constrained widths on large screens.
-- Full-player artwork scales for tablet portrait and landscape dimensions.
-- Selected songs remain readable while adding them to favorites or playlists.
-- Background playback is separated into engine, command, state, timer, and error-recovery components.
-- The release pipeline validates the Gradle version, dependencies, and Gradle Wrapper integrity.
+- Queue, playlist, and repeat state now stay synchronized with the foreground service more reliably after leaving and returning to the app.
+- Active playlist indicators, rotating playlist artwork, and paused disc behavior are corrected.
+- Circular artwork seeking behaves like a turntable in both directions without an extra rotation after release.
+- Playlist ticker speed can be set to `0` for a completely static preview.
+- The main interface and full player can independently use a solid color, gradient, validated image, or GIF with adjustable blur.
+- Visual media is validated before saving and decoded strictly as raster pixels without executing links, scripts, or metadata.
+- Equalizer presets are available while a custom profile remains remembered.
+- Volume leveling analyzes each track and applies smooth gain changes without abrupt shifts inside a song.
+- Section scroll positions, mini-player memory, and original track titles are preserved; playlist artwork is retained instead of visibly reloading.
+- The song actions window is content-sized and compact, with all actions aligned in one consistent column.

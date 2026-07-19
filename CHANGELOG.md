@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.5.1 - Playback, sound, and visual customization
+
+- Keep playlist and repeat playback state synchronized with the foreground service after leaving and returning to the app.
+- Correct active playlist indicators, rotating playlist artwork, pause behavior, and turntable-style forward/backward seeking.
+- Allow playlist ticker speed to be set to zero for a completely static preview.
+- Add solid, gradient, image, and GIF backgrounds with independent main/full-player settings and adjustable blur.
+- Validate selected visual media before saving it and decode raster pixels without executing metadata, links, or scripts.
+- Add equalizer presets while preserving a remembered custom profile.
+- Replace fixed volume correction with per-track loudness analysis and smooth gain changes.
+- Preserve menu scroll positions, mini-player restoration, original track titles, and already loaded playlist artwork.
+- Replace the oversized song actions sheet with a compact content-sized panel and consistently aligned actions.
+
 ## 2.5 - Adaptive tablet interface
 
 - Detect tablets automatically at 600 dp smallest width without adding a separate setting.
