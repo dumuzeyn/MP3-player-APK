@@ -127,11 +127,11 @@ public class PlayerService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIFICATION_ID, currentNotification());
-        handleCommand(this.commandHandler.read(intent));
+        handleCommand(this.commandHandler.read(intent), startId);
         return START_STICKY;
     }
 
-    private void handleCommand(PlaybackCommandHandler.Command command) {
+    private void handleCommand(PlaybackCommandHandler.Command command, int startId) {
         switch (command.type) {
             case RESTORE:
                 restorePlaybackAfterProcessDeath();
@@ -178,7 +178,7 @@ public class PlayerService extends Service {
             case STOP:
                 Log.i(TAG, "explicit_stop");
                 stopPlayback(true);
-                stopSelf();
+                stopSelf(startId);
                 break;
             case UNKNOWN:
                 Log.w(TAG, "unknown_command");
@@ -689,6 +689,8 @@ public class PlayerService extends Service {
     public static void refreshSnapshot() {
         if (instance != null) {
             instance.updateState();
+        } else {
+            lastPlaying = false;
         }
     }
 
@@ -759,6 +761,7 @@ public class PlayerService extends Service {
         }
         this.timerHandler.removeCallbacks(this.playbackWatchdog);
         releasePlayer();
+        lastPlaying = false;
         this.sleepTimer.close();
         this.timerHandler.removeCallbacks(this.audioFocusRetry);
         this.audioFocusController.stop();

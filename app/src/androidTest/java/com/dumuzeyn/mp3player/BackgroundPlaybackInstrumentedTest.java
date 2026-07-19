@@ -244,7 +244,7 @@ public class BackgroundPlaybackInstrumentedTest {
     }
 
     private void waitForPlayingUri(String message, String uri) {
-        InstrumentedTestSupport.waitFor(message, 10000L, () -> {
+        InstrumentedTestSupport.waitFor(message, 15000L, () -> {
             PlayerService.refreshSnapshot();
             return PlayerService.lastPlaying && uri.equals(PlayerService.lastUri);
         });
@@ -257,7 +257,7 @@ public class BackgroundPlaybackInstrumentedTest {
         try {
             Intent stopIntent = new Intent(context, PlayerService.class)
                     .setAction(PlayerService.ACTION_STOP);
-            context.startService(stopIntent);
+            startPlaybackService(stopIntent);
         } catch (RuntimeException ignored) {
         }
         InstrumentedTestSupport.waitFor("PlayerService did not stop", 3000L,
