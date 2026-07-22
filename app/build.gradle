@@ -24,7 +24,7 @@ gradle.taskGraph.whenReady { graph ->
 
 android {
     namespace "com.dumuzeyn.mp3player"
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.dumuzeyn.mp3player"
@@ -72,6 +72,10 @@ android {
 }
 
 dependencies {
+    def media3Version = "1.10.1"
+
+    implementation "androidx.media3:media3-exoplayer:$media3Version"
+    implementation "androidx.media3:media3-session:$media3Version"
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
     androidTestImplementation "androidx.test:core:1.6.1"

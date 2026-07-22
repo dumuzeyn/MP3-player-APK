@@ -3,7 +3,6 @@ package com.dumuzeyn.mp3player;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.media.MediaPlayer;
 import android.media.audiofx.AudioEffect;
 import android.media.audiofx.DynamicsProcessing;
 import android.media.audiofx.Equalizer;
@@ -24,19 +23,12 @@ final class AudioEffectsManager {
         this.context = context.getApplicationContext();
     }
 
-    void apply(MediaPlayer player, float normalizationGainDb) {
+    void apply(int audioSessionId, float normalizationGainDb) {
         release();
-        if (player == null) {
+        if (audioSessionId <= 0) {
             return;
         }
         SharedPreferences preferences = context.getSharedPreferences(EqualizerController.PREFS, 0);
-        int audioSessionId;
-        try {
-            audioSessionId = player.getAudioSessionId();
-        } catch (RuntimeException error) {
-            Log.w(DEBUG_TAG, "audio_effect_session_unavailable error=" + error.getMessage());
-            return;
-        }
         if (preferences.getBoolean(EqualizerController.ENABLED, false)) {
             applyEqualizer(preferences, audioSessionId);
         }

@@ -3,7 +3,6 @@ package com.dumuzeyn.mp3player;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.util.Log;
 
@@ -162,9 +161,6 @@ public final class TrackStore {
             metadata.mergeMissing(fallback);
         }
         if (metadata.durationMs <= 0) {
-            metadata.durationMs = readDurationWithMediaPlayer(context, uri);
-        }
-        if (metadata.durationMs <= 0) {
             Log.w(DEBUG_TAG, "duration_missing uri=" + uri);
         }
         return metadata;
@@ -203,41 +199,6 @@ public final class TrackStore {
             return new Metadata();
         } finally {
             releaseQuietly(retriever);
-            closeQuietly(descriptor);
-        }
-    }
-
-    private static int readDurationWithMediaPlayer(Context context, Uri uri) {
-        MediaPlayer player = new MediaPlayer();
-        AssetFileDescriptor descriptor = null;
-        try {
-            try {
-                player.setDataSource(context, uri);
-            } catch (Exception directError) {
-                Log.w(DEBUG_TAG, "duration_player_direct_failed uri=" + uri + " error=" + directError.getMessage());
-                descriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
-                if (descriptor == null) {
-                    return 0;
-                }
-                long declaredLength = descriptor.getDeclaredLength();
-                if (declaredLength >= 0) {
-                    player.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), declaredLength);
-                } else {
-                    player.setDataSource(descriptor.getFileDescriptor());
-                }
-            }
-            player.prepare();
-            int duration = Math.max(0, player.getDuration());
-            Log.i(DEBUG_TAG, "duration_player_fallback uri=" + uri + " durationMs=" + duration);
-            return duration;
-        } catch (Throwable e) {
-            Log.w(DEBUG_TAG, "duration_player_failed uri=" + uri + " error=" + e.getMessage());
-            return 0;
-        } finally {
-            try {
-                player.release();
-            } catch (Exception ignored) {
-            }
             closeQuietly(descriptor);
         }
     }

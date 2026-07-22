@@ -12,6 +12,7 @@ final class SongRowStateRegistry {
         boolean isCurrent(Track track);
         boolean isPlaying();
         int activeColor();
+        int secondaryActiveColor();
         int inactiveColor();
     }
 
@@ -70,7 +71,10 @@ final class SongRowStateRegistry {
         for (Map.Entry<String, WaveformView> entry : waveforms.entrySet()) {
             Track track = resolver.findTrack(entry.getKey());
             boolean current = track != null && resolver.isCurrent(track);
-            entry.getValue().setState(current ? resolver.activeColor() : resolver.inactiveColor(), current && resolver.isPlaying());
+            entry.getValue().setState(
+                    current ? resolver.activeColor() : resolver.inactiveColor(),
+                    resolver.secondaryActiveColor(),
+                    current && resolver.isPlaying());
         }
         for (ArrayList<RotatingCoverImageView> registered : covers.values()) {
             for (RotatingCoverImageView cover : registered) {

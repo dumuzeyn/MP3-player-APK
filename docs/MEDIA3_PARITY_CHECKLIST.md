@@ -66,11 +66,11 @@ playback core. An item is checked only after the stated test has actually passed
 
 ## Automated release checks
 
-- [ ] Unit tests pass.
-- [ ] Android lint passes.
-- [ ] Debug APK builds.
-- [ ] Signed release APK builds with R8 and resource shrinking.
-- [ ] Instrumented tests compile.
+- [x] Unit tests pass.
+- [x] Android lint passes.
+- [x] Debug APK builds.
+- [x] Signed release APK builds with R8 and resource shrinking.
+- [x] Instrumented tests compile.
 - [ ] Instrumented MediaController/background tests pass on Android 8.
 - [ ] Instrumented MediaController/background tests pass on Android 16.
 - [ ] Tablet layout tests pass.

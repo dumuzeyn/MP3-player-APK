@@ -298,12 +298,13 @@ final class FullPlayerController {
         host.applySeekBarColors(seek);
         int displayDuration = host.playbackDurationFor(track);
         seek.setMax(Math.max(1, displayDuration));
-        seek.setProgress(Math.max(0, PlayerService.lastPosition));
+        seek.setProgress(Math.max(0, host.playbackPosition()));
         content.addView(seek, new LinearLayout.LayoutParams(-1, host.dp(42)));
 
         LinearLayout row = host.row();
-        TextView elapsed = host.text(host.formatMs(PlayerService.lastPosition), 13, false);
-        TextView remain = host.text("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)), 13, false);
+        TextView elapsed = host.text(host.formatMs(host.playbackPosition()), 13, false);
+        TextView remain = host.text("-" + host.formatMs(
+                Math.max(0, displayDuration - host.playbackPosition())), 13, false);
         remain.setGravity(android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL);
         row.addView(elapsed, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
         row.addView(remain, new LinearLayout.LayoutParams(0, host.dp(28), 1.0f));
@@ -329,7 +330,7 @@ final class FullPlayerController {
                 seekTracking = true;
                 RotatingCoverImageView rotatingCover = rotatingCover();
                 if (rotatingCover != null) {
-                    rotatingCover.beginSeekSpin(Math.max(0, PlayerService.lastPosition));
+                    rotatingCover.beginSeekSpin(Math.max(0, host.playbackPosition()));
                 }
             }
 
@@ -497,12 +498,10 @@ final class FullPlayerController {
 
         @Override
         public void run() {
-            Track resolvedTrack;
             if (sheet.getParent() == null) {
                 return;
             }
-            PlayerService.refreshSnapshot();
-            if (PlayerService.lastIndex < 0) {
+            if (host.currentIndex < 0) {
                 host.currentIndex = -1;
                 host.playing = false;
                 host.overlayHost.removeView(sheet);
@@ -510,23 +509,19 @@ final class FullPlayerController {
                 host.render();
                 return;
             }
-            if (PlayerService.lastUri != null && !PlayerService.lastUri.isEmpty() && !PlayerService.lastUri.equals(track.uri) && (resolvedTrack = host.findTrack(PlayerService.lastUri)) != null) {
+            Track resolvedTrack = currentTrack();
+            if (resolvedTrack != null && !resolvedTrack.uri.equals(track.uri)) {
                 this.track = resolvedTrack;
-                host.currentIndex = host.tracks.indexOf(resolvedTrack);
                 refreshFromState(true);
                 host.render();
             }
-            boolean playbackChanged = host.playing != PlayerService.lastPlaying;
-            host.playing = PlayerService.lastPlaying;
-            if (playbackChanged) {
-                refreshFromState(false);
-            }
             int displayDuration = host.playbackDurationFor(track);
+            int position = host.playbackPosition();
             if (!seekTracking) {
                 seek.setMax(Math.max(1, displayDuration));
-                seek.setProgress(Math.max(0, PlayerService.lastPosition));
-                elapsed.setText(host.formatMs(PlayerService.lastPosition));
-                remain.setText("-" + host.formatMs(Math.max(0, displayDuration - PlayerService.lastPosition)));
+                seek.setProgress(Math.max(0, position));
+                elapsed.setText(host.formatMs(position));
+                remain.setText("-" + host.formatMs(Math.max(0, displayDuration - position)));
             }
             if (timerButton != null) {
                 timerButton.setText(host.timerButtonText());

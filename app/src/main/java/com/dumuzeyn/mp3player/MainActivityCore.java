@@ -17,6 +17,7 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.dumuzeyn.mp3player.library.SongDiagnostics;
+import com.dumuzeyn.mp3player.playback.service.PlaybackSleepTimer;
 import com.dumuzeyn.mp3player.ui.permissions.NotificationPermissionController;
 import com.dumuzeyn.mp3player.ui.player.PlaybackTimeFormatter;
 import com.dumuzeyn.mp3player.ui.layout.ResponsiveLayoutController;
@@ -102,15 +103,13 @@ class MainActivityCore extends AppState {
         super.onCreate(bundle);
         SettingsDefaults.resetForVersion243(this);
         this.uiPreferencesStore.load();
-        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
+        this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
         this.songsRenderer.restoreRecentPlayback();
+        this.playbackController.connect();
         this.themeController.applyPalette();
         buildUi();
-        if (PlayerService.hasPlaybackSession()) {
-            this.playbackController.startPlaybackWatcher();
-        }
         this.songsRenderer.refreshMissingMetadataAsync();
         this.uiHandler.postDelayed(
                 this.backgroundPlaybackSettingsController::maybePromptOnce, 900L);
@@ -129,7 +128,6 @@ class MainActivityCore extends AppState {
 
     @Override
     protected void onStop() {
-        PlayerService.persistSnapshot();
         super.onStop();
         this.themeController.onHostStopped();
     }
@@ -137,11 +135,8 @@ class MainActivityCore extends AppState {
     @Override
     protected void onResume() {
         super.onResume();
-        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
+        this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         this.songsRenderer.restoreRecentPlayback();
-        if (PlayerService.hasPlaybackSession()) {
-            this.playbackController.startPlaybackWatcher();
-        }
         this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
@@ -160,6 +155,7 @@ class MainActivityCore extends AppState {
         this.uiHandler.removeCallbacksAndMessages(null);
         this.playbackHandler.removeCallbacksAndMessages(null);
         this.playerUiController.onHostDestroyed();
+        this.playbackController.release();
         this.coverLoader.close();
         super.onDestroy();
     }
@@ -238,6 +234,11 @@ class MainActivityCore extends AppState {
             @Override
             public int activeColor() {
                 return MainActivityCore.this.purple;
+            }
+
+            @Override
+            public int secondaryActiveColor() {
+                return MainActivityCore.this.yellow;
             }
 
             @Override
@@ -462,7 +463,8 @@ class MainActivityCore extends AppState {
     }
 
     int playbackDurationFor(Track track) {
-        int serviceDuration = Math.max(0, PlayerService.lastDuration);
+        int serviceDuration = (int) Math.min(Integer.MAX_VALUE,
+                Math.max(0L, this.playbackController.duration()));
         if (serviceDuration > 0) {
             return serviceDuration;
         }
@@ -488,7 +490,7 @@ class MainActivityCore extends AppState {
     }
 
     void refreshPlaybackAppearance() {
-        PlayerService.refreshAppearance();
+        this.playbackController.refreshAudioEffects();
     }
 
     String timerButtonText() {
@@ -519,10 +521,6 @@ class MainActivityCore extends AppState {
         this.playbackController.previous();
     }
 
-    void startPlaybackWatcher() {
-        this.playbackController.startPlaybackWatcher();
-    }
-
     void cycleLoopMode() {
         this.playbackController.cycleLoopMode();
     }
@@ -531,16 +529,20 @@ class MainActivityCore extends AppState {
         this.playbackController.seekTo(position);
     }
 
-    void startServiceAction(String str, int i) {
-        this.playbackController.startServiceAction(str, i);
+    void playQueueIndex(int index, int position) {
+        this.playbackController.playQueueIndex(index, position);
     }
 
-    void startServiceAction(String str, int i, boolean z) {
-        this.playbackController.startServiceAction(str, i, z);
+    int playbackPosition() {
+        return (int) Math.min(Integer.MAX_VALUE, this.playbackController.currentPosition());
     }
 
-    void startServiceAction(String str, int i, boolean z, int position) {
-        this.playbackController.startServiceAction(str, i, z, position);
+    void startSleepTimer(long delayMs) {
+        this.playbackController.startSleepTimer(delayMs);
+    }
+
+    void cancelSleepTimer() {
+        this.playbackController.cancelSleepTimer();
     }
 
     ArrayList<String> queueUris() {
@@ -622,7 +624,8 @@ class MainActivityCore extends AppState {
     }
 
     WaveformView wave(Track track, boolean z) {
-        WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.purple : this.purpleSoft, z && this.playing);
+        WaveformView waveformView = new WaveformView(this, track.title + track.uri,
+                z ? this.purple : this.purpleSoft, this.yellow, z && this.playing);
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));
         waveformView.setLayoutParams(new LinearLayout.LayoutParams(dp(190), dp(30)));

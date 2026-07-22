@@ -29,48 +29,30 @@ final class SongsRenderer {
     }
 
     void restoreRecentPlayback() {
-        PlayerService.refreshSnapshot();
-        boolean liveSession = PlayerService.hasPlaybackSession();
-        if (!liveSession && host.resumeWindowMinutes <= 0) {
+        if (host.resumeWindowMinutes <= 0) {
             return;
         }
         PlaybackStateManager.State savedState = new PlaybackStateManager(host).load();
         long savedAt = savedState.savedAt;
         long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
-        if (!liveSession && (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow)) {
+        if (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow) {
             return;
         }
-        String savedUri = savedState.uri;
-        String uri = liveSession && !PlayerService.lastUri.isEmpty()
-                ? PlayerService.lastUri
-                : savedUri;
+        String uri = savedState.uri;
         Track track = host.findTrack(uri);
         if (track == null) {
             return;
         }
         host.currentIndex = host.tracks.indexOf(track);
-        host.playing = liveSession && PlayerService.lastPlaying;
-        host.resumePosition = liveSession
-                ? Math.max(0, PlayerService.lastPosition)
-                : savedState.position;
-        host.loopMode = liveSession
-                ? PlayerService.lastLoopMode
-                : savedState.loopMode;
+        host.playing = false;
+        host.resumePosition = savedState.position;
+        host.loopMode = savedState.loopMode;
         host.shuffleMode = savedState.shuffle;
         host.playbackQueue.clear();
         host.playbackQueue.addAll(PlaybackQueueResolver.restore(
                 host.tracks,
                 savedState.queueUris,
                 track));
-        if (!liveSession) {
-            PlayerService.lastIndex = host.currentIndex;
-            PlayerService.lastPlaying = false;
-            PlayerService.lastPosition = host.resumePosition;
-            PlayerService.lastDuration = Math.max(track.durationMs,
-                    savedState.duration);
-            PlayerService.lastUri = uri;
-            PlayerService.lastLoopMode = host.loopMode;
-        }
     }
 
     void refreshMissingMetadataAsync() {

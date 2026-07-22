@@ -474,8 +474,7 @@ final class OverlayController {
         host.currentIndex = host.tracks.indexOf(track);
         host.playing = true;
         host.resumePosition = 0;
-        host.startServiceAction(PlayerService.ACTION_PLAY_INDEX, index, false);
-        host.startPlaybackWatcher();
+        host.playQueueIndex(index, 0);
         host.render();
     }
 

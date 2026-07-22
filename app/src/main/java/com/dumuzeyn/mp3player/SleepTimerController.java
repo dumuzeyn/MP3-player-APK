@@ -1,10 +1,9 @@
 package com.dumuzeyn.mp3player;
 
-import android.content.Intent;
-import android.os.Build;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import com.dumuzeyn.mp3player.playback.service.PlaybackSleepTimer;
 
 final class SleepTimerController {
     private final MainActivityCore host;
@@ -80,13 +79,13 @@ final class SleepTimerController {
     void start(int minutes) {
         long delayMs = Math.max(1L, (long) minutes) * 60L * 1000L;
         host.sleepTimerEndsAt = System.currentTimeMillis() + delayMs;
-        sendTimerAction(PlayerService.ACTION_TIMER_START, delayMs);
+        host.startSleepTimer(delayMs);
         host.playerUiController.syncPlaybackUi();
     }
 
     void cancel() {
         host.sleepTimerEndsAt = 0L;
-        sendTimerAction(PlayerService.ACTION_TIMER_CANCEL, 0L);
+        host.cancelSleepTimer();
         host.playerUiController.syncPlaybackUi();
     }
 
@@ -103,19 +102,6 @@ final class SleepTimerController {
     }
 
     private void syncFromService() {
-        host.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(host);
-    }
-
-    private void sendTimerAction(String action, long delayMs) {
-        Intent intent = new Intent(host, (Class<?>) PlayerService.class);
-        intent.setAction(action);
-        if (delayMs > 0L) {
-            intent.putExtra(PlayerService.EXTRA_TIMER_MS, delayMs);
-        }
-        if (Build.VERSION.SDK_INT >= 26) {
-            host.startForegroundService(intent);
-        } else {
-            host.startService(intent);
-        }
+        host.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(host);
     }
 }

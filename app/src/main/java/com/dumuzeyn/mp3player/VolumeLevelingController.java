@@ -1,8 +1,6 @@
 package com.dumuzeyn.mp3player;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.widget.Button;
 
 final class VolumeLevelingController {
@@ -58,12 +56,6 @@ final class VolumeLevelingController {
     }
 
     private void dispatchSettings() {
-        Intent intent = new Intent(host, PlayerService.class);
-        intent.setAction(PlayerService.ACTION_AUDIO_EFFECTS);
-        if (Build.VERSION.SDK_INT >= 26) {
-            host.startForegroundService(intent);
-        } else {
-            host.startService(intent);
-        }
+        host.refreshPlaybackAppearance();
     }
 }
