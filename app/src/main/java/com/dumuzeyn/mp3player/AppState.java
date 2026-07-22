@@ -10,11 +10,9 @@ abstract class AppState extends Activity {
     final HashSet<String> favorites = new HashSet<>();
     final ArrayList<Playlist> playlists = new ArrayList<>();
     final ArrayList<Track> playbackQueue = new ArrayList<>();
+    private PlaybackSnapshot playbackSnapshot = PlaybackSnapshot.empty();
 
     int tabIndex = 0;
-    int currentIndex = -1;
-    boolean playing = false;
-    int loopMode = 0;
     int customTimerMinutes = 10;
     int resumeWindowMinutes = 120;
     int particleFrequency = 45;
@@ -35,7 +33,6 @@ abstract class AppState extends Activity {
     int miniPlayerCardOpacity = 82;
     int headerCardOpacity = 82;
     int dialogCardOpacity = 82;
-    int resumePosition = 0;
     long sleepTimerEndsAt = 0L;
     boolean dark = false;
     boolean animations = true;
@@ -53,7 +50,6 @@ abstract class AppState extends Activity {
     int mainGradientEnd = 0xff3a3013;
     int playerGradientStart = 0xff351b5d;
     int playerGradientEnd = 0xff3a3013;
-    boolean shuffleMode = false;
     String language = "en";
     String themeMode = "light";
     int customBg = -1;
@@ -68,4 +64,39 @@ abstract class AppState extends Activity {
     boolean fullPlayerOpening = false;
     int songRenderGeneration = 0;
     boolean renderingTabPreview = false;
+
+    final PlaybackSnapshot playbackSnapshot() {
+        return playbackSnapshot;
+    }
+
+    final void updatePlaybackSnapshot(PlaybackSnapshot snapshot) {
+        playbackSnapshot = snapshot == null ? PlaybackSnapshot.empty() : snapshot;
+    }
+
+    final int currentTrackIndex() {
+        if (playbackSnapshot.currentMediaId.isEmpty()) {
+            return -1;
+        }
+        for (int index = 0; index < tracks.size(); index++) {
+            if (MediaItemMapper.stableHash(tracks.get(index).uri)
+                    .equals(playbackSnapshot.currentMediaId)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    final boolean isPlaybackPlaying() {
+        return playbackSnapshot.playWhenReady
+                && playbackSnapshot.phase != PlaybackPhase.ENDED
+                && playbackSnapshot.phase != PlaybackPhase.ERROR;
+    }
+
+    final int repeatMode() {
+        return RepeatModeMapper.fromMedia3(playbackSnapshot.repeatMode);
+    }
+
+    final boolean isShuffleEnabled() {
+        return playbackSnapshot.shuffleEnabled;
+    }
 }

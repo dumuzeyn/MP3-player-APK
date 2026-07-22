@@ -111,8 +111,10 @@ final class OverlayController {
     }
 
     void openQueue() {
-        if (host.playbackQueue.isEmpty() && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()) {
-            host.playbackQueue.add(host.tracks.get(host.currentIndex));
+        int currentIndex = host.currentTrackIndex();
+        if (host.playbackQueue.isEmpty() && currentIndex >= 0
+                && currentIndex < host.tracks.size()) {
+            host.playbackQueue.add(host.tracks.get(currentIndex));
         }
         final FrameLayout shade = host.shade();
         LinearLayout panel = host.panelCard();
@@ -123,8 +125,10 @@ final class OverlayController {
         add.setOnClickListener(view -> {
             host.overlayHost.removeView(shade);
             openSelection(host.tr("Add to queue", "Добавить в список"), new HashSet<>(), selected -> {
-                if (host.playbackQueue.isEmpty() && host.currentIndex >= 0 && host.currentIndex < host.tracks.size()) {
-                    host.playbackQueue.add(host.tracks.get(host.currentIndex));
+                int activeIndex = host.currentTrackIndex();
+                if (host.playbackQueue.isEmpty() && activeIndex >= 0
+                        && activeIndex < host.tracks.size()) {
+                    host.playbackQueue.add(host.tracks.get(activeIndex));
                 }
                 for (String uri : selected) {
                     Track track = host.findTrack(uri);
@@ -252,7 +256,8 @@ final class OverlayController {
                 renderSelectionRows(parent, selected, query);
             });
             row.addView(mark, host.square(48));
-            Button play = host.icon(host.isCurrent(track) && host.playing ? "Ⅱ" : "▶");
+            Button play = host.icon(host.isCurrent(track) && host.isPlaybackPlaying()
+                    ? "Ⅱ" : "▶");
             host.applyPlainIconStyle(play, isSelected ? selectedContent : host.purple);
             play.setOnClickListener(view -> {
                 if (host.isCurrent(track)) {
@@ -471,9 +476,6 @@ final class OverlayController {
         if (index < 0) {
             return;
         }
-        host.currentIndex = host.tracks.indexOf(track);
-        host.playing = true;
-        host.resumePosition = 0;
         host.playQueueIndex(index, 0);
         host.render();
     }

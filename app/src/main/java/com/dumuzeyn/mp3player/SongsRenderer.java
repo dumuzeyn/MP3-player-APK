@@ -1,7 +1,5 @@
 package com.dumuzeyn.mp3player;
 
-import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
-
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -26,33 +24,6 @@ final class SongsRenderer {
 
     SongsRenderer(MainActivityCore host) {
         this.host = host;
-    }
-
-    void restoreRecentPlayback() {
-        if (host.resumeWindowMinutes <= 0) {
-            return;
-        }
-        PlaybackStateManager.State savedState = new PlaybackStateManager(host).load();
-        long savedAt = savedState.savedAt;
-        long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
-        if (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow) {
-            return;
-        }
-        String uri = savedState.uri;
-        Track track = host.findTrack(uri);
-        if (track == null) {
-            return;
-        }
-        host.currentIndex = host.tracks.indexOf(track);
-        host.playing = false;
-        host.resumePosition = savedState.position;
-        host.loopMode = savedState.loopMode;
-        host.shuffleMode = savedState.shuffle;
-        host.playbackQueue.clear();
-        host.playbackQueue.addAll(PlaybackQueueResolver.restore(
-                host.tracks,
-                savedState.queueUris,
-                track));
     }
 
     void refreshMissingMetadataAsync() {
@@ -308,7 +279,8 @@ final class SongsRenderer {
 
         Button play = host.icon("");
         host.applyPrimaryButtonStyle(play);
-        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
+        SongRowStateRegistry.applyPlayState(play,
+                host.isCurrent(track) && host.isPlaybackPlaying());
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -365,7 +337,8 @@ final class SongsRenderer {
 
         Button play = host.icon("");
         host.applyPlainIconStyle(play, host.isCurrent(track) ? host.bg : host.purple);
-        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
+        SongRowStateRegistry.applyPlayState(play,
+                host.isCurrent(track) && host.isPlaybackPlaying());
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

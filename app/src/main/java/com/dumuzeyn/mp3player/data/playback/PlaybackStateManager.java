@@ -3,6 +3,8 @@ package com.dumuzeyn.mp3player.data.playback;
 import android.content.Context;
 import android.content.SharedPreferences;
 import com.dumuzeyn.mp3player.Track;
+import com.dumuzeyn.mp3player.PlaybackSnapshot;
+import com.dumuzeyn.mp3player.RepeatModeMapper;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
@@ -61,6 +63,14 @@ public final class PlaybackStateManager {
         } else {
             editor.apply();
         }
+    }
+
+    public void save(PlaybackSnapshot snapshot, String currentUri, List<Track> queue,
+            boolean includeQueue) {
+        save(new Snapshot(currentUri, (int) Math.min(Integer.MAX_VALUE, snapshot.positionMs),
+                (int) Math.min(Integer.MAX_VALUE, snapshot.durationMs), snapshot.currentIndex,
+                RepeatModeMapper.fromMedia3(snapshot.repeatMode),
+                snapshot.playWhenReady, snapshot.shuffleEnabled, queue), includeQueue);
     }
 
     public void clear() {

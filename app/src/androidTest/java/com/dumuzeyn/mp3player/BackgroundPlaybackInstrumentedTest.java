@@ -148,7 +148,7 @@ public class BackgroundPlaybackInstrumentedTest {
         activity = launchMainActivity();
         MainActivityCore host = (MainActivityCore) activity;
         instrumentation.runOnMainSync(() -> {
-            host.currentIndex = 0;
+            setUiSnapshot(host, 0, false);
             host.openFullPlayer();
             activity.finish();
         });
@@ -165,8 +165,7 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.runOnMainSync(() -> {
             host.animations = true;
             host.circularCovers = true;
-            host.currentIndex = 0;
-            host.playing = true;
+            setUiSnapshot(host, 0, true);
             holder[0] = new RotatingCoverImageView(host);
             host.root.addView(holder[0], new android.widget.FrameLayout.LayoutParams(200, 200));
             holder[0].bindTrack(host.tracks.get(0));
@@ -175,7 +174,7 @@ public class BackgroundPlaybackInstrumentedTest {
                 () -> holder[0].getRotation() > 1.0f);
         float[] reset = new float[1];
         instrumentation.runOnMainSync(() -> {
-            host.currentIndex = 1;
+            setUiSnapshot(host, 1, true);
             holder[0].bindTrack(host.tracks.get(1));
             reset[0] = holder[0].getRotation();
         });
@@ -195,6 +194,16 @@ public class BackgroundPlaybackInstrumentedTest {
         controller.setRepeatMode(repeatMode);
         controller.prepare();
         controller.play();
+    }
+
+    private static void setUiSnapshot(MainActivityCore host, int trackIndex, boolean playing) {
+        Track track = host.tracks.get(trackIndex);
+        String mediaId = MediaItemMapper.stableHash(track.uri);
+        host.updatePlaybackSnapshot(new PlaybackSnapshot(
+                Collections.singletonList(mediaId), mediaId, 0, 0L, track.durationMs,
+                playing, Player.STATE_READY, Player.REPEAT_MODE_OFF, false,
+                PlaybackPhase.READY, PauseReason.NONE, StopReason.NONE,
+                null, System.currentTimeMillis()));
     }
 
     private Activity launchMainActivity() {

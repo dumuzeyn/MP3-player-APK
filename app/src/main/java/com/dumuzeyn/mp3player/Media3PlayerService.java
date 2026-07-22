@@ -19,12 +19,10 @@ import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
 import androidx.media3.session.SessionCommand;
 import androidx.media3.session.SessionCommands;
-import androidx.media3.session.SessionError;
 import androidx.media3.session.SessionResult;
 import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
 import com.dumuzeyn.mp3player.playback.service.PlaybackErrorRecovery;
 import com.dumuzeyn.mp3player.playback.service.PlaybackSleepTimer;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +54,7 @@ public final class Media3PlayerService extends MediaSessionService {
     private PlaybackSleepTimer sleepTimer;
     private AudioEffectsManager audioEffects;
     private TrackLoudnessNormalizer loudnessNormalizer;
+    private Media3SessionCommandHandler commandHandler;
     private PauseReason pauseReason = PauseReason.NONE;
     private StopReason stopReason = StopReason.NONE;
     @Nullable private PlaybackErrorInfo lastError;
@@ -82,6 +81,9 @@ public final class Media3PlayerService extends MediaSessionService {
                 .setHandleAudioBecomingNoisy(!uninterrupted)
                 .build();
         player.addListener(new PlayerEvents());
+        commandHandler = new Media3SessionCommandHandler(player, sleepTimer, stateManager,
+                this::applyAudioEffects, () -> stopReason = StopReason.USER,
+                this::snapshotBundle);
         mediaSession = new MediaSession.Builder(this, player)
                 .setBitmapLoader(artworkProvider)
                 .setCallback(new SessionCallback())
@@ -95,7 +97,7 @@ public final class Media3PlayerService extends MediaSessionService {
                         .build();
         provider.setSmallIcon(R.drawable.ic_notification_music);
         setMediaNotificationProvider(provider);
-        restoreState();
+        new PlaybackSessionRestorer(this, stateManager, mapper).restore(player);
         sleepTimer.restore();
         Log.i(TAG, "service_created");
     }
@@ -146,31 +148,6 @@ public final class Media3PlayerService extends MediaSessionService {
         super.onDestroy();
     }
 
-    private void restoreState() {
-        PlaybackStateManager.State state = stateManager.load();
-        ArrayList<Track> queue = PlaybackQueueResolver.restore(
-                TrackStore.load(this), state.queueUris, null);
-        if (queue.isEmpty()) {
-            return;
-        }
-        int index = Math.max(0, Math.min(state.index, queue.size() - 1));
-        player.setMediaItems(toMediaItems(queue), index, Math.max(0, state.position));
-        player.setRepeatMode(toMedia3RepeatMode(state.loopMode));
-        player.setShuffleModeEnabled(false);
-        player.prepare();
-        if (state.playing) {
-            player.play();
-        }
-    }
-
-    private ArrayList<MediaItem> toMediaItems(List<Track> tracks) {
-        ArrayList<MediaItem> items = new ArrayList<>();
-        for (Track track : tracks) {
-            items.add(mapper.toMediaItem(track));
-        }
-        return items;
-    }
-
     private void onSleepTimerExpired() {
         pauseReason = PauseReason.SLEEP_TIMER;
         stopReason = StopReason.SLEEP_TIMER;
@@ -216,10 +193,7 @@ public final class Media3PlayerService extends MediaSessionService {
         if (player == null) {
             return;
         }
-        stateManager.save(new PlaybackStateManager.Snapshot(
-                currentUri(), safeInt(player.getCurrentPosition()), safeInt(player.getDuration()),
-                player.getCurrentMediaItemIndex(), fromMedia3RepeatMode(player.getRepeatMode()),
-                player.getPlayWhenReady(), false, currentTracks()), includeQueue);
+        stateManager.save(snapshot(), currentUri(), currentTracks(), includeQueue);
     }
 
     private ArrayList<Track> currentTracks() {
@@ -286,16 +260,6 @@ public final class Media3PlayerService extends MediaSessionService {
         bundle.putString("pauseReason", value.pauseReason.name());
         bundle.putString("stopReason", value.stopReason.name());
         return bundle;
-    }
-
-    static int toMedia3RepeatMode(int mode) {
-        return mode == 1 ? Player.REPEAT_MODE_ONE
-                : mode == 2 ? Player.REPEAT_MODE_ALL : Player.REPEAT_MODE_OFF;
-    }
-
-    static int fromMedia3RepeatMode(int mode) {
-        return mode == Player.REPEAT_MODE_ONE ? 1
-                : mode == Player.REPEAT_MODE_ALL ? 2 : 0;
     }
 
     private static int safeInt(long value) {
@@ -387,36 +351,7 @@ public final class Media3PlayerService extends MediaSessionService {
         @Override
         public ListenableFuture<SessionResult> onCustomCommand(MediaSession session,
                 MediaSession.ControllerInfo controller, SessionCommand command, Bundle args) {
-            String action = command.customAction;
-            if (Media3Commands.TIMER_START.equals(action)) {
-                sleepTimer.start(args.getLong(Media3Commands.ARG_TIMER_MS, 0L));
-                return success();
-            }
-            if (Media3Commands.TIMER_CANCEL.equals(action)) {
-                sleepTimer.cancel();
-                return success();
-            }
-            if (Media3Commands.AUDIO_EFFECTS.equals(action)) {
-                applyAudioEffects();
-                return success();
-            }
-            if (Media3Commands.CLEAR_QUEUE.equals(action)) {
-                stopReason = StopReason.USER;
-                player.stop();
-                player.clearMediaItems();
-                stateManager.clear();
-                return success();
-            }
-            if (Media3Commands.DIAGNOSTIC_SNAPSHOT.equals(action)) {
-                return Futures.immediateFuture(new SessionResult(
-                        SessionResult.RESULT_SUCCESS, snapshotBundle()));
-            }
-            return Futures.immediateFuture(
-                    new SessionResult(SessionError.ERROR_NOT_SUPPORTED));
-        }
-
-        private ListenableFuture<SessionResult> success() {
-            return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
+            return commandHandler.handle(command, args);
         }
     }
 }

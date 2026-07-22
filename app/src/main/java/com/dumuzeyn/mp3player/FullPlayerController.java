@@ -34,10 +34,8 @@ final class FullPlayerController {
     }
 
     void open() {
-        if (host.currentIndex < 0 && !host.tracks.isEmpty()) {
-            host.currentIndex = 0;
-        }
-        if (host.currentIndex < 0) {
+        int currentIndex = host.currentTrackIndex();
+        if (currentIndex < 0) {
             return;
         }
         if (this.currentSheet != null && this.currentSheet.getParent() != null) {
@@ -47,7 +45,7 @@ final class FullPlayerController {
         if (host.miniPlayer != null) {
             host.miniPlayer.setVisibility(View.GONE);
         }
-        Track track = host.tracks.get(host.currentIndex);
+        Track track = host.tracks.get(currentIndex);
         this.boundTrack = track;
         FrameLayout sheet = createSheet();
         this.currentSheet = sheet;
@@ -252,7 +250,7 @@ final class FullPlayerController {
         Button repeat = host.button(host.loopLabel());
         this.repeatButton = repeat;
         styleRepeatButton(repeat);
-        host.applyPlayerToolStyle(repeat, host.loopMode != 0);
+        host.applyPlayerToolStyle(repeat, host.repeatMode() != 0);
         repeat.setSingleLine(true);
         repeat.setOnClickListener(view -> {
             host.cycleLoopMode();
@@ -362,7 +360,7 @@ final class FullPlayerController {
         });
         row.addView(previous, host.square(68));
 
-        Button play = host.icon(host.playing ? "Ⅱ" : "▶");
+        Button play = host.icon(host.isPlaybackPlaying() ? "Ⅱ" : "▶");
         this.playButton = play;
         play.setOnClickListener(view -> {
             host.toggleCurrent();
@@ -418,10 +416,11 @@ final class FullPlayerController {
     }
 
     private void refreshFromState(boolean allowTrackChange) {
-        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+        int currentIndex = host.currentTrackIndex();
+        if (currentIndex < 0 || currentIndex >= host.tracks.size()) {
             return;
         }
-        Track track = host.tracks.get(host.currentIndex);
+        Track track = host.tracks.get(currentIndex);
         if (allowTrackChange && (this.boundTrack == null || !this.boundTrack.uri.equals(track.uri))) {
             this.boundTrack = track;
             if (this.coverView != null) {
@@ -445,10 +444,10 @@ final class FullPlayerController {
         if (this.repeatButton != null) {
             this.repeatButton.setText(host.loopLabel());
             styleRepeatButton(this.repeatButton);
-            host.applyPlayerToolStyle(this.repeatButton, host.loopMode != 0);
+            host.applyPlayerToolStyle(this.repeatButton, host.repeatMode() != 0);
         }
         if (this.playButton != null) {
-            this.playButton.setText(host.playing ? "Ⅱ" : "▶");
+            this.playButton.setText(host.isPlaybackPlaying() ? "Ⅱ" : "▶");
         }
         RotatingCoverImageView rotatingCover = rotatingCover();
         if (rotatingCover != null) {
@@ -467,10 +466,11 @@ final class FullPlayerController {
     }
 
     private Track currentTrack() {
-        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+        int currentIndex = host.currentTrackIndex();
+        if (currentIndex < 0 || currentIndex >= host.tracks.size()) {
             return null;
         }
-        return host.tracks.get(host.currentIndex);
+        return host.tracks.get(currentIndex);
     }
 
     private RotatingCoverImageView rotatingCover() {
@@ -501,9 +501,7 @@ final class FullPlayerController {
             if (sheet.getParent() == null) {
                 return;
             }
-            if (host.currentIndex < 0) {
-                host.currentIndex = -1;
-                host.playing = false;
+            if (host.currentTrackIndex() < 0) {
                 host.overlayHost.removeView(sheet);
                 host.updateMini();
                 host.render();

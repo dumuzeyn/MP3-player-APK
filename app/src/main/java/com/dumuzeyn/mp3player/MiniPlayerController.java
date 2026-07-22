@@ -104,10 +104,11 @@ final class MiniPlayerController {
     }
 
     private Track currentTrack() {
-        if (host.currentIndex < 0 || host.currentIndex >= host.tracks.size()) {
+        int currentIndex = host.currentTrackIndex();
+        if (currentIndex < 0 || currentIndex >= host.tracks.size()) {
             return null;
         }
-        return host.tracks.get(host.currentIndex);
+        return host.tracks.get(currentIndex);
     }
 
     private boolean isOverlayOpen() {
@@ -117,7 +118,7 @@ final class MiniPlayerController {
     private void bindMiniPlayer(Track track) {
         host.miniTitle.setText(track.title);
         host.miniSub.setText(track.artist);
-        host.miniButton.setText(host.playing ? "Ⅱ" : "▶");
+        host.miniButton.setText(host.isPlaybackPlaying() ? "Ⅱ" : "▶");
     }
 
     private void hideMiniPlayer() {

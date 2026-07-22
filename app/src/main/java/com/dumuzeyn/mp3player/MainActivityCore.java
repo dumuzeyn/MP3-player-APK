@@ -73,6 +73,8 @@ class MainActivityCore extends AppState {
     private final BackNavigationController backNavigationController = new BackNavigationController(this);
     final ThemeController themeController = new ThemeController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
+    private final PlaybackQueueController playbackQueueController =
+            new PlaybackQueueController(this, playbackController);
     final SleepTimerController sleepTimerController = new SleepTimerController(this);
     final EqualizerController equalizerController = new EqualizerController(this);
     final VolumeLevelingController volumeLevelingController = new VolumeLevelingController(this);
@@ -106,7 +108,6 @@ class MainActivityCore extends AppState {
         this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
-        this.songsRenderer.restoreRecentPlayback();
         this.playbackController.connect();
         this.themeController.applyPalette();
         buildUi();
@@ -136,7 +137,6 @@ class MainActivityCore extends AppState {
     protected void onResume() {
         super.onResume();
         this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
-        this.songsRenderer.restoreRecentPlayback();
         this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
@@ -228,7 +228,7 @@ class MainActivityCore extends AppState {
 
             @Override
             public boolean isPlaying() {
-                return MainActivityCore.this.playing;
+                return MainActivityCore.this.isPlaybackPlaying();
             }
 
             @Override
@@ -373,7 +373,7 @@ class MainActivityCore extends AppState {
     }
 
     void stopPlaybackAndClearQueue() {
-        this.playbackController.clearPlaybackMemory();
+        this.playbackQueueController.clear();
         this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
@@ -415,15 +415,15 @@ class MainActivityCore extends AppState {
     }
 
     void addTrackToQueue(Track track) {
-        this.playbackController.addToQueue(track);
+        this.playbackQueueController.add(track);
     }
 
     void removeTrackFromQueue(Track track) {
-        this.playbackController.removeFromQueue(track);
+        this.playbackQueueController.remove(track);
     }
 
     void removeTrackFromLibrary(Track track) {
-        this.playbackController.removeFromLibrary(track);
+        this.playbackQueueController.removeFromLibrary(track);
     }
 
     void confirmDeletePlaylist(Playlist playlist) {
@@ -451,7 +451,7 @@ class MainActivityCore extends AppState {
     }
 
     String loopLabel() {
-        return this.playbackController.loopLabel();
+        return this.playbackQueueController.loopLabel();
     }
 
     String formatMs(int i) {
@@ -498,19 +498,19 @@ class MainActivityCore extends AppState {
     }
 
     void playTrack(Track track) {
-        this.playbackController.playTrack(track);
+        this.playbackQueueController.playTrack(track, true);
     }
 
     void playTrack(Track track, boolean z) {
-        this.playbackController.playTrack(track, z);
+        this.playbackQueueController.playTrack(track, z);
     }
 
     void playList(ArrayList<Track> arrayList, boolean z) {
-        this.playbackController.playList(arrayList, z);
+        this.playbackQueueController.playList(arrayList, z);
     }
 
     void toggleCurrent() {
-        this.playbackController.toggleCurrent();
+        this.playbackQueueController.toggleOrStart();
     }
 
     void nextInternal() {
@@ -522,7 +522,7 @@ class MainActivityCore extends AppState {
     }
 
     void cycleLoopMode() {
-        this.playbackController.cycleLoopMode();
+        this.playbackController.cycleRepeatMode();
     }
 
     void seekTo(int position) {
@@ -530,7 +530,7 @@ class MainActivityCore extends AppState {
     }
 
     void playQueueIndex(int index, int position) {
-        this.playbackController.playQueueIndex(index, position);
+        this.playbackQueueController.playIndex(index, position);
     }
 
     int playbackPosition() {
@@ -546,27 +546,27 @@ class MainActivityCore extends AppState {
     }
 
     ArrayList<String> queueUris() {
-        return this.playbackController.queueUris();
+        return this.playbackQueueController.queueUris();
     }
 
     ArrayList<Track> activeQueue() {
-        return this.playbackController.activeQueue();
+        return this.playbackQueueController.activeQueue();
     }
 
     boolean isPlayingSource(ArrayList<Track> arrayList) {
-        return this.playbackController.isPlayingSource(arrayList);
+        return this.playbackQueueController.isPlayingSource(arrayList);
     }
 
     boolean isPlayingCollection(ArrayList<Track> tracks) {
-        return this.playbackController.isPlayingCollection(tracks);
+        return this.playbackQueueController.isPlayingCollection(tracks);
     }
 
     boolean isCurrentCollection(ArrayList<Track> tracks) {
-        return this.playbackController.isCurrentCollection(tracks);
+        return this.playbackQueueController.isCurrentCollection(tracks);
     }
 
     int queueIndexOf(Track track) {
-        return this.playbackController.queueIndexOf(track);
+        return this.playbackQueueController.indexOf(track);
     }
 
     void updateMini() {
@@ -583,7 +583,9 @@ class MainActivityCore extends AppState {
     }
 
     boolean isCurrent(Track track) {
-        return this.currentIndex >= 0 && this.currentIndex < this.tracks.size() && this.tracks.get(this.currentIndex).uri.equals(track.uri);
+        int currentIndex = currentTrackIndex();
+        return currentIndex >= 0 && currentIndex < this.tracks.size()
+                && this.tracks.get(currentIndex).uri.equals(track.uri);
     }
 
     Track findTrack(String str) {
@@ -625,7 +627,8 @@ class MainActivityCore extends AppState {
 
     WaveformView wave(Track track, boolean z) {
         WaveformView waveformView = new WaveformView(this, track.title + track.uri,
-                z ? this.purple : this.purpleSoft, this.yellow, z && this.playing);
+                z ? this.purple : this.purpleSoft, this.yellow,
+                z && this.isPlaybackPlaying());
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));
         waveformView.setLayoutParams(new LinearLayout.LayoutParams(dp(190), dp(30)));
@@ -754,7 +757,9 @@ class MainActivityCore extends AppState {
     }
 
     void addMiniSpacerIfNeeded() {
-        if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size() || this.overlayHost.getChildCount() > 0) {
+        int currentIndex = currentTrackIndex();
+        if (currentIndex < 0 || currentIndex >= this.tracks.size()
+                || this.overlayHost.getChildCount() > 0) {
             return;
         }
         View view = new View(this);
