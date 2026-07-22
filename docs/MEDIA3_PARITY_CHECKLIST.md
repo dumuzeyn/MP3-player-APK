@@ -71,11 +71,12 @@ playback core. An item is checked only after the stated test has actually passed
 - [x] Debug APK builds.
 - [x] Signed release APK builds with R8 and resource shrinking.
 - [x] Instrumented tests compile.
+- [x] Instrumented tests pass on a physical Realme device with Android 13.
 - [ ] Instrumented MediaController/background tests pass on Android 8.
 - [ ] Instrumented MediaController/background tests pass on Android 16.
 - [ ] Tablet layout tests pass.
-- [ ] Macrobenchmarks compile and produce reports.
-- [ ] Baseline Profile is packaged in the release artifact.
+- [x] Macrobenchmarks compile and produce reports.
+- [x] Baseline Profile is packaged in the release artifact.
 
 ## Manual physical-device checks
 
