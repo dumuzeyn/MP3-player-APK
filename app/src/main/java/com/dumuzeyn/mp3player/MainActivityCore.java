@@ -158,6 +158,7 @@ class MainActivityCore extends AppState {
         this.playbackHandler.removeCallbacksAndMessages(null);
         this.playerUiController.onHostDestroyed();
         this.playbackController.release();
+        this.volumeLevelingController.release();
         this.coverLoader.close();
         super.onDestroy();
     }

@@ -31,6 +31,8 @@ final class SettingsRenderer {
                 view -> host.backgroundPlaybackSettingsController.openDialog());
 
         section(host.tr("Sound", "Звук"));
+        addButton(host.volumeLevelingController.settingLabel(),
+                view -> host.volumeLevelingController.openDialog());
         addButton(host.tr("Equalizer", "Эквалайзер"),
                 view -> host.equalizerController.openDialog());
         addButton(host.stableVolumeController.settingLabel(),

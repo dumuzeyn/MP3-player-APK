@@ -23,6 +23,28 @@ final class AudioEffectsManager {
         this.context = context.getApplicationContext();
     }
 
+    float adjustedNormalizationGainDb(float analyzedGainDb) {
+        SharedPreferences preferences = context.getSharedPreferences(EqualizerController.PREFS, 0);
+        if (!preferences.getBoolean(VolumeLevelingController.ENABLED, false)) {
+            return 0.0f;
+        }
+        int maximumBandBoost = 0;
+        if (preferences.getBoolean(EqualizerController.ENABLED, false)) {
+            for (int band = 0; band < EqualizerController.BAND_COUNT; band++) {
+                maximumBandBoost = Math.max(maximumBandBoost,
+                        preferences.getInt(EqualizerController.BAND_PREFIX + band, 0));
+            }
+        }
+        return LoudnessGainPolicy.accountForEqualizer(analyzedGainDb, maximumBandBoost);
+    }
+
+    static float playerVolumeForGainDb(float gainDb) {
+        if (gainDb >= 0.0f) {
+            return 1.0f;
+        }
+        return (float) Math.pow(10.0, Math.max(LoudnessGainPolicy.MAX_CUT_DB, gainDb) / 20.0);
+    }
+
     void apply(int audioSessionId, float normalizationGainDb) {
         release();
         if (audioSessionId <= 0) {

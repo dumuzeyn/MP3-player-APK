@@ -165,10 +165,16 @@ public final class Media3PlayerService extends MediaSessionService {
     }
 
     private void applyAudioEffects() {
+        if (player == null) {
+            return;
+        }
+        float analyzedGain = loudnessNormalizer.cachedGainDb(currentTrack());
+        float appliedGain = audioEffects.adjustedNormalizationGainDb(analyzedGain);
+        player.setVolume(AudioEffectsManager.playerVolumeForGainDb(appliedGain));
         if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
             return;
         }
-        audioEffects.apply(audioSessionId, loudnessNormalizer.cachedGainDb(currentUri()));
+        audioEffects.apply(audioSessionId, Math.max(0.0f, appliedGain));
     }
 
     private void prefetchLoudness() {
@@ -218,6 +224,17 @@ public final class Media3PlayerService extends MediaSessionService {
             }
         }
         return queue;
+    }
+
+    @Nullable
+    private Track currentTrack() {
+        String mediaId = currentMediaId();
+        for (Track track : TrackStore.load(this)) {
+            if (mapper.mediaId(track).equals(mediaId)) {
+                return track;
+            }
+        }
+        return null;
     }
 
     private String currentUri() {
@@ -348,6 +365,8 @@ public final class Media3PlayerService extends MediaSessionService {
             audioEffects.release();
             errorRecovery.resetConsecutiveErrors();
             lastError = null;
+            prefetchLoudness();
+            applyAudioEffects();
             persistState(true);
             logEvent("media_item_transition", "none");
         }
