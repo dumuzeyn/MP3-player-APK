@@ -75,6 +75,7 @@ android {
 
         benchmark {
             initWith release
+            applicationIdSuffix ".benchmark"
             signingConfig signingConfigs.debug
             matchingFallbacks = ["release"]
             debuggable false

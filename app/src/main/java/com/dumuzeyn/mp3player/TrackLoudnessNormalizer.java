@@ -110,16 +110,6 @@ final class TrackLoudnessNormalizer {
         cache.edit().clear().commit();
     }
 
-    int analyzedCount() {
-        int count = 0;
-        for (String key : cache.getAll().keySet()) {
-            if (key.startsWith(RESULT_PREFIX)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
     int analyzedCount(List<Track> tracks) {
         int count = 0;
         if (tracks != null) {
@@ -130,10 +120,6 @@ final class TrackLoudnessNormalizer {
             }
         }
         return count;
-    }
-
-    int errorCount() {
-        return failedTrackIds().size();
     }
 
     int errorCount(List<Track> tracks) {
