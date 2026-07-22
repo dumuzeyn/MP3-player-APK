@@ -7,18 +7,19 @@ import android.view.View;
 
 public class WaveformView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final int yellow = 0xFFFFD000;
     private final int seed;
     private int color;
+    private int accentColor;
     private boolean active;
     private long startedAt;
 
-    public WaveformView(Context context, String key, int color, boolean active) {
+    public WaveformView(Context context, String key, int color, int accentColor, boolean active) {
         super(context);
         this.seed = Math.abs(key.hashCode());
         this.active = active;
         this.startedAt = System.currentTimeMillis();
         this.color = color;
+        this.accentColor = accentColor;
         paint.setColor(color);
         paint.setStrokeCap(Paint.Cap.ROUND);
     }
@@ -28,8 +29,9 @@ public class WaveformView extends View {
         invalidate();
     }
 
-    public void setState(int color, boolean active) {
+    public void setState(int color, int accentColor, boolean active) {
         this.color = color;
+        this.accentColor = accentColor;
         if (this.active != active) {
             this.startedAt = System.currentTimeMillis();
         }
@@ -51,7 +53,7 @@ public class WaveformView extends View {
         float time = (System.currentTimeMillis() - startedAt) / (active ? 180f : 520f);
 
         for (int i = 0; i < bars; i++) {
-            paint.setColor(active && i % 9 == 4 ? yellow : color);
+            paint.setColor(active && i % 9 == 4 ? accentColor : color);
             float x = gap + i * gap * 1.48f;
             float base = 0.24f + ((seed >> (i % 12)) & 15) / 22f;
             float pulse = active ? (float) Math.sin(time + i * 0.7f) * 0.22f : 0f;

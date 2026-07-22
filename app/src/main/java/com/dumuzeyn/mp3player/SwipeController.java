@@ -20,6 +20,8 @@ final class SwipeController {
     private boolean startedOnMiniPlayer;
     private boolean consuming;
     private ScrollView previewScroll;
+    private LinearLayout previewList;
+    private MainRenderer.PreviewState previewState;
     private int targetIndex = -1;
     private int direction;
     private int width;
@@ -71,7 +73,7 @@ final class SwipeController {
             }
             if (host.animations) {
                 int requestedDirection = deltaX < 0.0f ? 1 : -1;
-                if (requestedDirection != direction && Math.abs(deltaX) > host.dp(SWIPE_START_DP)) {
+                if (requestedDirection != direction && Math.abs(deltaX) > host.dp(36)) {
                     cleanupPreview();
                     prepareAdjacentTransition(requestedDirection);
                 }
@@ -141,9 +143,9 @@ final class SwipeController {
         targetSearch = search == null ? "" : search;
         width = Math.max(1, host.contentHost.getWidth());
         transitionDistance = width + host.dp(12);
-        LinearLayout previewList = new LinearLayout(host);
+        previewList = new LinearLayout(host);
         previewList.setOrientation(LinearLayout.VERTICAL);
-        int previewScrollY = host.renderTabPreview(previewList, targetIndex, targetSearch);
+        previewState = host.renderTabPreview(previewList, targetIndex, targetSearch);
         previewScroll = new ScrollView(host);
         previewScroll.addView(previewList, new FrameLayout.LayoutParams(-1, -2));
         int previewHeight = Math.max(1, host.contentHost.getHeight());
@@ -151,7 +153,7 @@ final class SwipeController {
                 View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(previewHeight, View.MeasureSpec.EXACTLY));
         previewScroll.layout(0, 0, width, previewHeight);
-        previewScroll.scrollTo(0, previewScrollY);
+        previewScroll.scrollTo(0, previewState.scrollY);
         previewScroll.setTranslationX(direction * transitionDistance);
         host.contentHost.addView(previewScroll, 0, new FrameLayout.LayoutParams(-1, -1));
         host.tabAnimating = true;
@@ -207,6 +209,26 @@ final class SwipeController {
         int completedDirection = direction;
         boolean shouldRecord = recordHistory;
         String completedSearch = targetSearch;
+        if (completedTarget <= 1 && previewScroll != null && previewList != null
+                && previewState != null) {
+            ScrollView committedScroll = previewScroll;
+            LinearLayout committedList = previewList;
+            MainRenderer.PreviewState committedState = previewState;
+            previewScroll = null;
+            previewList = null;
+            previewState = null;
+            targetIndex = -1;
+            resetCurrentContent();
+            host.completeTabTransitionWithPreview(
+                    completedTarget,
+                    completedDirection,
+                    shouldRecord,
+                    completedSearch,
+                    committedScroll,
+                    committedList,
+                    committedState);
+            return;
+        }
         cleanupPreview();
         resetCurrentContent();
         host.completeTabTransition(completedTarget, completedDirection, shouldRecord, completedSearch);
@@ -224,6 +246,9 @@ final class SwipeController {
             host.contentHost.removeView(previewScroll);
         }
         previewScroll = null;
+        previewList = null;
+        previewState = null;
+        host.discardTabPreview();
         targetIndex = -1;
     }
 

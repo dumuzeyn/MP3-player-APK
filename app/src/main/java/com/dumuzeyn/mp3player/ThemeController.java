@@ -103,6 +103,9 @@ final class ThemeController {
             host.fg = host.customTextColor;
             host.primaryText = host.customTextColor;
             host.secondaryText = mixColor(host.customTextColor, host.bg, 0.58f);
+            if (ThemeContrastPolicy.requiresOutline(host.customTextColor, host.bg)) {
+                host.textOutlineEnabled = true;
+            }
         }
         host.muted = host.secondaryText;
         host.line = host.cardStroke;
@@ -154,6 +157,15 @@ final class ThemeController {
             LinearLayout.LayoutParams outlineParams = new LinearLayout.LayoutParams(-1, host.dp(46));
             outlineParams.setMargins(0, host.dp(8), 0, host.dp(8));
             controls.addView(outlineToggle, outlineParams);
+            if (host.customTextColor != 0
+                    && ThemeContrastPolicy.requiresOutline(host.customTextColor, host.bg)) {
+                TextView contrastHint = host.text(host.tr(
+                        "The outline is enabled automatically because the selected text color "
+                                + "has low contrast. Your color is unchanged.",
+                        "Контур включён автоматически из-за низкого контраста. "
+                                + "Выбранный цвет текста не изменён."), 13, false);
+                controls.addView(contrastHint, new LinearLayout.LayoutParams(-1, -2));
+            }
             if (host.textOutlineEnabled) {
                 TextView outlineLabel = host.text(host.tr("Outline color", "Цвет контура"), 16, true);
                 LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-1, host.dp(32));

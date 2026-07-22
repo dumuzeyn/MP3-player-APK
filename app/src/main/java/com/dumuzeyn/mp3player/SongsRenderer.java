@@ -1,7 +1,5 @@
 package com.dumuzeyn.mp3player;
 
-import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
-
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -26,51 +24,6 @@ final class SongsRenderer {
 
     SongsRenderer(MainActivityCore host) {
         this.host = host;
-    }
-
-    void restoreRecentPlayback() {
-        PlayerService.refreshSnapshot();
-        boolean liveSession = PlayerService.hasPlaybackSession();
-        if (!liveSession && host.resumeWindowMinutes <= 0) {
-            return;
-        }
-        PlaybackStateManager.State savedState = new PlaybackStateManager(host).load();
-        long savedAt = savedState.savedAt;
-        long resumeWindow = (long) host.resumeWindowMinutes * 60000L;
-        if (!liveSession && (savedAt <= 0L || System.currentTimeMillis() - savedAt > resumeWindow)) {
-            return;
-        }
-        String savedUri = savedState.uri;
-        String uri = liveSession && !PlayerService.lastUri.isEmpty()
-                ? PlayerService.lastUri
-                : savedUri;
-        Track track = host.findTrack(uri);
-        if (track == null) {
-            return;
-        }
-        host.currentIndex = host.tracks.indexOf(track);
-        host.playing = liveSession && PlayerService.lastPlaying;
-        host.resumePosition = liveSession
-                ? Math.max(0, PlayerService.lastPosition)
-                : savedState.position;
-        host.loopMode = liveSession
-                ? PlayerService.lastLoopMode
-                : savedState.loopMode;
-        host.shuffleMode = savedState.shuffle;
-        host.playbackQueue.clear();
-        host.playbackQueue.addAll(PlaybackQueueResolver.restore(
-                host.tracks,
-                savedState.queueUris,
-                track));
-        if (!liveSession) {
-            PlayerService.lastIndex = host.currentIndex;
-            PlayerService.lastPlaying = false;
-            PlayerService.lastPosition = host.resumePosition;
-            PlayerService.lastDuration = Math.max(track.durationMs,
-                    savedState.duration);
-            PlayerService.lastUri = uri;
-            PlayerService.lastLoopMode = host.loopMode;
-        }
     }
 
     void refreshMissingMetadataAsync() {
@@ -187,7 +140,7 @@ final class SongsRenderer {
         if (scrollY <= 0 || pendingTracks == null) {
             return;
         }
-        int approximateRows = Math.max(24, scrollY / Math.max(1, host.dp(62)) + 18);
+        int approximateRows = Math.max(15, scrollY / Math.max(1, host.dp(62)) + 12);
         while (pendingTracks != null && pendingStart < approximateRows) {
             appendNextSongBatch();
         }
@@ -222,7 +175,7 @@ final class SongsRenderer {
         }
         ArrayList<Track> tracksToRender = pendingTracks;
         int start = pendingStart;
-        int batchSize = host.renderingTabPreview ? 15 : 24;
+        int batchSize = 15;
         int end = Math.min(tracksToRender.size(), start + batchSize);
         for (int i = start; i < end; i++) {
             host.list.addView(songRow(tracksToRender.get(i), true, true));
@@ -255,9 +208,7 @@ final class SongsRenderer {
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);
         marker.setVisibility(host.isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        if (!host.renderingTabPreview) {
-            host.songRows.registerCurrentMarker(track.uri, marker);
-        }
+        host.activeSongRows().registerCurrentMarker(track.uri, marker);
 
         ImageView cover = host.coverView();
         host.loadCover(cover, track, host.purpleSoft);
@@ -285,9 +236,7 @@ final class SongsRenderer {
         metaRow.setOrientation(LinearLayout.HORIZONTAL);
         metaRow.setGravity(16);
         WaveformView waveform = host.wave(track, host.isCurrent(track));
-        if (!host.renderingTabPreview) {
-            host.songRows.registerWaveform(track.uri, waveform);
-        }
+        host.activeSongRows().registerWaveform(track.uri, waveform);
         metaRow.addView(waveform, new LinearLayout.LayoutParams(0, host.dp(26), 1.0f));
         TextView duration = host.text(host.formatTrackDuration(track), 12, false);
         duration.setGravity(17);
@@ -326,7 +275,8 @@ final class SongsRenderer {
 
         Button play = host.icon("");
         host.applyPrimaryButtonStyle(play);
-        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
+        SongRowStateRegistry.applyPlayState(play,
+                host.isCurrent(track) && host.isPlaybackPlaying());
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -340,9 +290,7 @@ final class SongsRenderer {
                 }
             }
         });
-        if (!host.renderingTabPreview) {
-            host.songRows.registerPlayButton(track.uri, play);
-        }
+        host.activeSongRows().registerPlayButton(track.uri, play);
         row.addView(play, host.square(44));
         container.addView(row, new FrameLayout.LayoutParams(-1, -2));
         FrameLayout.LayoutParams markerParams = new FrameLayout.LayoutParams(host.dp(4), host.dp(52));
@@ -383,7 +331,8 @@ final class SongsRenderer {
 
         Button play = host.icon("");
         host.applyPlainIconStyle(play, host.isCurrent(track) ? host.bg : host.purple);
-        SongRowStateRegistry.applyPlayState(play, host.isCurrent(track) && host.playing);
+        SongRowStateRegistry.applyPlayState(play,
+                host.isCurrent(track) && host.isPlaybackPlaying());
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

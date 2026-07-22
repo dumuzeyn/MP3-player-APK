@@ -13,7 +13,7 @@ import java.util.Random;
 /** Lightweight decorative particles that never participate in touch dispatch. */
 final class ParticleEffectsView extends View {
     private static final int MAX_PARTICLES = 28;
-    private static final long MOVE_EMIT_INTERVAL_MS = 70L;
+    private static final long MOVE_EMIT_INTERVAL_MS = 120L;
     private final MainActivityCore host;
     private final ArrayList<Particle> particles = new ArrayList<>();
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -54,15 +54,13 @@ final class ParticleEffectsView extends View {
             return;
         }
         int action = event.getActionMasked();
-        int[] location = new int[2];
-        getLocationOnScreen(location);
-        float x = event.getRawX() - location[0];
-        float y = event.getRawY() - location[1];
+        float x = event.getX();
+        float y = event.getY();
         if (action == MotionEvent.ACTION_DOWN) {
             lastTouchX = x;
             lastTouchY = y;
             lastMoveEmitTime = SystemClock.uptimeMillis();
-            emitBurst(x, y, 7);
+            emitBurst(x, y, 4);
         } else if (action == MotionEvent.ACTION_MOVE) {
             long now = SystemClock.uptimeMillis();
             float dx = x - lastTouchX;
@@ -71,7 +69,7 @@ final class ParticleEffectsView extends View {
                 lastTouchX = x;
                 lastTouchY = y;
                 lastMoveEmitTime = now;
-                emitBurst(x, y, 2);
+                emitBurst(x, y, 1);
             }
         }
     }

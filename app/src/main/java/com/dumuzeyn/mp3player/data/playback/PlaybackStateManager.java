@@ -3,6 +3,8 @@ package com.dumuzeyn.mp3player.data.playback;
 import android.content.Context;
 import android.content.SharedPreferences;
 import com.dumuzeyn.mp3player.Track;
+import com.dumuzeyn.mp3player.PlaybackSnapshot;
+import com.dumuzeyn.mp3player.RepeatModeMapper;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
@@ -63,6 +65,21 @@ public final class PlaybackStateManager {
         }
     }
 
+    public void save(PlaybackSnapshot snapshot, String currentUri, List<Track> queue,
+            boolean includeQueue) {
+        save(new Snapshot(currentUri, (int) Math.min(Integer.MAX_VALUE, snapshot.positionMs),
+                (int) Math.min(Integer.MAX_VALUE, snapshot.durationMs), snapshot.currentIndex,
+                RepeatModeMapper.fromMedia3(snapshot.repeatMode),
+                snapshot.playWhenReady, snapshot.shuffleEnabled, queue), includeQueue);
+    }
+
+    public void save(PlaybackSnapshot snapshot, String currentUri, boolean includeQueue) {
+        save(new Snapshot(currentUri, (int) Math.min(Integer.MAX_VALUE, snapshot.positionMs),
+                (int) Math.min(Integer.MAX_VALUE, snapshot.durationMs), snapshot.currentIndex,
+                RepeatModeMapper.fromMedia3(snapshot.repeatMode), snapshot.playWhenReady,
+                snapshot.shuffleEnabled, new ArrayList<>(snapshot.queueMediaIds)), includeQueue);
+    }
+
     public void clear() {
         lastSavedQueueJson = "";
         preferences.edit().clear().apply();
@@ -105,6 +122,11 @@ public final class PlaybackStateManager {
 
         public Snapshot(String uri, int position, int duration, int index, int loopMode,
                 boolean playing, boolean shuffle, List<Track> queue) {
+            this(uri, position, duration, index, loopMode, playing, shuffle, trackIds(queue));
+        }
+
+        private Snapshot(String uri, int position, int duration, int index, int loopMode,
+                boolean playing, boolean shuffle, ArrayList<String> queueIds) {
             this.uri = uri == null ? "" : uri;
             this.position = position;
             this.duration = duration;
@@ -112,10 +134,15 @@ public final class PlaybackStateManager {
             this.loopMode = loopMode;
             this.playing = playing;
             this.shuffle = shuffle;
-            this.queueUris = new ArrayList<>();
+            this.queueUris = queueIds;
+        }
+
+        private static ArrayList<String> trackIds(List<Track> queue) {
+            ArrayList<String> ids = new ArrayList<>();
             for (Track track : queue) {
-                this.queueUris.add(track.uri);
+                ids.add(track.trackId);
             }
+            return ids;
         }
     }
 

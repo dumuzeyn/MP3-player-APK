@@ -61,9 +61,9 @@ final class UiPreferencesStore {
         SharedPreferences preferences = preferences();
         host.themeController.load(preferences);
         host.animations = preferences.getBoolean(ANIMATIONS, true);
-        host.language = preferences.getString(LANGUAGE, "en");
+        host.language = preferences.getString(LANGUAGE, "ru");
         if (!"en".equals(host.language) && !"ru".equals(host.language)) {
-            host.language = "en";
+            host.language = "ru";
         }
         host.customTimerMinutes = preferences.getInt(CUSTOM_TIMER, 10);
         host.resumeWindowMinutes = Math.max(0, preferences.getInt(RESUME_WINDOW_MINUTES, 120));

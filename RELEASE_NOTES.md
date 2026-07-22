@@ -1,83 +1,33 @@
-# MP3 Player Voltune 2.5.3
+# MP3 Player Voltune 3.0
 
 ## Русский
 
-Обновление удобства настроек и навигации по библиотеке.
+Версия 3.0 обновляет основу воспроизведения и ускоряет работу с большой библиотекой.
 
-- Исправлена системная тема экрана запуска: splash теперь берёт палитру выбранного варианта, а не старую фиолетово-жёлтую иконку.
-- Красно-голубой вариант рабочего стола приведён к цветам пользовательской темы `#FF3545` и `#D0E8FF`.
-- Пользовательский цвет текста больше не переносится в Светлую и Тёмную темы, поэтому их подписи остаются контрастными.
-- Иконка в последних приложениях использует тот же масштаб, что и иконка на рабочем столе.
-- Чёрный текст Светлой темы получил чёткий белый контур для читаемости на любом фоне.
-- Тонкий белый контур Светлой темы одинаково применяется к заголовкам и кнопкам большого плеера, включая таймер и повтор.
-- Текст внутри карточек остаётся чистым без контура; на открытом фоне Светлая тема использует белый контур, а Тёмная — чёрный.
+- Воспроизведение переведено на Media3 `ExoPlayer`, `MediaSessionService` и `MediaController`.
+- Очередь, текущая песня, позиция, повтор и мини-плеер восстанавливаются надёжнее после возврата в приложение.
+- Исправлено определение активной песни после перехода на Media3: снова работают гистограмма, кнопка паузы и вращение обложки.
+- Переход в «Песни» больше не создаёт один и тот же список дважды.
+- Для «Песен», «Избранного», жанров, исполнителей и альбомов заранее готовятся 15 карточек, поэтому пользователь не видит поэтапную загрузку первых элементов.
+- Сохранение плейлистов и избранного выполняется вне главного потока и одной атомарной операцией.
+- Фоновое сохранение состояния больше не перечитывает всю музыкальную библиотеку каждые несколько секунд.
+- Добавлены проверки миграции библиотеки из 165 песен и производительности на библиотеке из 1 000 треков.
+- При чистой установке интерфейс по умолчанию открывается на русском языке.
 
-- Окна темы, языка, памяти мини-плеера и фона больше не закрываются после каждого изменения.
-- В окне темы всегда доступны «Светлая», «Тёмная» и «Своя»; дополнительные цвета появляются только после выбора «Своя» без выхода из окна.
-- В пользовательской теме кнопка «Готово» закреплена внизу, а длинный список параметров прокручивается отдельно.
-- Размытая тень текста заменена чётким контуром с включением, выключением и выбором цвета.
-- Переключатель контура сохраняет нейтральный фон и меняет только состояние «вкл/выкл»; цвет выбирается отдельно.
-- В настройках частиц кнопка «По умолчанию» восстанавливает оба цвета темы, частоту, размер и время жизни.
-- Позиция длинного списка восстанавливается до его появления: при возврате в «Песни» больше не видно прокрутку сверху.
-- Анимированный предпросмотр соседней вкладки использует ту же сохранённую позицию и не сбрасывает пакетную загрузку песен.
-- В теме «Своя» отдельно выбираются оба акцентных цвета; второй цвет больше не зафиксирован жёлтым.
-- Двухцветная палитра применяется к треугольникам и значку Voltune в шапке, системном медиаплеере, списке последних приложений, на рабочем столе и экране запуска.
-
-Также включены все изменения версии 2.5.1:
-
-- Состояние очереди, плейлиста и повтора надёжнее синхронизируется с фоновым сервисом после выхода и возвращения в приложение.
-- Исправлены индикаторы активного плейлиста, вращение его обложки и остановка диска на паузе.
-- Перемотка круглой обложки работает как диск: вперёд и назад без лишнего оборота после отпускания пальца.
-- Скорость титров плейлистов можно установить в `0`, полностью остановив прокрутку.
-- Для основного интерфейса и большого плеера можно отдельно выбрать однотонный фон, градиент, изображение или GIF и настроить размытие.
-- Медиафон проверяется до сохранения и декодируется только как растровое изображение без выполнения ссылок, скриптов и метаданных.
-- Добавлены готовые профили эквалайзера и сохранение собственной конфигурации.
-- Выравнивание громкости анализирует каждый трек и меняет усиление плавно, без резких скачков внутри песни.
-- Сохраняются позиции прокрутки разделов, память мини-плеера и исходные названия песен; обложки плейлистов не загружаются заново без необходимости.
-- Окно свойств песни стало компактным: его высота определяется содержимым, а все действия выровнены единым столбцом.
-- Скорость вращения обложки-диска в большом плеере регулируется от 25% до 200%; перемотка учитывает выбранную скорость.
-- Для частиц можно независимо выбрать два цвета, сохранив цвета темы как исходный вариант.
-- Цвет текста настраивается отдельно от темы и акцента; при необходимости включается контур с собственным цветом.
-- Фоновые тесты Android 15/16 теперь проверяют подтверждённое воспроизведение и не принимают краткий переход между треками за остановку.
-- Планшетная проверка CI отделена от аудиотестов и проверяет только конфигурацию приложения и адаптивную разметку.
+Все существующие возможности Voltune сохранены: фоновое воспроизведение, повтор, таймер сна, плейлисты, избранное, темы, эквалайзер, выравнивание громкости, системная медиапанель и адаптивный интерфейс для планшетов.
 
 ## English
 
-An update focused on stable settings and library navigation.
+Version 3.0 modernizes playback and improves responsiveness with large music libraries.
 
-- The Android splash screen now uses the selected launcher palette instead of the old purple-and-yellow icon.
-- The red-and-blue launcher variant now matches the custom theme colors `#FF3545` and `#D0E8FF`.
-- Custom text colors no longer leak into Light or Dark themes, keeping their labels readable.
-- The recent-apps icon now uses the same geometry and scale as the launcher icon.
-- Black text in the Light theme now has a crisp white outline for readability on any background.
-- The thin Light-theme outline is consistent across full-player labels and controls, including timer and repeat buttons.
-- Text inside cards stays outline-free; exposed Light-theme text uses white and Dark-theme text uses black outlines.
+- Playback now uses Media3 `ExoPlayer`, `MediaSessionService`, and `MediaController`.
+- Queue, current track, position, repeat mode, and mini-player state restore more reliably after returning to the app.
+- Active-track matching was corrected after the Media3 migration, restoring waveform animation, pause state, and rotating artwork.
+- Entering Songs no longer builds the same list twice.
+- Songs, Favorites, Genres, Artists, and Albums prepare 15 cards before a transition, avoiding visibly staged initial loading.
+- Playlist and favorite changes are persisted off the main thread in one atomic operation.
+- Periodic playback persistence no longer reloads the complete library every few seconds.
+- Coverage now includes a 165-track database migration and a 1,000-track startup/navigation benchmark.
+- Clean installations default to Russian while existing language preferences remain unchanged.
 
-- Theme, language, mini-player memory, and background dialogs remain open while values change.
-- Light, Dark, and Custom always remain available; additional color controls appear only after Custom is selected without leaving the dialog.
-- The Done action stays pinned while the longer custom-theme controls scroll independently.
-- Blurred text shadows are replaced with a crisp outline that can be toggled and colored.
-- The outline toggle keeps a neutral background and changes only its on/off state; color remains a separate choice.
-- Particle defaults restore both theme colors as well as frequency, size, and lifetime sliders.
-- Long lists are positioned before becoming visible, so returning to Songs no longer shows a jump from the top.
-- Animated adjacent-tab previews use the same remembered position without disturbing batched song rendering.
-- Custom themes can select both accent colors independently instead of keeping the second accent fixed to yellow.
-- The two-color palette is reflected by the Voltune mark in the header, media session, recent-apps screen, launcher, and Android splash screen.
-
-This release also includes every change from 2.5.1:
-
-- Queue, playlist, and repeat state now stay synchronized with the foreground service more reliably after leaving and returning to the app.
-- Active playlist indicators, rotating playlist artwork, and paused disc behavior are corrected.
-- Circular artwork seeking behaves like a turntable in both directions without an extra rotation after release.
-- Playlist ticker speed can be set to `0` for a completely static preview.
-- The main interface and full player can independently use a solid color, gradient, validated image, or GIF with adjustable blur.
-- Visual media is validated before saving and decoded strictly as raster pixels without executing links, scripts, or metadata.
-- Equalizer presets are available while a custom profile remains remembered.
-- Volume leveling analyzes each track and applies smooth gain changes without abrupt shifts inside a song.
-- Section scroll positions, mini-player memory, and original track titles are preserved; playlist artwork is retained instead of visibly reloading.
-- The song actions window is content-sized and compact, with all actions aligned in one consistent column.
-- Full-player disc rotation is adjustable from 25% to 200%, and turntable seeking follows the selected speed.
-- Two particle colors can be selected independently while theme colors remain the default palette.
-- Text color is independent from theme and accent colors, with an optional configurable outline for contrast.
-- Android 15/16 background tests now observe confirmed playback instead of treating a brief track transition as a stop.
-- Tablet CI is separated from audio scenarios and focuses on application configuration and responsive layout.
+All established Voltune features remain available, including background playback, repeat, sleep timer, playlists, favorites, themes, equalizer, volume leveling, system media controls, and adaptive tablet layouts.

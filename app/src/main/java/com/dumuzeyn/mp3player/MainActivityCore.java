@@ -17,6 +17,7 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.dumuzeyn.mp3player.library.SongDiagnostics;
+import com.dumuzeyn.mp3player.playback.service.PlaybackSleepTimer;
 import com.dumuzeyn.mp3player.ui.permissions.NotificationPermissionController;
 import com.dumuzeyn.mp3player.ui.player.PlaybackTimeFormatter;
 import com.dumuzeyn.mp3player.ui.layout.ResponsiveLayoutController;
@@ -58,6 +59,7 @@ class MainActivityCore extends AppState {
     final Handler uiHandler = new Handler(Looper.getMainLooper());
     final Handler playbackHandler = new Handler(Looper.getMainLooper());
     final SongRowStateRegistry songRows = new SongRowStateRegistry();
+    final SongRowStateRegistry previewSongRows = new SongRowStateRegistry();
     final SongsRenderer songsRenderer = new SongsRenderer(this);
     final PlayerUiController playerUiController = new PlayerUiController(this);
     private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
@@ -72,6 +74,8 @@ class MainActivityCore extends AppState {
     private final BackNavigationController backNavigationController = new BackNavigationController(this);
     final ThemeController themeController = new ThemeController(this);
     private final PlaybackController playbackController = new PlaybackController(this);
+    private final PlaybackQueueController playbackQueueController =
+            new PlaybackQueueController(this, playbackController);
     final SleepTimerController sleepTimerController = new SleepTimerController(this);
     final EqualizerController equalizerController = new EqualizerController(this);
     final VolumeLevelingController volumeLevelingController = new VolumeLevelingController(this);
@@ -89,6 +93,8 @@ class MainActivityCore extends AppState {
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
     private final UiPreferencesStore uiPreferencesStore = new UiPreferencesStore(this);
+    private final LibraryPersistenceController libraryPersistenceController =
+            new LibraryPersistenceController(this);
     final ResponsiveLayoutController responsiveLayoutController =
             new ResponsiveLayoutController(this);
     Button sourcePlayButton;
@@ -102,15 +108,15 @@ class MainActivityCore extends AppState {
         super.onCreate(bundle);
         SettingsDefaults.resetForVersion243(this);
         this.uiPreferencesStore.load();
-        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
+        BenchmarkLibrarySeeder.seedIfRequested(this,
+                getIntent().getIntExtra(BenchmarkLibrarySeeder.EXTRA_TRACK_COUNT, 0));
+        this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
-        this.songsRenderer.restoreRecentPlayback();
+        this.playbackController.restorePersistedUiState();
+        this.playbackController.connect();
         this.themeController.applyPalette();
         buildUi();
-        if (PlayerService.hasPlaybackSession()) {
-            this.playbackController.startPlaybackWatcher();
-        }
         this.songsRenderer.refreshMissingMetadataAsync();
         this.uiHandler.postDelayed(
                 this.backgroundPlaybackSettingsController::maybePromptOnce, 900L);
@@ -129,7 +135,6 @@ class MainActivityCore extends AppState {
 
     @Override
     protected void onStop() {
-        PlayerService.persistSnapshot();
         super.onStop();
         this.themeController.onHostStopped();
     }
@@ -137,11 +142,7 @@ class MainActivityCore extends AppState {
     @Override
     protected void onResume() {
         super.onResume();
-        this.sleepTimerEndsAt = PlayerService.getSleepTimerEndsAt(this);
-        this.songsRenderer.restoreRecentPlayback();
-        if (PlayerService.hasPlaybackSession()) {
-            this.playbackController.startPlaybackWatcher();
-        }
+        this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
@@ -160,7 +161,10 @@ class MainActivityCore extends AppState {
         this.uiHandler.removeCallbacksAndMessages(null);
         this.playbackHandler.removeCallbacksAndMessages(null);
         this.playerUiController.onHostDestroyed();
+        this.playbackController.release();
+        this.volumeLevelingController.release();
         this.coverLoader.close();
+        this.libraryPersistenceController.close();
         super.onDestroy();
     }
 
@@ -201,13 +205,7 @@ class MainActivityCore extends AppState {
 
     void saveState() {
         this.uiPreferencesStore.save();
-        LibraryDatabase database = new LibraryDatabase(this);
-        try {
-            database.saveFavorites(this.favorites);
-            database.savePlaylists(this.playlists);
-        } finally {
-            database.close();
-        }
+        this.libraryPersistenceController.save(this.favorites, this.playlists);
     }
 
     private void colors() {
@@ -219,7 +217,16 @@ class MainActivityCore extends AppState {
     }
 
     private void refreshPlaybackChrome() {
-        this.songRows.refresh(new SongRowStateRegistry.StateResolver() {
+        this.songRows.refresh(songRowStateResolver());
+        this.playlistController.refreshPlaybackState();
+        if (this.sourcePlayButton != null) {
+            this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
+        }
+        updateMini();
+    }
+
+    SongRowStateRegistry.StateResolver songRowStateResolver() {
+        return new SongRowStateRegistry.StateResolver() {
             @Override
             public Track findTrack(String uri) {
                 return MainActivityCore.this.findTrack(uri);
@@ -232,7 +239,7 @@ class MainActivityCore extends AppState {
 
             @Override
             public boolean isPlaying() {
-                return MainActivityCore.this.playing;
+                return MainActivityCore.this.isPlaybackPlaying();
             }
 
             @Override
@@ -241,15 +248,15 @@ class MainActivityCore extends AppState {
             }
 
             @Override
+            public int secondaryActiveColor() {
+                return MainActivityCore.this.yellow;
+            }
+
+            @Override
             public int inactiveColor() {
                 return MainActivityCore.this.purpleSoft;
             }
-        });
-        this.playlistController.refreshPlaybackState();
-        if (this.sourcePlayButton != null) {
-            this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
-        }
-        updateMini();
+        };
     }
 
     private void buildUi() {
@@ -335,6 +342,34 @@ class MainActivityCore extends AppState {
         this.tabsController.finishTransition(targetIndex);
     }
 
+    void completeTabTransitionWithPreview(int targetIndex, int direction, boolean recordHistory,
+            String targetSearch, ScrollView committedScroll, LinearLayout committedList,
+            MainRenderer.PreviewState previewState) {
+        if (recordHistory) {
+            this.backNavigationController.recordTabState(this.tabIndex, this.search);
+        }
+        this.mainRenderer.captureCurrentScrollPosition();
+        ScrollView previousScroll = this.contentScroll;
+        if (previousScroll != null && previousScroll.getParent() == this.contentHost) {
+            this.contentHost.removeView(previousScroll);
+        }
+        this.contentScroll = committedScroll;
+        this.list = committedList;
+        committedScroll.setTranslationX(0.0f);
+        committedScroll.setAlpha(1.0f);
+        committedScroll.setVisibility(View.VISIBLE);
+        committedScroll.setOnScrollChangeListener(
+                (view, scrollX, scrollY, oldScrollX, oldScrollY) ->
+                        songsRenderer.loadMoreIfNearBottom());
+        this.preferredTabDirection = direction;
+        this.tabIndex = targetIndex;
+        this.search = targetSearch == null ? "" : targetSearch;
+        this.tabAnimating = false;
+        this.mainRenderer.adoptPreview(targetIndex, this.search, previewState);
+        refreshTabs();
+        this.tabsController.finishTransition(targetIndex);
+    }
+
     void scrollTabsToActive(boolean z) {
         this.tabsController.scrollToActive(z, this.tabIndex);
     }
@@ -351,8 +386,17 @@ class MainActivityCore extends AppState {
         this.mainRenderer.render();
     }
 
-    int renderTabPreview(LinearLayout target, int targetIndex, String targetSearch) {
+    MainRenderer.PreviewState renderTabPreview(
+            LinearLayout target, int targetIndex, String targetSearch) {
         return this.mainRenderer.renderPreview(target, targetIndex, targetSearch);
+    }
+
+    void discardTabPreview() {
+        this.mainRenderer.discardPreview();
+    }
+
+    SongRowStateRegistry activeSongRows() {
+        return this.renderingTabPreview ? this.previewSongRows : this.songRows;
     }
 
     void renderSectionHeader() {
@@ -372,7 +416,7 @@ class MainActivityCore extends AppState {
     }
 
     void stopPlaybackAndClearQueue() {
-        this.playbackController.clearPlaybackMemory();
+        this.playbackQueueController.clear();
         this.playerUiController.syncPlaybackUi();
         refreshAfterTrackChange();
     }
@@ -414,15 +458,15 @@ class MainActivityCore extends AppState {
     }
 
     void addTrackToQueue(Track track) {
-        this.playbackController.addToQueue(track);
+        this.playbackQueueController.add(track);
     }
 
     void removeTrackFromQueue(Track track) {
-        this.playbackController.removeFromQueue(track);
+        this.playbackQueueController.remove(track);
     }
 
     void removeTrackFromLibrary(Track track) {
-        this.playbackController.removeFromLibrary(track);
+        this.playbackQueueController.removeFromLibrary(track);
     }
 
     void confirmDeletePlaylist(Playlist playlist) {
@@ -450,7 +494,7 @@ class MainActivityCore extends AppState {
     }
 
     String loopLabel() {
-        return this.playbackController.loopLabel();
+        return this.playbackQueueController.loopLabel();
     }
 
     String formatMs(int i) {
@@ -462,7 +506,8 @@ class MainActivityCore extends AppState {
     }
 
     int playbackDurationFor(Track track) {
-        int serviceDuration = Math.max(0, PlayerService.lastDuration);
+        int serviceDuration = (int) Math.min(Integer.MAX_VALUE,
+                Math.max(0L, this.playbackController.duration()));
         if (serviceDuration > 0) {
             return serviceDuration;
         }
@@ -488,7 +533,7 @@ class MainActivityCore extends AppState {
     }
 
     void refreshPlaybackAppearance() {
-        PlayerService.refreshAppearance();
+        this.playbackController.refreshAudioEffects();
     }
 
     String timerButtonText() {
@@ -496,19 +541,19 @@ class MainActivityCore extends AppState {
     }
 
     void playTrack(Track track) {
-        this.playbackController.playTrack(track);
+        this.playbackQueueController.playTrack(track, true);
     }
 
     void playTrack(Track track, boolean z) {
-        this.playbackController.playTrack(track, z);
+        this.playbackQueueController.playTrack(track, z);
     }
 
     void playList(ArrayList<Track> arrayList, boolean z) {
-        this.playbackController.playList(arrayList, z);
+        this.playbackQueueController.playList(arrayList, z);
     }
 
     void toggleCurrent() {
-        this.playbackController.toggleCurrent();
+        this.playbackQueueController.toggleOrStart();
     }
 
     void nextInternal() {
@@ -519,52 +564,52 @@ class MainActivityCore extends AppState {
         this.playbackController.previous();
     }
 
-    void startPlaybackWatcher() {
-        this.playbackController.startPlaybackWatcher();
-    }
-
     void cycleLoopMode() {
-        this.playbackController.cycleLoopMode();
+        this.playbackController.cycleRepeatMode();
     }
 
     void seekTo(int position) {
         this.playbackController.seekTo(position);
     }
 
-    void startServiceAction(String str, int i) {
-        this.playbackController.startServiceAction(str, i);
+    void playQueueIndex(int index, int position) {
+        this.playbackQueueController.playIndex(index, position);
     }
 
-    void startServiceAction(String str, int i, boolean z) {
-        this.playbackController.startServiceAction(str, i, z);
+    int playbackPosition() {
+        return (int) Math.min(Integer.MAX_VALUE, this.playbackController.currentPosition());
     }
 
-    void startServiceAction(String str, int i, boolean z, int position) {
-        this.playbackController.startServiceAction(str, i, z, position);
+    void startSleepTimer(long delayMs) {
+        this.playbackController.startSleepTimer(delayMs);
+    }
+
+    void cancelSleepTimer() {
+        this.playbackController.cancelSleepTimer();
     }
 
     ArrayList<String> queueUris() {
-        return this.playbackController.queueUris();
+        return this.playbackQueueController.queueUris();
     }
 
     ArrayList<Track> activeQueue() {
-        return this.playbackController.activeQueue();
+        return this.playbackQueueController.activeQueue();
     }
 
     boolean isPlayingSource(ArrayList<Track> arrayList) {
-        return this.playbackController.isPlayingSource(arrayList);
+        return this.playbackQueueController.isPlayingSource(arrayList);
     }
 
     boolean isPlayingCollection(ArrayList<Track> tracks) {
-        return this.playbackController.isPlayingCollection(tracks);
+        return this.playbackQueueController.isPlayingCollection(tracks);
     }
 
     boolean isCurrentCollection(ArrayList<Track> tracks) {
-        return this.playbackController.isCurrentCollection(tracks);
+        return this.playbackQueueController.isCurrentCollection(tracks);
     }
 
     int queueIndexOf(Track track) {
-        return this.playbackController.queueIndexOf(track);
+        return this.playbackQueueController.indexOf(track);
     }
 
     void updateMini() {
@@ -581,7 +626,9 @@ class MainActivityCore extends AppState {
     }
 
     boolean isCurrent(Track track) {
-        return this.currentIndex >= 0 && this.currentIndex < this.tracks.size() && this.tracks.get(this.currentIndex).uri.equals(track.uri);
+        int currentIndex = currentTrackIndex();
+        return currentIndex >= 0 && currentIndex < this.tracks.size()
+                && this.tracks.get(currentIndex).uri.equals(track.uri);
     }
 
     Track findTrack(String str) {
@@ -599,22 +646,39 @@ class MainActivityCore extends AppState {
 
     void loadCover(ImageView view, Track track, int fallbackColor) {
         registerCoverState(view, track);
-        this.coverLoader.load(view, track, fallbackColor);
+        if (this.renderingTabPreview) {
+            this.coverLoader.loadCachedOnly(view, track, fallbackColor, CoverLoader.THUMB_SIZE);
+        } else {
+            this.coverLoader.load(view, track, fallbackColor);
+        }
     }
 
     void loadCover(ImageView view, Track track, int fallbackColor, int maxSize) {
         registerCoverState(view, track);
-        this.coverLoader.load(view, track, fallbackColor, maxSize);
+        if (this.renderingTabPreview) {
+            this.coverLoader.loadCachedOnly(view, track, fallbackColor, maxSize);
+        } else {
+            this.coverLoader.load(view, track, fallbackColor, maxSize);
+        }
     }
 
     private void registerCoverState(ImageView view, Track track) {
         if (view instanceof RotatingCoverImageView) {
             RotatingCoverImageView cover = (RotatingCoverImageView) view;
             cover.bindTrack(track);
-            if (!this.renderingTabPreview && track != null) {
-                this.songRows.registerCover(track.uri, cover);
+            if (track != null) {
+                activeSongRows().registerCover(track.uri, cover);
             }
         }
+    }
+
+    void loadPromotedCovers() {
+        this.songRows.forEachCover((uri, cover) -> {
+            Track track = findTrack(uri);
+            if (track != null) {
+                this.coverLoader.load(cover, track, this.purpleSoft);
+            }
+        });
     }
 
     void seedCoverCacheFromView(ImageView view, Track track) {
@@ -622,7 +686,9 @@ class MainActivityCore extends AppState {
     }
 
     WaveformView wave(Track track, boolean z) {
-        WaveformView waveformView = new WaveformView(this, track.title + track.uri, z ? this.purple : this.purpleSoft, z && this.playing);
+        WaveformView waveformView = new WaveformView(this, track.title + track.uri,
+                z ? this.purple : this.purpleSoft, this.yellow,
+                z && this.isPlaybackPlaying());
         waveformView.setMinimumHeight(dp(28));
         waveformView.setPadding(0, dp(3), 0, dp(3));
         waveformView.setLayoutParams(new LinearLayout.LayoutParams(dp(190), dp(30)));
@@ -637,9 +703,21 @@ class MainActivityCore extends AppState {
         this.audioImportController.openFolder();
     }
 
+    void rescanMusicFolders() {
+        this.audioImportController.rescanPersistedFolders();
+    }
+
+    void reloadUiPreferences() {
+        this.uiPreferencesStore.load();
+        rebuildUi();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (this.settingsController.handleActivityResult(requestCode, resultCode, data)) {
+            return;
+        }
         if (this.backgroundPlaybackSettingsController.handleActivityResult(requestCode)) {
             return;
         }
@@ -751,7 +829,9 @@ class MainActivityCore extends AppState {
     }
 
     void addMiniSpacerIfNeeded() {
-        if (this.currentIndex < 0 || this.currentIndex >= this.tracks.size() || this.overlayHost.getChildCount() > 0) {
+        int currentIndex = currentTrackIndex();
+        if (currentIndex < 0 || currentIndex >= this.tracks.size()
+                || this.overlayHost.getChildCount() > 0) {
             return;
         }
         View view = new View(this);

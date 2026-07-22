@@ -205,6 +205,10 @@ final class TabsController {
         button.setGravity(17);
         button.setPadding(host.dp(14), 0, host.dp(14), 0);
 
+        if (button instanceof OutlinedButton) {
+            ((OutlinedButton) button).setTextOutline(false, Color.TRANSPARENT, 1.0f);
+        }
+
         button.setBackgroundColor(Color.TRANSPARENT);
         button.setTextColor(index == host.tabIndex ? Color.WHITE : host.secondaryText);
     }

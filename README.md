@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Скачать_APK-Release_2.5.3-9b4dff?style=for-the-badge" alt="Скачать APK">
+    <img src="https://img.shields.io/badge/Скачать_APK-Release_3.0-9b4dff?style=for-the-badge" alt="Скачать APK">
   </a>
   <a href="#english">
     <img src="https://img.shields.io/badge/English-Open-ffd12f?style=for-the-badge&labelColor=17151d" alt="English version">
@@ -17,6 +17,7 @@ MP3 Player Voltune — локальный музыкальный плеер дл
 - Разделы «Песни», «Избранное», «Плейлисты», «Жанры», «Исполнители» и «Альбомы».
 - Поиск, сортировка, очередь, последовательное и случайное воспроизведение.
 - Фоновое воспроизведение и управление из системной медиапанели.
+- Надёжный движок Media3 с быстрым восстановлением очереди, текущей песни и мини-плеера.
 - Повтор песни или всей очереди до ручной остановки либо срабатывания таймера сна.
 - Мини-плеер и большой плеер с качественной обложкой, перемоткой и управлением очередью.
 - Плейлисты, избранное, эквалайзер с готовыми профилями и собственной сохраняемой настройкой.
@@ -49,12 +50,14 @@ flowchart TD
     ACT["MainActivityCore<br/>координатор жизненного цикла"]
     UI["MainRenderer и контроллеры плеера<br/>экраны, мини-плеер, большой плеер"]
     SONGS["SongsRenderer<br/>списки и восстановление библиотеки"]
-    SERVICE["PlayerService<br/>Android foreground service"]
-    COMMANDS["PlaybackCommandHandler<br/>команды воспроизведения"]
-    ENGINE["PlaybackEngine<br/>MediaPlayer и источники content URI"]
+    CLIENT["PlaybackController<br/>MediaController и состояние UI"]
+    SERVICE["Media3PlayerService<br/>MediaSessionService"]
+    COMMANDS["Media3SessionCommandHandler<br/>команды воспроизведения"]
+    ENGINE["ExoPlayer<br/>очередь и источники content URI"]
     STATE["data/playback/PlaybackStateManager<br/>очередь, позиция и режим повтора"]
     RECOVERY["PlaybackErrorRecovery и PlaybackSleepTimer<br/>ошибки и таймер сна"]
     DATA["LibraryDatabase и TrackStore<br/>песни, избранное, плейлисты"]
+    PERSIST["LibraryPersistenceController<br/>асинхронное атомарное сохранение"]
     STYLE["ThemeController и UiFactory<br/>темы, диалоги, элементы интерфейса"]
     BACKGROUND["BackgroundSettingsController и BackgroundMediaView<br/>цвет, градиент, изображение, GIF и размытие"]
     AUDIO["AudioEffectsManager и TrackLoudnessNormalizer<br/>эквалайзер и выравнивание громкости"]
@@ -64,7 +67,10 @@ flowchart TD
     ACT --> SONGS
     ACT --> PREFS
     SONGS --> DATA
-    UI --> SERVICE
+    ACT --> PERSIST
+    PERSIST --> DATA
+    UI --> CLIENT
+    CLIENT --> SERVICE
     SERVICE --> COMMANDS
     SERVICE --> ENGINE
     SERVICE --> STATE
@@ -83,11 +89,11 @@ flowchart TD
 
 - Новый экран библиотеки: реализовать `MenuRenderer` и подключить его в `MainRenderer`.
 - Новая настройка: добавить состояние в соответствующий контроллер и строку в `SettingsRenderer`.
-- Новое действие воспроизведения: добавить команду в `PlaybackController` и обработать её в `PlayerService`.
+- Новое действие воспроизведения: добавить команду в `PlaybackController`, `Media3Commands` и обработать её в `Media3SessionCommandHandler`.
 - Изменение карточек песен: `SongsRenderer`, `UiFactory` и `ButtonFactory`.
 - Изменение большого или мини-плеера: `FullPlayerController` или `MiniPlayerController`.
-- Работа с библиотекой: `TrackStore`, `LibraryDatabase` и `PlaylistController`.
-- Состояние фонового воспроизведения: `PlaybackStateManager`; подготовка аудио: `PlaybackEngine`.
+- Работа с библиотекой: `TrackStore`, `LibraryDatabase`, `LibraryPersistenceController` и `PlaylistController`.
+- Состояние фонового воспроизведения: `PlaybackStateManager`; очередь и подготовка аудио: `Media3PlayerService` и `ExoPlayer`.
 - Фоны приложения и большого плеера: `BackgroundSettingsController`, проверка файлов — `BackgroundMediaValidator`, отображение — `BackgroundMediaView`.
 - Эквалайзер и выравнивание громкости: `EqualizerController`, `AudioEffectsManager` и `TrackLoudnessNormalizer`.
 - Цвет текста и контура: `ThemeController`; общая отрисовка текста: `UiFactory` и `ButtonFactory`.
@@ -125,7 +131,7 @@ flowchart TD
 
 <p align="center">
   <a href="../../releases/latest/download/MP3-Player-Voltune.apk">
-    <img src="https://img.shields.io/badge/Download_APK-Release_2.5.3-9b4dff?style=for-the-badge" alt="Download APK">
+    <img src="https://img.shields.io/badge/Download_APK-Release_3.0-9b4dff?style=for-the-badge" alt="Download APK">
   </a>
   <a href="#mp3-player-voltune">
     <img src="https://img.shields.io/badge/Русский-Открыть-ffd12f?style=for-the-badge&labelColor=17151d" alt="Russian version">
@@ -140,6 +146,7 @@ MP3 Player Voltune is a local Android music player for audio already downloaded 
 - Songs, Favorites, Playlists, Genres, Artists, and Albums sections.
 - Search, sorting, queue management, sequential playback, and shuffle.
 - Background playback with Android system media controls.
+- Reliable Media3 playback with fast queue, current-track, and mini-player restoration.
 - Repeat one or repeat all until manually stopped or the sleep timer expires.
 - Mini-player and full player with high-quality artwork, seeking, and queue controls.
 - Playlists, favorites, an equalizer with built-in presets, and a remembered custom profile.
@@ -172,12 +179,14 @@ flowchart TD
     ACT["MainActivityCore<br/>lifecycle coordinator"]
     UI["MainRenderer and player controllers<br/>screens, mini-player, full player"]
     SONGS["SongsRenderer<br/>library lists and restoration"]
-    SERVICE["PlayerService<br/>Android foreground service"]
-    COMMANDS["PlaybackCommandHandler<br/>playback commands"]
-    ENGINE["PlaybackEngine<br/>MediaPlayer and content URI sources"]
+    CLIENT["PlaybackController<br/>MediaController and UI state"]
+    SERVICE["Media3PlayerService<br/>MediaSessionService"]
+    COMMANDS["Media3SessionCommandHandler<br/>playback commands"]
+    ENGINE["ExoPlayer<br/>queue and content URI sources"]
     STATE["data/playback/PlaybackStateManager<br/>queue, position, and repeat mode"]
     RECOVERY["PlaybackErrorRecovery and PlaybackSleepTimer<br/>errors and sleep timer"]
     DATA["LibraryDatabase and TrackStore<br/>songs, favorites, playlists"]
+    PERSIST["LibraryPersistenceController<br/>asynchronous atomic persistence"]
     STYLE["ThemeController and UiFactory<br/>themes, dialogs, UI elements"]
     BACKGROUND["BackgroundSettingsController and BackgroundMediaView<br/>color, gradient, image, GIF, and blur"]
     AUDIO["AudioEffectsManager and TrackLoudnessNormalizer<br/>equalizer and volume leveling"]
@@ -187,7 +196,10 @@ flowchart TD
     ACT --> SONGS
     ACT --> PREFS
     SONGS --> DATA
-    UI --> SERVICE
+    ACT --> PERSIST
+    PERSIST --> DATA
+    UI --> CLIENT
+    CLIENT --> SERVICE
     SERVICE --> COMMANDS
     SERVICE --> ENGINE
     SERVICE --> STATE
@@ -206,11 +218,11 @@ Common extension points:
 
 - New library screen: implement `MenuRenderer` and connect it in `MainRenderer`.
 - New setting: add its state to the responsible controller and its row to `SettingsRenderer`.
-- New playback command: dispatch it through `PlaybackController` and handle it in `PlayerService`.
+- New playback command: dispatch it through `PlaybackController` and `Media3Commands`, then handle it in `Media3SessionCommandHandler`.
 - Song card changes: use `SongsRenderer`, `UiFactory`, and `ButtonFactory`.
 - Full-player or mini-player changes: use `FullPlayerController` or `MiniPlayerController`.
-- Library persistence: use `TrackStore`, `LibraryDatabase`, and `PlaylistController`.
-- Background playback state: use `PlaybackStateManager`; audio preparation: use `PlaybackEngine`.
+- Library persistence: use `TrackStore`, `LibraryDatabase`, `LibraryPersistenceController`, and `PlaylistController`.
+- Background playback state: use `PlaybackStateManager`; queue and audio preparation use `Media3PlayerService` and `ExoPlayer`.
 - Main and full-player backgrounds: use `BackgroundSettingsController`; validation is handled by `BackgroundMediaValidator`, rendering by `BackgroundMediaView`.
 - Equalizer and loudness leveling: use `EqualizerController`, `AudioEffectsManager`, and `TrackLoudnessNormalizer`.
 - Text and outline colors: use `ThemeController`; shared text rendering lives in `UiFactory` and `ButtonFactory`.
