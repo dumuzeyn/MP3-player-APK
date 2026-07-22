@@ -106,19 +106,34 @@ final class BackgroundSettingsController {
                             Toast.LENGTH_LONG).show();
                     return;
                 }
-                if (main) {
-                    host.mainBackgroundMediaUri = uri.toString();
-                    host.mainBackgroundMode = MODE_MEDIA;
+                if (result.heavy) {
+                    host.showActionPanel(
+                            host.tr("Heavy animated background", "Тяжёлый анимированный фон"),
+                            host.tr("This image may increase memory use and battery drain. "
+                                            + "Use it anyway?",
+                                    "Это изображение может увеличить расход памяти и заряда. "
+                                            + "Всё равно использовать?"),
+                            host.tr("Cancel", "Отмена"), host.tr("Use", "Использовать"),
+                            true, () -> applyMedia(main, uri));
                 } else {
-                    host.playerBackgroundMediaUri = uri.toString();
-                    host.playerBackgroundMode = MODE_MEDIA;
+                    applyMedia(main, uri);
                 }
-                host.saveState();
-                host.rebuildUi();
-                openDialog();
             });
         });
         return true;
+    }
+
+    private void applyMedia(boolean main, Uri uri) {
+        if (main) {
+            host.mainBackgroundMediaUri = uri.toString();
+            host.mainBackgroundMode = MODE_MEDIA;
+        } else {
+            host.playerBackgroundMediaUri = uri.toString();
+            host.playerBackgroundMode = MODE_MEDIA;
+        }
+        host.saveState();
+        host.rebuildUi();
+        openDialog();
     }
 
     void close() {

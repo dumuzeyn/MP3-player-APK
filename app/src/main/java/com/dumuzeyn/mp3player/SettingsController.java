@@ -16,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 final class SettingsController {
     private static final int EXPORT_BACKUP = 5201;
     private static final int IMPORT_BACKUP = 5202;
+    private static final int EXPORT_THEME = 5203;
+    private static final int IMPORT_THEME = 5204;
     private static final String SUPPORT_URL = "https://pay.cloudtips.ru/p/54e5a4f9";
     private final MainActivityCore host;
 
@@ -186,17 +188,35 @@ final class SettingsController {
         host.startActivityForResult(intent, IMPORT_BACKUP);
     }
 
+    void exportTheme() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "Voltune-theme.json");
+        host.startActivityForResult(intent, EXPORT_THEME);
+    }
+
+    void importTheme() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        host.startActivityForResult(intent, IMPORT_THEME);
+    }
+
     boolean handleActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode != EXPORT_BACKUP && requestCode != IMPORT_BACKUP) {
+        if (requestCode != EXPORT_BACKUP && requestCode != IMPORT_BACKUP
+                && requestCode != EXPORT_THEME && requestCode != IMPORT_THEME) {
             return false;
         }
         if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
             return true;
         }
         try {
-            if (requestCode == EXPORT_BACKUP) {
-                String backup = LibraryBackupManager.exportBackup(host, host.tracks,
-                        host.playlists);
+            if (requestCode == EXPORT_BACKUP || requestCode == EXPORT_THEME) {
+                String backup = requestCode == EXPORT_BACKUP
+                        ? LibraryBackupManager.exportBackup(host, host.tracks, host.playlists)
+                        : ThemePresetCodec.encode(host.getSharedPreferences("mp3_player_ui", 0));
                 OutputStream output = host.getContentResolver().openOutputStream(data.getData(),
                         "wt");
                 if (output == null) {
@@ -207,7 +227,7 @@ final class SettingsController {
                 } finally {
                     output.close();
                 }
-                Toast.makeText(host, host.tr("Backup exported", "Резервная копия сохранена"),
+                Toast.makeText(host, host.tr("File exported", "Файл сохранён"),
                         Toast.LENGTH_SHORT).show();
             } else {
                 InputStream input = host.getContentResolver().openInputStream(data.getData());
@@ -221,7 +241,9 @@ final class SettingsController {
                     int count;
                     while ((count = input.read(buffer)) >= 0) {
                         total += count;
-                        if (total > LibraryBackupManager.MAX_BACKUP_BYTES) {
+                        int maxBytes = requestCode == IMPORT_BACKUP
+                                ? LibraryBackupManager.MAX_BACKUP_BYTES : ThemePresetCodec.MAX_BYTES;
+                        if (total > maxBytes) {
                             throw new IllegalArgumentException("Backup is too large");
                         }
                         bytes.write(buffer, 0, count);
@@ -229,15 +251,20 @@ final class SettingsController {
                 } finally {
                     input.close();
                 }
-                LibraryBackupManager.ImportResult imported =
-                        LibraryBackupManager.importBackup(host,
-                                new String(bytes.toByteArray(), StandardCharsets.UTF_8),
-                                host.tracks);
-                host.playlists.clear();
-                host.playlists.addAll(imported.playlists);
-                host.saveState();
-                host.rebuildUi();
-                Toast.makeText(host, host.tr("Backup restored", "Резервная копия восстановлена"),
+                String encoded = new String(bytes.toByteArray(), StandardCharsets.UTF_8);
+                if (requestCode == IMPORT_BACKUP) {
+                    LibraryBackupManager.ImportResult imported =
+                            LibraryBackupManager.importBackup(host, encoded, host.tracks);
+                    host.playlists.clear();
+                    host.playlists.addAll(imported.playlists);
+                    host.saveState();
+                    host.rebuildUi();
+                } else {
+                    ThemePresetCodec.decodeInto(encoded,
+                            host.getSharedPreferences("mp3_player_ui", 0));
+                    host.reloadUiPreferences();
+                }
+                Toast.makeText(host, host.tr("File restored", "Файл восстановлен"),
                         Toast.LENGTH_SHORT).show();
             }
         } catch (Exception error) {
