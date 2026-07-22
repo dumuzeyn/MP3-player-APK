@@ -23,21 +23,18 @@ final class SettingsRenderer {
         addButton(host.tr("Mini-player memory: ", "Память мини-плеера: ")
                         + host.settingsController.resumeWindowText(),
                 view -> host.settingsController.openResumeWindowDialog());
-        reset(SettingsSectionResetter.Section.GENERAL);
 
         section(host.tr("Playback", "Воспроизведение"));
         addButton(host.uninterruptedPlaybackController.settingLabel(),
                 view -> host.uninterruptedPlaybackController.toggle());
         addButton(host.backgroundPlaybackSettingsController.settingLabel(),
                 view -> host.backgroundPlaybackSettingsController.openDialog());
-        reset(SettingsSectionResetter.Section.PLAYBACK);
 
         section(host.tr("Sound", "Звук"));
         addButton(host.tr("Equalizer", "Эквалайзер"),
                 view -> host.equalizerController.openDialog());
         addButton(host.stableVolumeController.settingLabel(),
                 view -> host.stableVolumeController.toggle());
-        reset(SettingsSectionResetter.Section.SOUND);
 
         section(host.tr("Appearance", "Внешний вид"));
         subsection(host.tr("Ready themes and accent colors", "Готовые темы и акцентные цвета"));
@@ -57,12 +54,12 @@ final class SettingsRenderer {
                         + host.tr(host.circularCovers ? "spinning circles" : "rounded squares",
                         host.circularCovers ? "вращающиеся круги" : "скруглённые квадраты"),
                 view -> toggleCoverStyle());
-        reset(SettingsSectionResetter.Section.APPEARANCE);
+        defaults(SettingsSectionResetter.Section.APPEARANCE);
 
         section(host.tr("Full player", "Большой плеер"));
         addButton(host.coverRotationSettingsController.settingLabel(),
                 view -> host.coverRotationSettingsController.openDialog());
-        reset(SettingsSectionResetter.Section.FULL_PLAYER);
+        defaults(SettingsSectionResetter.Section.FULL_PLAYER);
 
         section(host.tr("Animations", "Анимации"));
         addButton(host.tr("Animations: ", "Анимации: ")
@@ -75,7 +72,7 @@ final class SettingsRenderer {
                 view -> host.particleSettingsController.openDialog());
         addButton(host.playlistTickerSettingsController.settingLabel(),
                 view -> host.playlistTickerSettingsController.openDialog());
-        reset(SettingsSectionResetter.Section.ANIMATIONS);
+        defaults(SettingsSectionResetter.Section.ANIMATIONS);
 
         section(host.tr("Library", "Библиотека"));
         addButton(host.tr("Check songs", "Проверить песни"),
@@ -162,8 +159,8 @@ final class SettingsRenderer {
         host.list.addView(title, params);
     }
 
-    private void reset(SettingsSectionResetter.Section section) {
-        addCompactButton(host.tr("Reset section", "Сбросить раздел"),
+    private void defaults(SettingsSectionResetter.Section section) {
+        addButton(host.tr("Default", "По умолчанию"),
                 view -> SettingsSectionResetter.reset(host, section));
     }
 
@@ -180,16 +177,6 @@ final class SettingsRenderer {
         button.setOnClickListener(listener);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(54));
         params.setMargins(0, host.dp(2), 0, host.dp(2));
-        host.list.addView(button, params);
-    }
-
-    private void addCompactButton(String label, View.OnClickListener listener) {
-        Button button = host.button(label);
-        button.setTextSize(14.0f);
-        host.applySecondaryButtonStyle(button, host.settingsCardOpacity);
-        button.setOnClickListener(listener);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, host.dp(40));
-        params.setMargins(host.dp(18), 0, host.dp(18), host.dp(4));
         host.list.addView(button, params);
     }
 
