@@ -13,7 +13,9 @@ import com.dumuzeyn.mp3player.data.playback.PlaybackStateManager;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Connects the UI to Media3 and exposes playback commands plus a read-only UI snapshot. */
 final class PlaybackController implements Player.Listener {
@@ -40,6 +42,43 @@ final class PlaybackController implements Player.Listener {
         controllerFuture = new MediaController.Builder(host, token).buildAsync();
         controllerFuture.addListener(() -> host.runOnUiThread(this::finishConnection),
                 Runnable::run);
+    }
+
+    void restorePersistedUiState() {
+        PlaybackStateManager.State state = new PlaybackStateManager(host).load();
+        long resumeWindowMs = Math.max(0L, host.resumeWindowMinutes) * 60000L;
+        boolean expired = state.savedAt <= 0L || resumeWindowMs <= 0L
+                || System.currentTimeMillis() - state.savedAt > resumeWindowMs;
+        if (!state.playing && expired) {
+            return;
+        }
+        Track current = host.findTrack(state.uri);
+        ArrayList<Track> restoredQueue = PlaybackQueueResolver.restore(
+                host.tracks, state.queueUris, current);
+        if (restoredQueue.isEmpty()) {
+            return;
+        }
+        int index = Math.max(0, Math.min(state.index, restoredQueue.size() - 1));
+        if (current == null) {
+            current = restoredQueue.get(index);
+        } else {
+            int restoredIndex = restoredQueue.indexOf(current);
+            if (restoredIndex >= 0) {
+                index = restoredIndex;
+            }
+        }
+        ArrayList<String> mediaIds = new ArrayList<>();
+        for (Track track : restoredQueue) {
+            mediaIds.add(mapper.mediaId(track));
+        }
+        host.playbackQueue.clear();
+        host.playbackQueue.addAll(restoredQueue);
+        host.updatePlaybackSnapshot(new PlaybackSnapshot(mediaIds, mapper.mediaId(current),
+                index, state.position, Math.max(current.durationMs, state.duration),
+                state.playing, Player.STATE_READY, RepeatModeMapper.toMedia3(state.loopMode),
+                state.shuffle, PlaybackPhase.READY,
+                state.playing ? PauseReason.NONE : PauseReason.USER, StopReason.NONE,
+                null, state.savedAt));
     }
 
     private void finishConnection() {
@@ -241,14 +280,21 @@ final class PlaybackController implements Player.Listener {
     }
 
     private void synchronizeQueueProjection() {
+        Map<String, Track> tracksById = new HashMap<>();
+        Map<String, Track> tracksByUri = new HashMap<>();
+        for (Track track : host.tracks) {
+            tracksById.put(mapper.mediaId(track), track);
+            tracksByUri.put(track.uri, track);
+        }
         host.playbackQueue.clear();
         for (int itemIndex = 0; itemIndex < controller.getMediaItemCount(); itemIndex++) {
-            String mediaId = controller.getMediaItemAt(itemIndex).mediaId;
-            for (Track track : host.tracks) {
-                if (mapper.mediaId(track).equals(mediaId)) {
-                    host.playbackQueue.add(track);
-                    break;
-                }
+            MediaItem item = controller.getMediaItemAt(itemIndex);
+            Track track = tracksById.get(item.mediaId);
+            if (track == null && item.localConfiguration != null) {
+                track = tracksByUri.get(item.localConfiguration.uri.toString());
+            }
+            if (track != null) {
+                host.playbackQueue.add(track);
             }
         }
     }
@@ -289,9 +335,7 @@ final class PlaybackController implements Player.Listener {
     public void onEvents(Player player, Player.Events events) {
         boolean refreshRows = events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)
                 || events.contains(Player.EVENT_IS_PLAYING_CHANGED)
-                || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)
-                || events.contains(Player.EVENT_REPEAT_MODE_CHANGED)
-                || events.contains(Player.EVENT_TIMELINE_CHANGED);
+                || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED);
         synchronizeUi(refreshRows);
     }
 }

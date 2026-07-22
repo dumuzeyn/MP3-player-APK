@@ -30,6 +30,10 @@ final class SettingsRenderer {
         addButton(host.backgroundPlaybackSettingsController.settingLabel(),
                 view -> host.backgroundPlaybackSettingsController.openDialog());
 
+        if (host.renderingTabPreview) {
+            return;
+        }
+
         section(host.tr("Sound", "Звук"));
         addButton(host.volumeLevelingController.settingLabel(),
                 view -> host.volumeLevelingController.openDialog());

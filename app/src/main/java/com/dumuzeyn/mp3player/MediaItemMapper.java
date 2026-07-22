@@ -23,6 +23,13 @@ public final class MediaItemMapper {
         return track == null ? "" : track.trackId;
     }
 
+    static boolean matchesMediaId(Track track, String mediaId) {
+        if (track == null || mediaId == null || mediaId.isEmpty()) {
+            return false;
+        }
+        return mediaId.equals(track.trackId) || mediaId.equals(stableHash(track.uri));
+    }
+
     /** Compatibility helper for state created before stable track IDs were introduced. */
     public static String stableHash(String value) {
         return TrackIdentity.fromLegacyUri(value);

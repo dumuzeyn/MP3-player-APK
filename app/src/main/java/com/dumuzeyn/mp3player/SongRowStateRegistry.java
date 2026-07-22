@@ -28,6 +28,28 @@ final class SongRowStateRegistry {
         covers.clear();
     }
 
+    void replaceWith(SongRowStateRegistry source) {
+        clear();
+        playButtons.putAll(source.playButtons);
+        currentMarkers.putAll(source.currentMarkers);
+        waveforms.putAll(source.waveforms);
+        for (Map.Entry<String, ArrayList<RotatingCoverImageView>> entry : source.covers.entrySet()) {
+            covers.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+    }
+
+    void forEachCover(CoverConsumer consumer) {
+        for (Map.Entry<String, ArrayList<RotatingCoverImageView>> entry : covers.entrySet()) {
+            for (RotatingCoverImageView cover : entry.getValue()) {
+                consumer.accept(entry.getKey(), cover);
+            }
+        }
+    }
+
+    interface CoverConsumer {
+        void accept(String uri, RotatingCoverImageView cover);
+    }
+
     void registerPlayButton(String uri, Button button) {
         playButtons.put(uri, button);
     }

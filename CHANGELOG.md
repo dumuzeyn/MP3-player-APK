@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0 - Media3 playback and responsive library
+
+- Migrated playback to Media3 `ExoPlayer`, `MediaSessionService`, and `MediaController` while preserving background playback, queues, repeat, notifications, and sleep timer behavior.
+- Restored the current track and mini-player synchronously before the Media3 controller reconnects.
+- Matched current songs by stable track identifiers with compatibility for queues saved by older releases.
+- Removed repeated database reads from periodic playback-state persistence.
+- Moved playlist and favorite persistence off the UI thread and made collection updates atomic.
+- Reused the prepared Songs/Favorites screen after a tab swipe instead of building the same rows twice.
+- Prepared 15 visible cards for Songs, Favorites, Genres, Artists, and Albums to prevent visible incremental loading during transitions.
+- Reduced particle and cover work during tab previews while retaining active waveforms and rotating artwork.
+- Added a 1,000-track startup and navigation benchmark plus a 165-track database migration test.
+- Made Russian the default language for clean installations without changing an existing user's language.
+
 ## 2.5.3 - Launcher, splash, and theme polish
 
 - Route each custom launcher alias through an Activity with the matching Android 12+ splash theme.

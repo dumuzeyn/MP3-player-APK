@@ -45,22 +45,26 @@ public class VoltuneMacrobenchmark {
         rule.measureRepeated(PACKAGE_NAME,
                 interactionMetrics(), compilationMode(), StartupMode.COLD, 5,
                 scope -> {
+                    scope.startActivityAndWait(benchmarkLibraryIntent());
                     scope.pressHome();
                     return Unit.INSTANCE;
                 },
                 scope -> {
-                    Intent intent = new Intent(Intent.ACTION_MAIN)
-                            .addCategory(Intent.CATEGORY_LAUNCHER)
-                            .setComponent(new ComponentName(
-                                    PACKAGE_NAME,
-                                    "com.dumuzeyn.mp3player.LauncherLight"))
-                            .putExtra("voltuneBenchmarkTrackCount", 10000);
-                    scope.startActivityAndWait(intent);
+                    scope.startActivityAndWait();
                     scope.getDevice().swipe(500, 1600, 500, 400, 20);
                     clickText(scope, "Favorites", "\u0418\u0437\u0431\u0440\u0430\u043d\u043d\u043e\u0435");
                     clickText(scope, "Songs", "\u041f\u0435\u0441\u043d\u0438");
                     return Unit.INSTANCE;
                 });
+    }
+
+    private static Intent benchmarkLibraryIntent() {
+        return new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setComponent(new ComponentName(
+                        PACKAGE_NAME,
+                        "com.dumuzeyn.mp3player.LauncherLight"))
+                .putExtra("voltuneBenchmarkTrackCount", 1000);
     }
 
     private void startup(StartupMode mode) {

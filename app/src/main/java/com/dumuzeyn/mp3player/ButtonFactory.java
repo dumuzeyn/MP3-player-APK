@@ -1,8 +1,10 @@
 package com.dumuzeyn.mp3player;
 
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.widget.Button;
 
 final class ButtonFactory {
@@ -27,6 +29,10 @@ final class ButtonFactory {
         button.setMinWidth(0);
         button.setMinHeight(0);
         button.setBackgroundColor(Color.TRANSPARENT);
+        button.setForeground(new RippleDrawable(
+                ColorStateList.valueOf(Color.argb(42, Color.red(host.fg),
+                        Color.green(host.fg), Color.blue(host.fg))),
+                null, rippleMask()));
         host.themeController.applyTextOutline(button);
         return button;
     }
@@ -88,5 +94,12 @@ final class ButtonFactory {
             drawable.setStroke(host.dp(1), host.cardStroke);
         }
         return drawable;
+    }
+
+    private GradientDrawable rippleMask() {
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(Color.WHITE);
+        mask.setCornerRadius(host.dp(16));
+        return mask;
     }
 }

@@ -59,6 +59,7 @@ class MainActivityCore extends AppState {
     final Handler uiHandler = new Handler(Looper.getMainLooper());
     final Handler playbackHandler = new Handler(Looper.getMainLooper());
     final SongRowStateRegistry songRows = new SongRowStateRegistry();
+    final SongRowStateRegistry previewSongRows = new SongRowStateRegistry();
     final SongsRenderer songsRenderer = new SongsRenderer(this);
     final PlayerUiController playerUiController = new PlayerUiController(this);
     private final SettingsRenderer settingsRenderer = new SettingsRenderer(this);
@@ -92,6 +93,8 @@ class MainActivityCore extends AppState {
     final PlaylistController playlistController = new PlaylistController(this);
     private final MainRenderer mainRenderer = new MainRenderer(this);
     private final UiPreferencesStore uiPreferencesStore = new UiPreferencesStore(this);
+    private final LibraryPersistenceController libraryPersistenceController =
+            new LibraryPersistenceController(this);
     final ResponsiveLayoutController responsiveLayoutController =
             new ResponsiveLayoutController(this);
     Button sourcePlayButton;
@@ -110,6 +113,7 @@ class MainActivityCore extends AppState {
         this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
+        this.playbackController.restorePersistedUiState();
         this.playbackController.connect();
         this.themeController.applyPalette();
         buildUi();
@@ -160,6 +164,7 @@ class MainActivityCore extends AppState {
         this.playbackController.release();
         this.volumeLevelingController.release();
         this.coverLoader.close();
+        this.libraryPersistenceController.close();
         super.onDestroy();
     }
 
@@ -200,13 +205,7 @@ class MainActivityCore extends AppState {
 
     void saveState() {
         this.uiPreferencesStore.save();
-        LibraryDatabase database = new LibraryDatabase(this);
-        try {
-            database.saveFavorites(this.favorites);
-            database.savePlaylists(this.playlists);
-        } finally {
-            database.close();
-        }
+        this.libraryPersistenceController.save(this.favorites, this.playlists);
     }
 
     private void colors() {
@@ -218,7 +217,16 @@ class MainActivityCore extends AppState {
     }
 
     private void refreshPlaybackChrome() {
-        this.songRows.refresh(new SongRowStateRegistry.StateResolver() {
+        this.songRows.refresh(songRowStateResolver());
+        this.playlistController.refreshPlaybackState();
+        if (this.sourcePlayButton != null) {
+            this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
+        }
+        updateMini();
+    }
+
+    SongRowStateRegistry.StateResolver songRowStateResolver() {
+        return new SongRowStateRegistry.StateResolver() {
             @Override
             public Track findTrack(String uri) {
                 return MainActivityCore.this.findTrack(uri);
@@ -248,12 +256,7 @@ class MainActivityCore extends AppState {
             public int inactiveColor() {
                 return MainActivityCore.this.purpleSoft;
             }
-        });
-        this.playlistController.refreshPlaybackState();
-        if (this.sourcePlayButton != null) {
-            this.sourcePlayButton.setText(isPlayingSource(currentVisibleTracks()) ? "Ⅱ" : "▶");
-        }
-        updateMini();
+        };
     }
 
     private void buildUi() {
@@ -339,6 +342,34 @@ class MainActivityCore extends AppState {
         this.tabsController.finishTransition(targetIndex);
     }
 
+    void completeTabTransitionWithPreview(int targetIndex, int direction, boolean recordHistory,
+            String targetSearch, ScrollView committedScroll, LinearLayout committedList,
+            MainRenderer.PreviewState previewState) {
+        if (recordHistory) {
+            this.backNavigationController.recordTabState(this.tabIndex, this.search);
+        }
+        this.mainRenderer.captureCurrentScrollPosition();
+        ScrollView previousScroll = this.contentScroll;
+        if (previousScroll != null && previousScroll.getParent() == this.contentHost) {
+            this.contentHost.removeView(previousScroll);
+        }
+        this.contentScroll = committedScroll;
+        this.list = committedList;
+        committedScroll.setTranslationX(0.0f);
+        committedScroll.setAlpha(1.0f);
+        committedScroll.setVisibility(View.VISIBLE);
+        committedScroll.setOnScrollChangeListener(
+                (view, scrollX, scrollY, oldScrollX, oldScrollY) ->
+                        songsRenderer.loadMoreIfNearBottom());
+        this.preferredTabDirection = direction;
+        this.tabIndex = targetIndex;
+        this.search = targetSearch == null ? "" : targetSearch;
+        this.tabAnimating = false;
+        this.mainRenderer.adoptPreview(targetIndex, this.search, previewState);
+        refreshTabs();
+        this.tabsController.finishTransition(targetIndex);
+    }
+
     void scrollTabsToActive(boolean z) {
         this.tabsController.scrollToActive(z, this.tabIndex);
     }
@@ -355,8 +386,17 @@ class MainActivityCore extends AppState {
         this.mainRenderer.render();
     }
 
-    int renderTabPreview(LinearLayout target, int targetIndex, String targetSearch) {
+    MainRenderer.PreviewState renderTabPreview(
+            LinearLayout target, int targetIndex, String targetSearch) {
         return this.mainRenderer.renderPreview(target, targetIndex, targetSearch);
+    }
+
+    void discardTabPreview() {
+        this.mainRenderer.discardPreview();
+    }
+
+    SongRowStateRegistry activeSongRows() {
+        return this.renderingTabPreview ? this.previewSongRows : this.songRows;
     }
 
     void renderSectionHeader() {
@@ -606,22 +646,39 @@ class MainActivityCore extends AppState {
 
     void loadCover(ImageView view, Track track, int fallbackColor) {
         registerCoverState(view, track);
-        this.coverLoader.load(view, track, fallbackColor);
+        if (this.renderingTabPreview) {
+            this.coverLoader.loadCachedOnly(view, track, fallbackColor, CoverLoader.THUMB_SIZE);
+        } else {
+            this.coverLoader.load(view, track, fallbackColor);
+        }
     }
 
     void loadCover(ImageView view, Track track, int fallbackColor, int maxSize) {
         registerCoverState(view, track);
-        this.coverLoader.load(view, track, fallbackColor, maxSize);
+        if (this.renderingTabPreview) {
+            this.coverLoader.loadCachedOnly(view, track, fallbackColor, maxSize);
+        } else {
+            this.coverLoader.load(view, track, fallbackColor, maxSize);
+        }
     }
 
     private void registerCoverState(ImageView view, Track track) {
         if (view instanceof RotatingCoverImageView) {
             RotatingCoverImageView cover = (RotatingCoverImageView) view;
             cover.bindTrack(track);
-            if (!this.renderingTabPreview && track != null) {
-                this.songRows.registerCover(track.uri, cover);
+            if (track != null) {
+                activeSongRows().registerCover(track.uri, cover);
             }
         }
+    }
+
+    void loadPromotedCovers() {
+        this.songRows.forEachCover((uri, cover) -> {
+            Track track = findTrack(uri);
+            if (track != null) {
+                this.coverLoader.load(cover, track, this.purpleSoft);
+            }
+        });
     }
 
     void seedCoverCacheFromView(ImageView view, Track track) {

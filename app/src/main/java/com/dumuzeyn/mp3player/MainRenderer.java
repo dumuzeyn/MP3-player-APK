@@ -57,6 +57,10 @@ final class MainRenderer {
         renderedMenuKey = null;
     }
 
+    void captureCurrentScrollPosition() {
+        rememberCurrentScrollPosition();
+    }
+
     private void rememberCurrentScrollPosition() {
         if (renderedMenuKey == null || host.contentScroll == null) {
             return;
@@ -106,7 +110,7 @@ final class MainRenderer {
         return tabIndex + "\n" + (search == null ? "" : search);
     }
 
-    int renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {
+    PreviewState renderPreview(android.widget.LinearLayout target, int targetIndex, String targetSearch) {
         android.widget.LinearLayout previousList = host.list;
         ButtonState previousButton = new ButtonState(host.sourcePlayButton);
         SongsRenderer.BatchState previousBatchState = host.songsRenderer.captureBatchState();
@@ -114,7 +118,9 @@ final class MainRenderer {
         String previousSearch = host.search;
         boolean previousPreview = host.renderingTabPreview;
         int scrollY = scrollPositionFor(targetIndex, targetSearch);
+        PreviewState previewState;
         try {
+            host.previewSongRows.clear();
             host.list = target;
             host.tabIndex = targetIndex;
             host.search = targetSearch == null ? "" : targetSearch;
@@ -130,6 +136,10 @@ final class MainRenderer {
             if (renderer.needsMiniSpacer()) {
                 host.addMiniSpacerIfNeeded();
             }
+            previewState = new PreviewState(
+                    scrollY,
+                    host.songsRenderer.captureBatchState(),
+                    host.sourcePlayButton);
         } finally {
             host.list = previousList;
             host.tabIndex = previousTab;
@@ -138,7 +148,22 @@ final class MainRenderer {
             host.sourcePlayButton = previousButton.button;
             host.songsRenderer.restoreBatchState(previousBatchState);
         }
-        return scrollY;
+        return previewState;
+    }
+
+    void adoptPreview(int targetIndex, String targetSearch, PreviewState state) {
+        renderedMenuKey = menuKey(targetIndex, targetSearch);
+        host.songsRenderer.restoreBatchState(state.batchState);
+        host.songRows.replaceWith(host.previewSongRows);
+        host.previewSongRows.clear();
+        host.sourcePlayButton = state.sourcePlayButton;
+        host.songRows.refresh(host.songRowStateResolver());
+        host.loadPromotedCovers();
+        host.updateMini();
+    }
+
+    void discardPreview() {
+        host.previewSongRows.clear();
     }
 
     private int scrollPositionFor(int tabIndex, String search) {
@@ -180,6 +205,19 @@ final class MainRenderer {
 
         ButtonState(android.widget.Button button) {
             this.button = button;
+        }
+    }
+
+    static final class PreviewState {
+        final int scrollY;
+        final SongsRenderer.BatchState batchState;
+        final android.widget.Button sourcePlayButton;
+
+        PreviewState(int scrollY, SongsRenderer.BatchState batchState,
+                android.widget.Button sourcePlayButton) {
+            this.scrollY = scrollY;
+            this.batchState = batchState;
+            this.sourcePlayButton = sourcePlayButton;
         }
     }
 }

@@ -35,7 +35,8 @@ public class LibraryDatabaseMigrationInstrumentedTest {
 
     @Test
     public void versionOneMigrationPreservesTracksFavoritesAndPlaylists() {
-        String uri = "content://migration/song.mp3";
+        String uri = "content://migration/song-0.mp3";
+        String lastUri = "content://migration/song-164.mp3";
         SQLiteDatabase old = context.openOrCreateDatabase(LibraryDatabase.DB_NAME, 0, null);
         old.execSQL("CREATE TABLE tracks (uri TEXT PRIMARY KEY NOT NULL, title TEXT NOT NULL, "
                 + "artist TEXT NOT NULL, album TEXT NOT NULL, genre TEXT NOT NULL, "
@@ -46,14 +47,16 @@ public class LibraryDatabaseMigrationInstrumentedTest {
         old.execSQL("CREATE TABLE playlist_tracks (playlist_id INTEGER NOT NULL, "
                 + "uri TEXT NOT NULL, position INTEGER NOT NULL, "
                 + "PRIMARY KEY (playlist_id, uri))");
-        ContentValues track = new ContentValues();
-        track.put("uri", uri);
-        track.put("title", "Migration song");
-        track.put("artist", "Artist");
-        track.put("album", "Album");
-        track.put("genre", "Genre");
-        track.put("duration_ms", 123000);
-        old.insertOrThrow("tracks", null, track);
+        for (int index = 0; index < 165; index++) {
+            ContentValues track = new ContentValues();
+            track.put("uri", "content://migration/song-" + index + ".mp3");
+            track.put("title", "Migration song " + index);
+            track.put("artist", "Artist");
+            track.put("album", "Album");
+            track.put("genre", "Genre");
+            track.put("duration_ms", 123000 + index);
+            old.insertOrThrow("tracks", null, track);
+        }
         ContentValues favorite = new ContentValues();
         favorite.put("uri", uri);
         old.insertOrThrow("favorites", null, favorite);
@@ -66,6 +69,11 @@ public class LibraryDatabaseMigrationInstrumentedTest {
         member.put("uri", uri);
         member.put("position", 0);
         old.insertOrThrow("playlist_tracks", null, member);
+        ContentValues lastMember = new ContentValues();
+        lastMember.put("playlist_id", playlistId);
+        lastMember.put("uri", lastUri);
+        lastMember.put("position", 1);
+        old.insertOrThrow("playlist_tracks", null, lastMember);
         old.setVersion(1);
         old.close();
 
@@ -75,12 +83,14 @@ public class LibraryDatabaseMigrationInstrumentedTest {
         ArrayList<Playlist> playlists = migrated.loadPlaylists();
         migrated.close();
 
-        assertEquals(1, tracks.size());
+        assertEquals(165, tracks.size());
         assertEquals(TrackIdentity.fromLegacyUri(uri), tracks.get(0).trackId);
         assertFalse(tracks.get(0).trackId.equals(uri));
         assertEquals(123000, tracks.get(0).durationMs);
         assertEquals(1, favorites.size());
         assertEquals(1, playlists.size());
+        assertEquals(2, playlists.get(0).uris.size());
         assertEquals(uri, playlists.get(0).uris.get(0));
+        assertEquals(lastUri, playlists.get(0).uris.get(1));
     }
 }

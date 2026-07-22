@@ -16,7 +16,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 final class CoverLoader {
     private static final int MAX_COVER_BYTES = 8 * 1024 * 1024;
-    private static final int THUMB_SIZE = 160;
+    static final int THUMB_SIZE = 160;
 
     private final MainActivityCore host;
     private final LruCache<String, Bitmap> cache;
@@ -38,6 +38,21 @@ final class CoverLoader {
 
     void load(ImageView view, Track track, int fallbackColor) {
         load(view, track, fallbackColor, THUMB_SIZE);
+    }
+
+    void loadCachedOnly(ImageView view, Track track, int fallbackColor, int maxSize) {
+        String key = key(track, maxSize);
+        view.setTag(key);
+        Bitmap cached = cache.get(key);
+        if (cached == null && maxSize != THUMB_SIZE) {
+            cached = cache.get(key(track, THUMB_SIZE));
+        }
+        if (cached != null && !cached.isRecycled()) {
+            view.setImageBitmap(cached);
+        } else {
+            view.setImageDrawable(null);
+            view.setBackgroundColor(fallbackColor);
+        }
     }
 
     void load(final ImageView view, final Track track, int fallbackColor, final int maxSize) {

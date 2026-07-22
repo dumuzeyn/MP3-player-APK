@@ -208,7 +208,7 @@ public final class Media3PlayerService extends MediaSessionService {
         if (player == null) {
             return;
         }
-        stateManager.save(snapshot(), currentUri(), currentTracks(), includeQueue);
+        stateManager.save(snapshot(), currentUri(), includeQueue);
     }
 
     private ArrayList<Track> currentTracks() {

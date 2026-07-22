@@ -50,7 +50,7 @@ abstract class AppState extends Activity {
     int mainGradientEnd = 0xff3a3013;
     int playerGradientStart = 0xff351b5d;
     int playerGradientEnd = 0xff3a3013;
-    String language = "en";
+    String language = "ru";
     String themeMode = "light";
     int customBg = -1;
     int customFg = -16777216;
@@ -78,8 +78,8 @@ abstract class AppState extends Activity {
             return -1;
         }
         for (int index = 0; index < tracks.size(); index++) {
-            if (MediaItemMapper.stableHash(tracks.get(index).uri)
-                    .equals(playbackSnapshot.currentMediaId)) {
+            if (MediaItemMapper.matchesMediaId(tracks.get(index),
+                    playbackSnapshot.currentMediaId)) {
                 return index;
             }
         }

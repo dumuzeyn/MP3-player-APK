@@ -140,7 +140,7 @@ final class SongsRenderer {
         if (scrollY <= 0 || pendingTracks == null) {
             return;
         }
-        int approximateRows = Math.max(24, scrollY / Math.max(1, host.dp(62)) + 18);
+        int approximateRows = Math.max(15, scrollY / Math.max(1, host.dp(62)) + 12);
         while (pendingTracks != null && pendingStart < approximateRows) {
             appendNextSongBatch();
         }
@@ -175,7 +175,7 @@ final class SongsRenderer {
         }
         ArrayList<Track> tracksToRender = pendingTracks;
         int start = pendingStart;
-        int batchSize = host.renderingTabPreview ? 15 : 24;
+        int batchSize = 15;
         int end = Math.min(tracksToRender.size(), start + batchSize);
         for (int i = start; i < end; i++) {
             host.list.addView(songRow(tracksToRender.get(i), true, true));
@@ -208,9 +208,7 @@ final class SongsRenderer {
         View marker = new View(host);
         marker.setBackgroundColor(host.yellow);
         marker.setVisibility(host.isCurrent(track) ? View.VISIBLE : View.INVISIBLE);
-        if (!host.renderingTabPreview) {
-            host.songRows.registerCurrentMarker(track.uri, marker);
-        }
+        host.activeSongRows().registerCurrentMarker(track.uri, marker);
 
         ImageView cover = host.coverView();
         host.loadCover(cover, track, host.purpleSoft);
@@ -238,9 +236,7 @@ final class SongsRenderer {
         metaRow.setOrientation(LinearLayout.HORIZONTAL);
         metaRow.setGravity(16);
         WaveformView waveform = host.wave(track, host.isCurrent(track));
-        if (!host.renderingTabPreview) {
-            host.songRows.registerWaveform(track.uri, waveform);
-        }
+        host.activeSongRows().registerWaveform(track.uri, waveform);
         metaRow.addView(waveform, new LinearLayout.LayoutParams(0, host.dp(26), 1.0f));
         TextView duration = host.text(host.formatTrackDuration(track), 12, false);
         duration.setGravity(17);
@@ -294,9 +290,7 @@ final class SongsRenderer {
                 }
             }
         });
-        if (!host.renderingTabPreview) {
-            host.songRows.registerPlayButton(track.uri, play);
-        }
+        host.activeSongRows().registerPlayButton(track.uri, play);
         row.addView(play, host.square(44));
         container.addView(row, new FrameLayout.LayoutParams(-1, -2));
         FrameLayout.LayoutParams markerParams = new FrameLayout.LayoutParams(host.dp(4), host.dp(52));

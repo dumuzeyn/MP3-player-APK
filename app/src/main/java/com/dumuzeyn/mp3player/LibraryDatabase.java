@@ -203,6 +203,18 @@ final class LibraryDatabase extends SQLiteOpenHelper {
         }
     }
 
+    void saveCollections(Set<String> favorites, List<Playlist> playlists) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            saveFavorites(db, favorites);
+            savePlaylists(db, playlists);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     private static void createVersion2(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE tracks (track_id TEXT PRIMARY KEY NOT NULL, "
                 + "uri TEXT UNIQUE NOT NULL, title TEXT NOT NULL, artist TEXT NOT NULL, "
