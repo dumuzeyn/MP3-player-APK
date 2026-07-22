@@ -48,6 +48,14 @@ final class SettingsRenderer {
                         + host.settingsController.resumeWindowText(),
                 view -> host.settingsController.openResumeWindowDialog());
         addButton(host.tr("Check songs", "Проверить песни"), view -> host.openSongDiagnostics());
+        addButton(host.tr("Rescan music folders", "Повторно сканировать папки"),
+                view -> host.rescanMusicFolders());
+        addButton(host.tr("Remove unavailable songs", "Удалить недоступные песни"),
+                view -> host.settingsController.confirmRemoveUnavailableSongs());
+        addButton(host.tr("Export playlists and settings", "Экспорт плейлистов и настроек"),
+                view -> host.settingsController.exportLibraryBackup());
+        addButton(host.tr("Import playlists and settings", "Импорт плейлистов и настроек"),
+                view -> host.settingsController.importLibraryBackup());
         addButton(host.tr("Crash reports: ", "Отчёты о сбоях: ") + CrashReportStore.count(host),
                 view -> host.settingsController.openCrashReports());
         addButton(host.tr("Delete all songs from app", "Удалить все песни из приложения"),

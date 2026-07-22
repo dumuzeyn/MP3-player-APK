@@ -3,8 +3,6 @@ package com.dumuzeyn.mp3player;
 import android.net.Uri;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 
 public final class MediaItemMapper {
     public MediaItem toMediaItem(Track track) {
@@ -22,20 +20,11 @@ public final class MediaItemMapper {
     }
 
     public String mediaId(Track track) {
-        return stableHash(track == null ? "" : track.uri);
+        return track == null ? "" : track.trackId;
     }
 
+    /** Compatibility helper for state created before stable track IDs were introduced. */
     public static String stableHash(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            StringBuilder result = new StringBuilder("track-");
-            for (int index = 0; index < 16; index++) {
-                result.append(String.format(java.util.Locale.ROOT, "%02x", digest[index]));
-            }
-            return result.toString();
-        } catch (Exception ignored) {
-            return "track-" + Integer.toHexString(value.hashCode());
-        }
+        return TrackIdentity.fromLegacyUri(value);
     }
 }

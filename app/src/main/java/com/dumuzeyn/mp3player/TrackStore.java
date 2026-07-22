@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.provider.DocumentsContract;
+import android.provider.OpenableColumns;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -14,6 +16,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.io.InputStream;
+import java.security.MessageDigest;
 
 public final class TrackStore {
     private static final int MAX_TEXT_LENGTH = 160;
@@ -99,7 +103,10 @@ public final class TrackStore {
         String album = isBlank(metadata.album) ? "Unknown album" : metadata.album;
         String genre = isBlank(metadata.genre) ? "Unknown genre" : metadata.genre;
 
-        Track track = new Track(uri.toString(), cleanText(title), cleanText(artist), cleanText(album), cleanText(genre), metadata.durationMs);
+        FileIdentity file = readFileIdentity(context, uri);
+        Track track = new Track(TrackIdentity.create(), uri.toString(), cleanText(title),
+                cleanText(artist), cleanText(album), cleanText(genre), metadata.durationMs,
+                file.size, file.lastModified, file.fingerprint);
         Log.i(DEBUG_TAG, "add_track uri=" + uri + " title=" + track.title + " duration=" + track.durationMs + " canOpen=true");
         return track;
     }
@@ -116,7 +123,8 @@ public final class TrackStore {
         String album = isBlank(fresh.album) ? oldTrack.album : fresh.album;
         String genre = isBlank(fresh.genre) ? oldTrack.genre : fresh.genre;
         int durationMs = fresh.durationMs > 0 ? fresh.durationMs : oldTrack.durationMs;
-        return new Track(oldTrack.uri, title, artist, album, genre, durationMs);
+        return new Track(oldTrack.trackId, oldTrack.uri, title, artist, album, genre,
+                durationMs, fresh.fileSize, fresh.lastModified, fresh.fingerprint);
     }
 
     public static boolean canOpenForRead(Context context, Uri uri) {
@@ -145,6 +153,24 @@ public final class TrackStore {
         Log.i(DEBUG_TAG, "duration_updated uri=" + uri + " durationMs=" + durationMs);
     }
 
+    public static void updateLocation(Context context, Track track) {
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.updateTrackLocation(track);
+        } finally {
+            database.close();
+        }
+    }
+
+    public static void updateAvailability(Context context, String trackId, String reason) {
+        LibraryDatabase database = new LibraryDatabase(context);
+        try {
+            database.updateAvailability(trackId, reason);
+        } finally {
+            database.close();
+        }
+    }
+
     public static void sort(List<Track> tracks) {
         Collections.sort(tracks, new Comparator<Track>() {
             @Override
@@ -164,6 +190,72 @@ public final class TrackStore {
             Log.w(DEBUG_TAG, "duration_missing uri=" + uri);
         }
         return metadata;
+    }
+
+    static FileIdentity readFileIdentity(Context context, Uri uri) {
+        long size = -1L;
+        long lastModified = 0L;
+        android.database.Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(uri,
+                    new String[]{OpenableColumns.SIZE,
+                            DocumentsContract.Document.COLUMN_LAST_MODIFIED},
+                    null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int sizeColumn = cursor.getColumnIndex(OpenableColumns.SIZE);
+                int modifiedColumn = cursor.getColumnIndex(
+                        DocumentsContract.Document.COLUMN_LAST_MODIFIED);
+                if (sizeColumn >= 0 && !cursor.isNull(sizeColumn)) {
+                    size = cursor.getLong(sizeColumn);
+                }
+                if (modifiedColumn >= 0 && !cursor.isNull(modifiedColumn)) {
+                    lastModified = cursor.getLong(modifiedColumn);
+                }
+            }
+        } catch (Exception ignored) {
+            // Some providers expose neither size nor modification time.
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return new FileIdentity(size, lastModified, fingerprint(context, uri));
+    }
+
+    private static String fingerprint(Context context, Uri uri) {
+        InputStream input = null;
+        try {
+            input = context.getContentResolver().openInputStream(uri);
+            if (input == null) {
+                return "";
+            }
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int remaining = 64 * 1024;
+            while (remaining > 0) {
+                int count = input.read(buffer, 0, Math.min(buffer.length, remaining));
+                if (count < 0) {
+                    break;
+                }
+                digest.update(buffer, 0, count);
+                remaining -= count;
+            }
+            StringBuilder result = new StringBuilder();
+            for (byte value : digest.digest()) {
+                result.append(String.format(Locale.ROOT, "%02x", value));
+            }
+            return result.toString();
+        } catch (Exception error) {
+            Log.w(DEBUG_TAG, "fingerprint_failed error=" + error.getMessage());
+            return "";
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
     }
 
     private static Metadata readMetadataDirect(Context context, Uri uri) {
@@ -284,6 +376,18 @@ public final class TrackStore {
             if (this.durationMs <= 0) {
                 this.durationMs = fallback.durationMs;
             }
+        }
+    }
+
+    static final class FileIdentity {
+        final long size;
+        final long lastModified;
+        final String fingerprint;
+
+        FileIdentity(long size, long lastModified, String fingerprint) {
+            this.size = size;
+            this.lastModified = lastModified;
+            this.fingerprint = fingerprint == null ? "" : fingerprint;
         }
     }
 }

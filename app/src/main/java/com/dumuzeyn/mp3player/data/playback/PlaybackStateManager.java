@@ -124,7 +124,7 @@ public final class PlaybackStateManager {
             this.shuffle = shuffle;
             this.queueUris = new ArrayList<>();
             for (Track track : queue) {
-                this.queueUris.add(track.uri);
+                this.queueUris.add(track.trackId);
             }
         }
     }
