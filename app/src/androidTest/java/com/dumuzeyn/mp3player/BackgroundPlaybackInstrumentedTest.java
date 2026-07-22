@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.SystemClock;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
@@ -29,6 +30,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +66,7 @@ public class BackgroundPlaybackInstrumentedTest {
         }
         controller = new MediaController.Builder(context, new SessionToken(context,
                 new ComponentName(context, Media3PlayerService.class)))
+                .setApplicationLooper(Looper.getMainLooper())
                 .buildAsync().get(15, TimeUnit.SECONDS);
         stopPlayback();
         waveFile = InstrumentedTestSupport.createTestWave(
@@ -84,7 +88,7 @@ public class BackgroundPlaybackInstrumentedTest {
             instrumentation.runOnMainSync(activity::finish);
         }
         if (controller != null) {
-            controller.release();
+            controllerAction(controller::release);
         }
         if (waveFile != null) {
             waveFile.delete();
@@ -103,15 +107,16 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.runOnMainSync(activity::finish);
         activity = null;
         InstrumentedTestSupport.waitFor("Playback stopped when Activity closed",
-                TRANSITION_TIMEOUT_MS, controller::isPlaying);
+                TRANSITION_TIMEOUT_MS, () -> controllerValue(controller::isPlaying));
         InstrumentedTestSupport.waitFor("Playback position did not advance",
-                TRANSITION_TIMEOUT_MS, () -> controller.getCurrentPosition() > 0);
+                TRANSITION_TIMEOUT_MS, () -> controllerValue(
+                        () -> controller.getCurrentPosition()) > 0);
 
-        controller.pause();
+        controllerAction(controller::pause);
         InstrumentedTestSupport.waitFor("Media3 did not pause", 5000L,
-                () -> !controller.isPlaying());
-        assertFalse(controller.isPlaying());
-        assertTrue(controller.getMediaItemCount() > 0);
+                () -> !controllerValue(controller::isPlaying));
+        assertFalse(controllerValue(controller::isPlaying));
+        assertTrue(controllerValue(controller::getMediaItemCount) > 0);
     }
 
     @Test
@@ -121,7 +126,8 @@ public class BackgroundPlaybackInstrumentedTest {
         waitForPlayingUri("First playlist track did not start", firstTrack.uri);
         Bundle timer = new Bundle();
         timer.putLong(Media3Commands.ARG_TIMER_MS, 20000L);
-        controller.sendCustomCommand(Media3Commands.TIMER_START_COMMAND, timer);
+        controllerAction(() -> controller.sendCustomCommand(
+                Media3Commands.TIMER_START_COMMAND, timer));
 
         instrumentation.runOnMainSync(activity::finishAndRemoveTask);
         activity = null;
@@ -139,8 +145,37 @@ public class BackgroundPlaybackInstrumentedTest {
         instrumentation.runOnMainSync(() -> activity.moveTaskToBack(true));
         waitForPlayingUri("Queue did not reach second track", secondTrack.uri);
         waitForPlayingUri("Queue did not wrap to first track", firstTrack.uri);
-        assertTrue(controller.isPlaying());
-        assertEquals(Player.REPEAT_MODE_ALL, controller.getRepeatMode());
+        assertTrue(controllerValue(controller::isPlaying));
+        assertEquals(Player.REPEAT_MODE_ALL,
+                (int) controllerValue(controller::getRepeatMode));
+    }
+
+    @Test
+    public void controllerCanReconnectWithoutLosingQueueOrPosition() throws Exception {
+        startQueue(Arrays.asList(firstTrack, secondTrack), Player.REPEAT_MODE_ALL);
+        waitForPlayingUri("First reconnect track did not start", firstTrack.uri);
+        InstrumentedTestSupport.waitFor("Playback position did not advance before reconnect",
+                5000L, () -> controllerValue(() -> controller.getCurrentPosition()) > 250L);
+        long positionBeforeReconnect = controllerValue(controller::getCurrentPosition);
+        controllerAction(controller::release);
+        controller = new MediaController.Builder(context, new SessionToken(context,
+                new ComponentName(context, Media3PlayerService.class)))
+                .setApplicationLooper(Looper.getMainLooper())
+                .buildAsync().get(15, TimeUnit.SECONDS);
+        assertEquals(2, (int) controllerValue(controller::getMediaItemCount));
+        assertEquals(Player.REPEAT_MODE_ALL,
+                (int) controllerValue(controller::getRepeatMode));
+        assertTrue(controllerValue(controller::getCurrentPosition) >= positionBeforeReconnect);
+        assertTrue(controllerValue(controller::isPlaying));
+    }
+
+    @Test
+    public void unavailableUriDoesNotLoopForeverAndAdvancesToValidTrack() {
+        Track unavailable = new Track("content://voltune.invalid/missing.mp3", "Missing",
+                "Voltune tests", "Compatibility", "Test", 1000);
+        startQueue(Arrays.asList(unavailable, secondTrack), Player.REPEAT_MODE_OFF);
+        waitForPlayingUri("Media3 did not recover from unavailable URI", secondTrack.uri);
+        assertTrue(controllerValue(controller::isPlaying));
     }
 
     @Test
@@ -154,7 +189,7 @@ public class BackgroundPlaybackInstrumentedTest {
         });
         activity = null;
         SystemClock.sleep(1200L);
-        assertEquals(0, controller.getMediaItemCount());
+        assertEquals(0, (int) controllerValue(controller::getMediaItemCount));
     }
 
     @Test
@@ -189,11 +224,13 @@ public class BackgroundPlaybackInstrumentedTest {
         for (Track track : tracks) {
             items.add(mapper.toMediaItem(track));
         }
-        controller.setMediaItems(items);
-        controller.setShuffleModeEnabled(false);
-        controller.setRepeatMode(repeatMode);
-        controller.prepare();
-        controller.play();
+        controllerAction(() -> {
+            controller.setMediaItems(items);
+            controller.setShuffleModeEnabled(false);
+            controller.setRepeatMode(repeatMode);
+            controller.prepare();
+            controller.play();
+        });
     }
 
     private static void setUiSnapshot(MainActivityCore host, int trackIndex, boolean playing) {
@@ -210,8 +247,8 @@ public class BackgroundPlaybackInstrumentedTest {
         Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
                 MainActivity.class.getName(), null, false);
         context.startActivity(new Intent(context, MainActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        Activity launched = monitor.waitForActivityWithTimeout(45000L);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        Activity launched = monitor.waitForActivityWithTimeout(15000L);
         instrumentation.removeMonitor(monitor);
         assertNotNull("MainActivity did not start", launched);
         InstrumentedTestSupport.waitFor("MainActivity did not finish layout", 10000L,
@@ -222,10 +259,12 @@ public class BackgroundPlaybackInstrumentedTest {
 
     private void waitForPlayingUri(String message, String uri) {
         InstrumentedTestSupport.waitFor(message, TRANSITION_TIMEOUT_MS, () -> {
-            MediaItem current = controller.getCurrentMediaItem();
-            return controller.isPlaying() && current != null
-                    && current.localConfiguration != null
-                    && uri.equals(current.localConfiguration.uri.toString());
+            return controllerValue(() -> {
+                MediaItem current = controller.getCurrentMediaItem();
+                return controller.isPlaying() && current != null
+                        && current.localConfiguration != null
+                        && uri.equals(current.localConfiguration.uri.toString());
+            });
         });
     }
 
@@ -233,10 +272,26 @@ public class BackgroundPlaybackInstrumentedTest {
         if (controller == null) {
             return;
         }
-        controller.stop();
-        controller.clearMediaItems();
-        controller.sendCustomCommand(Media3Commands.CLEAR_QUEUE_COMMAND, Bundle.EMPTY);
+        controllerAction(() -> {
+            controller.stop();
+            controller.clearMediaItems();
+            controller.sendCustomCommand(Media3Commands.CLEAR_QUEUE_COMMAND, Bundle.EMPTY);
+        });
         InstrumentedTestSupport.waitFor("Media3 session did not clear", 3000L,
-                () -> controller.getMediaItemCount() == 0);
+                () -> controllerValue(controller::getMediaItemCount) == 0);
+    }
+
+    private void controllerAction(Runnable action) {
+        instrumentation.runOnMainSync(action);
+    }
+
+    private <T> T controllerValue(Callable<T> query) {
+        FutureTask<T> task = new FutureTask<>(query);
+        instrumentation.runOnMainSync(task);
+        try {
+            return task.get(5, TimeUnit.SECONDS);
+        } catch (Exception error) {
+            throw new AssertionError("MediaController query failed", error);
+        }
     }
 }

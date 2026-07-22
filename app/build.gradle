@@ -26,6 +26,10 @@ android {
     namespace "com.dumuzeyn.mp3player"
     compileSdk 36
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.dumuzeyn.mp3player"
         minSdk 23
@@ -68,6 +72,13 @@ android {
             }
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+
+        benchmark {
+            initWith release
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ["release"]
+            debuggable false
+        }
     }
 }
 
@@ -76,6 +87,7 @@ dependencies {
 
     implementation "androidx.media3:media3-exoplayer:$media3Version"
     implementation "androidx.media3:media3-session:$media3Version"
+    implementation "androidx.profileinstaller:profileinstaller:1.4.1"
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
     androidTestImplementation "androidx.test:core:1.6.1"

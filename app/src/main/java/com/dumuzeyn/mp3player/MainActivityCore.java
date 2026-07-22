@@ -105,6 +105,8 @@ class MainActivityCore extends AppState {
         super.onCreate(bundle);
         SettingsDefaults.resetForVersion243(this);
         this.uiPreferencesStore.load();
+        BenchmarkLibrarySeeder.seedIfRequested(this,
+                getIntent().getIntExtra(BenchmarkLibrarySeeder.EXTRA_TRACK_COUNT, 0));
         this.sleepTimerEndsAt = PlaybackSleepTimer.readEndsAt(this);
         NotificationPermissionController.requestIfNeeded(this);
         this.mainRenderer.loadMenuData();
