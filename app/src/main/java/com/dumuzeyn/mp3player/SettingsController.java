@@ -18,6 +18,7 @@ final class SettingsController {
     private static final int IMPORT_BACKUP = 5202;
     private static final int EXPORT_THEME = 5203;
     private static final int IMPORT_THEME = 5204;
+    private static final int EXPORT_PLAYBACK_DIAGNOSTICS = 5205;
     private static final String SUPPORT_URL = "https://pay.cloudtips.ru/p/54e5a4f9";
     private final MainActivityCore host;
 
@@ -204,19 +205,53 @@ final class SettingsController {
         host.startActivityForResult(intent, IMPORT_THEME);
     }
 
+    void confirmExportPlaybackDiagnostics() {
+        host.showActionPanel(
+                host.tr("Export playback diagnostics", "Экспорт диагностики воспроизведения"),
+                host.tr(
+                        "The report contains the app and Android versions, device model, "
+                                + "current playback state and up to 200 recent playback events. "
+                                + "Music paths, URIs, file names and tags are not included. "
+                                + "The file is created only after you confirm.",
+                        "Отчёт содержит версии приложения и Android, модель устройства, "
+                                + "текущее состояние и до 200 последних событий воспроизведения. "
+                                + "Пути, URI, имена файлов и теги музыки не добавляются. "
+                                + "Файл будет создан только после вашего подтверждения."),
+                host.tr("Cancel", "Отмена"),
+                host.tr("Export", "Экспортировать"),
+                false,
+                this::exportPlaybackDiagnostics);
+    }
+
+    private void exportPlaybackDiagnostics() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_TITLE, "Voltune-playback-diagnostics.txt");
+        host.startActivityForResult(intent, EXPORT_PLAYBACK_DIAGNOSTICS);
+    }
+
     boolean handleActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode != EXPORT_BACKUP && requestCode != IMPORT_BACKUP
-                && requestCode != EXPORT_THEME && requestCode != IMPORT_THEME) {
+                && requestCode != EXPORT_THEME && requestCode != IMPORT_THEME
+                && requestCode != EXPORT_PLAYBACK_DIAGNOSTICS) {
             return false;
         }
         if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
             return true;
         }
         try {
-            if (requestCode == EXPORT_BACKUP || requestCode == EXPORT_THEME) {
-                String backup = requestCode == EXPORT_BACKUP
-                        ? LibraryBackupManager.exportBackup(host, host.tracks, host.playlists)
-                        : ThemePresetCodec.encode(host.getSharedPreferences("mp3_player_ui", 0));
+            if (requestCode == EXPORT_BACKUP || requestCode == EXPORT_THEME
+                    || requestCode == EXPORT_PLAYBACK_DIAGNOSTICS) {
+                String backup;
+                if (requestCode == EXPORT_BACKUP) {
+                    backup = LibraryBackupManager.exportBackup(host, host.tracks, host.playlists);
+                } else if (requestCode == EXPORT_THEME) {
+                    backup = ThemePresetCodec.encode(
+                            host.getSharedPreferences("mp3_player_ui", 0));
+                } else {
+                    backup = PlaybackEventLogger.buildReport(host);
+                }
                 OutputStream output = host.getContentResolver().openOutputStream(data.getData(),
                         "wt");
                 if (output == null) {

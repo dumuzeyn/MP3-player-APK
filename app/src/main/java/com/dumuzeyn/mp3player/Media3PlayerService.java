@@ -55,10 +55,12 @@ public final class Media3PlayerService extends MediaSessionService {
     private AudioEffectsManager audioEffects;
     private TrackLoudnessNormalizer loudnessNormalizer;
     private Media3SessionCommandHandler commandHandler;
+    private PlaybackEventLogger eventLogger;
     private PauseReason pauseReason = PauseReason.NONE;
     private StopReason stopReason = StopReason.NONE;
     @Nullable private PlaybackErrorInfo lastError;
     private int audioSessionId = C.AUDIO_SESSION_ID_UNSET;
+    private String audioFocusState = "managed";
 
     @Override
     public void onCreate() {
@@ -68,10 +70,12 @@ public final class Media3PlayerService extends MediaSessionService {
         audioEffects = new AudioEffectsManager(this);
         loudnessNormalizer = new TrackLoudnessNormalizer(this);
         artworkProvider = new MediaArtworkProvider(this);
+        eventLogger = new PlaybackEventLogger(this);
 
         boolean uninterrupted = getSharedPreferences(
                 UninterruptedPlaybackController.PREFS, MODE_PRIVATE)
                 .getBoolean(UninterruptedPlaybackController.ENABLED, false);
+        audioFocusState = uninterrupted ? "ignored_by_setting" : "managed";
         AudioAttributes attributes = new AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -99,6 +103,7 @@ public final class Media3PlayerService extends MediaSessionService {
         setMediaNotificationProvider(provider);
         new PlaybackSessionRestorer(this, stateManager, mapper).restore(player);
         sleepTimer.restore();
+        logEvent("service_created", "none");
         Log.i(TAG, "service_created");
     }
 
@@ -110,6 +115,7 @@ public final class Media3PlayerService extends MediaSessionService {
 
     @Override
     public void onTaskRemoved(@Nullable Intent rootIntent) {
+        logEvent("task_removed", "none");
         if (player == null || (!player.isPlaying()
                 && player.getPlaybackState() != Player.STATE_BUFFERING)) {
             stopSelf();
@@ -127,6 +133,7 @@ public final class Media3PlayerService extends MediaSessionService {
                 stopReason = StopReason.SERVICE_DESTROYED;
             }
             persistState(true);
+            logEvent("service_destroyed", "none", false);
         }
         if (mediaSession != null) {
             mediaSession.release();
@@ -154,6 +161,7 @@ public final class Media3PlayerService extends MediaSessionService {
         player.pause();
         player.stop();
         persistState(true);
+        logEvent("sleep_timer_expired", "none");
     }
 
     private void applyAudioEffects() {
@@ -177,6 +185,7 @@ public final class Media3PlayerService extends MediaSessionService {
         boolean recoverable = queueSize > 1;
         lastError = new PlaybackErrorInfo(error.errorCode, error.getErrorCodeName(),
                 recoverable, error.getMessage(), currentMediaId());
+        logEvent("player_error", lastError.category);
         if (transitionPolicy.shouldSkipError(failures, queueSize, recoverable)) {
             int next = (Math.max(0, player.getCurrentMediaItemIndex()) + 1) % queueSize;
             player.seekToDefaultPosition(next);
@@ -249,6 +258,21 @@ public final class Media3PlayerService extends MediaSessionService {
                 stopReason, lastError, System.currentTimeMillis());
     }
 
+    private void logEvent(String type, String errorCategory) {
+        boolean foreground = player != null && (player.isPlaying()
+                || (player.getPlayWhenReady()
+                && player.getPlaybackState() == Player.STATE_BUFFERING));
+        logEvent(type, errorCategory, foreground);
+    }
+
+    private void logEvent(String type, String errorCategory, boolean foreground) {
+        if (eventLogger == null || player == null) {
+            return;
+        }
+        eventLogger.record(type, snapshot(), errorCategory, audioFocusState,
+                mediaSession != null, foreground);
+    }
+
     private Bundle snapshotBundle() {
         PlaybackSnapshot value = snapshot();
         Bundle bundle = new Bundle();
@@ -281,6 +305,7 @@ public final class Media3PlayerService extends MediaSessionService {
                 handler.postDelayed(positionSaver, POSITION_SAVE_INTERVAL_MS);
             }
             persistState(true);
+            logEvent(isPlaying ? "playback_started" : "playback_paused", "none");
         }
 
         @Override
@@ -288,14 +313,20 @@ public final class Media3PlayerService extends MediaSessionService {
             if (!playWhenReady) {
                 if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
                     pauseReason = transitionPolicy.onTemporaryAudioFocusLoss(true);
+                    audioFocusState = "lost";
                 } else if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) {
                     pauseReason = transitionPolicy.onAudioBecomingNoisy();
+                    audioFocusState = "audio_becoming_noisy";
                 } else if (pauseReason == PauseReason.NONE) {
                     pauseReason = PauseReason.USER;
                     transitionPolicy.onUserPause();
+                    audioFocusState = "inactive";
                 }
+            } else {
+                audioFocusState = "active_or_not_required";
             }
             persistState(false);
+            logEvent("play_when_ready_changed", "none");
         }
 
         @Override
@@ -309,6 +340,7 @@ public final class Media3PlayerService extends MediaSessionService {
                 stopReason = StopReason.QUEUE_ENDED;
             }
             persistState(true);
+            logEvent("playback_state_changed", "none");
         }
 
         @Override
@@ -317,6 +349,7 @@ public final class Media3PlayerService extends MediaSessionService {
             errorRecovery.resetConsecutiveErrors();
             lastError = null;
             persistState(true);
+            logEvent("media_item_transition", "none");
         }
 
         @Override
@@ -328,6 +361,17 @@ public final class Media3PlayerService extends MediaSessionService {
         public void onAudioSessionIdChanged(int id) {
             audioSessionId = id;
             applyAudioEffects();
+            logEvent("audio_session_changed", "none");
+        }
+
+        @Override
+        public void onRepeatModeChanged(int repeatMode) {
+            logEvent("repeat_mode_changed", "none");
+        }
+
+        @Override
+        public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+            logEvent("shuffle_mode_changed", "none");
         }
     }
 
@@ -351,6 +395,9 @@ public final class Media3PlayerService extends MediaSessionService {
         @Override
         public ListenableFuture<SessionResult> onCustomCommand(MediaSession session,
                 MediaSession.ControllerInfo controller, SessionCommand command, Bundle args) {
+            String action = command.customAction == null ? "unknown" : command.customAction;
+            int separator = action.lastIndexOf('.');
+            logEvent("command_" + action.substring(separator + 1).toLowerCase(), "none");
             return commandHandler.handle(command, args);
         }
     }

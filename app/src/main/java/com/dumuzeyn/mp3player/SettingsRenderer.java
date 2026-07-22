@@ -116,6 +116,8 @@ final class SettingsRenderer {
         addButton(host.tr("Crash reports: ", "Отчёты о сбоях: ")
                         + CrashReportStore.count(host),
                 view -> host.settingsController.openCrashReports());
+        addButton(host.tr("Export playback diagnostics", "Экспорт диагностики воспроизведения"),
+                view -> host.settingsController.confirmExportPlaybackDiagnostics());
     }
 
     private void toggleAnimations() {
